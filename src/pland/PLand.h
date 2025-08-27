@@ -1,17 +1,23 @@
 #pragma once
 #include <memory>
 
+#include "Global.h"
 #include "ll/api/mod/NativeMod.h"
 
-#include "pland/hooks/EventListener.h"
-#include "pland/infra/DrawHandleManager.h"
-#include "pland/infra/SafeTeleport.h"
-#include "pland/land/LandRegistry.h"
-#include "pland/land/LandScheduler.h"
-#include "pland/selector/SelectorManager.h"
-
+#ifdef LD_DEVTOOL
+namespace devtool {
+class DevToolApp;
+}
+#endif
 
 namespace land {
+
+class LandRegistry;
+class EventListener;
+class LandScheduler;
+class SafeTeleport;
+class SelectorManager;
+class DrawHandleManager;
 
 class PLand {
     PLand();
@@ -19,16 +25,9 @@ class PLand {
 public: /* private */
     [[nodiscard]] ll::mod::NativeMod& getSelf() const;
 
-    /// @return True if the mod is loaded successfully.
     bool load();
-
-    /// @return True if the mod is enabled successfully.
     bool enable();
-
-    /// @return True if the mod is disabled successfully.
     bool disable();
-
-    /// @return True if the mod is unloaded successfully.
     bool unload();
 
 public: /* public */
@@ -42,15 +41,23 @@ public: /* public */
     LDNDAPI LandRegistry*      getLandRegistry() const;
     LDNDAPI DrawHandleManager* getDrawHandleManager() const;
 
+#ifdef LD_DEVTOOL
+    [[nodiscard]] devtool::DevToolApp* getDevToolApp() const;
+#endif
+
 private:
     ll::mod::NativeMod& mSelf;
 
-    std::unique_ptr<LandRegistry>      mLandRegistry;
-    std::unique_ptr<EventListener>     mEventListener;
-    std::unique_ptr<LandScheduler>     mLandScheduler;
-    std::unique_ptr<SafeTeleport>      mSafeTeleport;
-    std::unique_ptr<SelectorManager>   mSelectorManager;
-    std::unique_ptr<DrawHandleManager> mDrawHandleManager;
+    std::unique_ptr<LandRegistry>      mLandRegistry{nullptr};
+    std::unique_ptr<EventListener>     mEventListener{nullptr};
+    std::unique_ptr<LandScheduler>     mLandScheduler{nullptr};
+    std::unique_ptr<SafeTeleport>      mSafeTeleport{nullptr};
+    std::unique_ptr<SelectorManager>   mSelectorManager{nullptr};
+    std::unique_ptr<DrawHandleManager> mDrawHandleManager{nullptr};
+
+#ifdef LD_DEVTOOL
+    std::unique_ptr<devtool::DevToolApp> mDevToolApp{nullptr};
+#endif
 };
 
 } // namespace land

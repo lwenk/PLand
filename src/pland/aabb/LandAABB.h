@@ -1,4 +1,5 @@
 #pragma once
+#include "mc/world/level/BlockPos.h"
 #include "pland/Global.h"
 #include "pland/aabb/LandPos.h"
 
@@ -81,12 +82,27 @@ public:
      */
     LDNDAPI std::vector<BlockPos> getRange() const;
 
-    LDNDAPI bool hasPos(BlockPos const& pos, bool ignoreY = false) const;
+    /**
+     * @brief 获取 AABB 区域的顶点坐标 (4个角点，平面)
+     */
+    LDNDAPI std::array<Vec3, 4> getVertices() const;
+
+    /**
+     * @brief 获取 AABB 区域的顶点坐标 (8个角点，立方体)
+     */
+    LDNDAPI std::array<Vec3, 8> getCorners() const;
+
+    /**
+     * @brief 获取立方体 Box 的 12 条边线(每条边线有两个点)
+     */
+    LDNDAPI std::vector<std::pair<BlockPos, BlockPos>> getEdges() const;
+
+    LDNDAPI bool hasPos(BlockPos const& pos, bool includeY = true) const;
 
     /**
      * @brief 扩展 AABB 边界
      */
-    LDNDAPI LandAABB expanded(int spacing, bool ignoreY = false) const;
+    LDNDAPI LandAABB expanded(int spacing, bool includeY = true) const;
 
     /**
      * @brief 判断某个pos是否在领地内边界
@@ -113,7 +129,8 @@ public:
     /**
      * @brief 判断两个AABB是否满足最小间距要求
      */
-    LDNDAPI static bool isComplisWithMinSpacing(LandAABB const& pos1, LandAABB const& pos2, int minSpacing);
+    LDNDAPI static bool
+    isComplisWithMinSpacing(LandAABB const& pos1, LandAABB const& pos2, int minSpacing, bool includeY = true);
 
     /**
      * @brief 判断一个 AABB 区域是否完整包含另一个 AABB 区域
@@ -128,5 +145,6 @@ public:
     LDNDAPI static int getMinSpacing(LandAABB const& a, LandAABB const& b);
 };
 
+STATIC_ASSERT_AGGREGATE(LandAABB);
 
 } // namespace land

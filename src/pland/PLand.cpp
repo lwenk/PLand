@@ -14,6 +14,7 @@
 #include "pland/hooks/EventListener.h"
 #include "pland/infra/Config.h"
 #include "pland/infra/DrawHandleManager.h"
+#include "pland/infra/SafeTeleport.h"
 #include "pland/land/LandRegistry.h"
 #include "pland/land/LandScheduler.h"
 #include "pland/selector/SelectorManager.h"
@@ -24,7 +25,7 @@
 #endif
 
 #ifdef LD_DEVTOOL
-#include "DevToolAppManager.h"
+#include "DevToolApp.h"
 #endif
 
 namespace land {
@@ -48,8 +49,10 @@ bool PLand::load() {
     if (PLAND_VERSION_SNAPSHOT) {
         logger.warn("Version: {}", PLAND_VERSION_STRING);
         logger.warn("您当前正在使用开发快照版本，此版本可能某些功能异常、损坏、甚至导致崩溃，请勿在生产环境中使用。");
-        logger.warn("You are using a development snapshot version, this version may have some abnormal, broken or even "
-                    "crash functions, please do not use it in production environment.");
+        logger.warn(
+            "You are using a development snapshot version, this version may have some abnormal, broken or even "
+            "crash functions, please do not use it in production environment."
+        );
     } else {
         logger.info("Version: {}", PLAND_VERSION_STRING);
     }
@@ -88,7 +91,7 @@ bool PLand::enable() {
 #endif
 
 #ifdef LD_DEVTOOL
-    if (land::Config::cfg.internal.devTools) devtool::DevToolAppManager::getInstance().initApp();
+    if (land::Config::cfg.internal.devTools) mDevToolApp = devtool::DevToolApp::make();
 #endif
 
     return true;
@@ -96,7 +99,7 @@ bool PLand::enable() {
 
 bool PLand::disable() {
 #ifdef LD_DEVTOOL
-    if (land::Config::cfg.internal.devTools) devtool::DevToolAppManager::getInstance().destroyApp();
+    if (land::Config::cfg.internal.devTools && mDevToolApp) mDevToolApp.reset();
 #endif
 
     auto& logger = getSelf().getLogger();
@@ -144,6 +147,11 @@ LandScheduler*      PLand::getLandScheduler() const { return mLandScheduler.get(
 SelectorManager*    PLand::getSelectorManager() const { return mSelectorManager.get(); }
 LandRegistry*       PLand::getLandRegistry() const { return mLandRegistry.get(); }
 DrawHandleManager*  PLand::getDrawHandleManager() const { return mDrawHandleManager.get(); }
+
+
+#ifdef LD_DEVTOOL
+devtool::DevToolApp* PLand::getDevToolApp() const { return mDevToolApp.get(); }
+#endif
 
 
 } // namespace land

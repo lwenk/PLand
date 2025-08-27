@@ -6,9 +6,6 @@
 #include "pland/gui/form/PaginatedSimpleForm.h"
 #include <cassert>
 
-#ifdef DEBUG
-#include "pland/debug/FuckSharedResourceMemoryLeak.h"
-#endif
 
 namespace land {
 
@@ -16,7 +13,7 @@ using ll::form::CustomForm;
 using ll::form::CustomFormResult;
 
 
-class ChooseLandAdvancedUtilGUI::Impl : public std::enable_shared_from_this<Impl> {
+class ChooseLandAdvancedUtilGUI::Impl final {
     std::vector<SharedLand>                                 mLands{};                    // 领地数据
     ChooseCallback                                          mCallback{};                 // 回调
     BackSimpleForm<>::ButtonCallback                        mBackCallback{};             // 返回按钮回调
@@ -24,70 +21,55 @@ class ChooseLandAdvancedUtilGUI::Impl : public std::enable_shared_from_this<Impl
     View                                                    mCurrentView{View::All};     // 当前视图
     std::map<View, BackSimpleForm<BackPaginatedSimpleForm>> mViews{};                    // 视图
 
-    std::shared_ptr<Impl> mSelf{nullptr};
-
 public:
     explicit Impl(std::vector<SharedLand> lands, ChooseCallback callback, BackSimpleForm<>::ButtonCallback back = {})
     : mLands(std::move(lands)),
       mCallback(std::move(callback)),
-      mBackCallback(std::move(back)) {}
+      mBackCallback(std::move(back)) {
+#ifdef DEBUG
+        std::cout << "ChooseLandAdvancedUtilGUI::Impl::Impl()" << std::endl;
+#endif
+    }
 
 #ifdef DEBUG
-    virtual ~Impl() { std::cout << "ChooseLandAdvancedUtilGUI::Impl::~Impl()" << std::endl; }
+    ~Impl() { std::cout << "ChooseLandAdvancedUtilGUI::Impl::~Impl()" << std::endl; }
 #else
-    virtual ~Impl() = default;
+    ~Impl() = default;
 #endif
 
-    void freeSelf() { mSelf.reset(); }
+    [[nodiscard]] Impl* getThis() { return this; }
 
     BackSimpleForm<>::ButtonCallback makeBackCallback() {
-        return [thiz = std::weak_ptr(shared_from_this())](Player& self) {
-            if (auto ins = thiz.lock()) {
-                ins->mBackCallback(self);
-                ins->freeSelf();
+        return [thiz = getThis()](Player& self) {
+            if (thiz) {
+                thiz->mBackCallback(self);
+                delete thiz; // 已返回上一个表单，当前表单不再需要
             }
         };
     }
 
     SimpleForm::ButtonCallback makeCallback(WeakLand wLand) {
-        return [wLand, thiz = std::weak_ptr(shared_from_this())](Player& self) {
-            auto ins  = thiz.lock();
+        return [wLand, thiz = getThis()](Player& self) {
             auto land = wLand.lock();
-            if (ins && land) {
-                ins->mCallback(self, land);
-                ins->freeSelf();
-            }
-        };
-    }
-
-    PaginatedSimpleForm::FormCanceledCallback makeFormCanceledCallback() {
-        return [thiz = std::weak_ptr(shared_from_this())](Player&) {
-            if (auto ins = thiz.lock()) {
-                ins->freeSelf();
+            if (thiz && land) {
+                thiz->mCallback(self, land);
+                delete thiz; // 进入下一个表单，当前表单不再需要
             }
         };
     }
 
     void nextView(Player& player) {
         if (mCurrentView == View::OnlySub) {
-            sendView(View::All, player); // 回到初始视图
+            sendView(player, View::All); // 回到初始视图
             return;
         }
-        sendView(static_cast<View>(static_cast<int>(mCurrentView) + 1), player);
+        sendView(player, static_cast<View>(static_cast<int>(mCurrentView) + 1));
     }
 
     SimpleForm::ButtonCallback makeNextViewCallback() {
-        return [thiz = std::weak_ptr(shared_from_this())](Player& self) {
-            if (auto ins = thiz.lock()) {
-                ins->nextView(self);
-            }
-        };
-    }
-
-    SimpleForm::ButtonCallback makeFuzzySearchCallback() {
-        return [thiz = std::weak_ptr(shared_from_this())](Player& self) {
-            if (auto ins = thiz.lock()) {
-                ins->sendFuzzySearch(self);
+        return [thiz = getThis()](Player& self) {
+            if (thiz) {
+                thiz->nextView(self);
             }
         };
     }
@@ -103,8 +85,38 @@ public:
             for (auto& [view, form] : mViews) {
                 form.setTitle("选择领地"_trf(player));
                 form.setContent("请选择一个领地:"_trf(player));
-                form.appendButton("模糊搜索", "textures/ui/magnifyingGlass", "path", makeFuzzySearchCallback());
-                form.onFormCanceled(makeFormCanceledCallback());
+
+                // 重置过滤器（仅在非主视图或存在模糊搜索关键字时）
+                if (view != View::All || mFuzzyKeyword.has_value()) {
+                    form.appendButton(
+                        "重置过滤器"_trf(player),
+                        "textures/ui/refresh_light",
+                        "path",
+                        [thiz = getThis()](Player& self) {
+                            if (!thiz) return;
+                            if (!thiz->mFuzzyKeyword.has_value()) {
+                                thiz->sendView(self, View::All);
+                                return; // 没有模糊搜索关键字，仅重置视图
+                            }
+                            thiz->mViews.clear();
+                            thiz->mFuzzyKeyword = std::nullopt;
+                            thiz->mCurrentView  = View::All;
+                            thiz->sendTo(self); // 重新发送表单
+                        }
+                    );
+                }
+
+                form.appendButton(
+                    "模糊搜索"_trf(player),
+                    "textures/ui/magnifyingGlass",
+                    "path",
+                    [thiz = getThis()](Player& self) {
+                        if (thiz) {
+                            thiz->sendFuzzySearch(self);
+                        }
+                    }
+                );
+                form.onFormCanceled([thiz = getThis()](Player&) { delete thiz; });
 
                 switch (view) {
                 case View::All:
@@ -133,7 +145,7 @@ public:
                     break;
                 case View::OnlyMix:
                     form.appendButton(
-                        "切换: >混合领地<"_trf(player),
+                        "过滤: >混合领地<"_trf(player),
                         "textures/ui/store_sort_icon",
                         "path",
                         makeNextViewCallback()
@@ -151,7 +163,6 @@ public:
             }
         }
 
-        auto thiz = std::weak_ptr(shared_from_this());
         for (auto const& land : mLands) {
             if (mFuzzyKeyword && land->getName().find(*mFuzzyKeyword) == std::string::npos) {
                 continue; // 模糊搜索
@@ -189,35 +200,31 @@ public:
         CustomForm fm;
         fm.setTitle(PLUGIN_NAME + " | 模糊搜索领地"_trf(player));
         fm.appendInput("name", "请输入领地名称"_trf(player), "string", mFuzzyKeyword.value_or(""));
-        fm.sendTo(player, [thiz = std::weak_ptr(shared_from_this())](Player& self, CustomFormResult const& res, auto) {
-            auto ins = thiz.lock();
-            if (!ins) {
-                return;
-            }
+        fm.sendTo(player, [thiz = getThis()](Player& self, CustomFormResult const& res, auto) {
+            if (!thiz) return;
             if (!res) {
-                ins->freeSelf();
+                delete thiz;
                 return;
             }
             auto name = std::get<string>(res->at("name"));
             if (name.empty()) {
-                return ins->sendFuzzySearch(self); // 重新发送
+                return thiz->sendFuzzySearch(self); // 重新发送
             }
-            ins->mFuzzyKeyword = name;
-            ins->mViews.clear();
-            ins->buildForms(self);
-            ins->sendView(ins->mCurrentView, self);
+            thiz->mFuzzyKeyword = name;
+            thiz->mViews.clear();
+            thiz->buildForms(self);
+            thiz->sendView(self, thiz->mCurrentView);
         });
     }
 
-    void sendView(View view, Player& player) {
+    void sendView(Player& player, View view) {
         mCurrentView = view;
         mViews.at(view).sendTo(player);
-        mSelf = shared_from_this();
     }
 
     void sendTo(Player& player) {
         buildForms(player);
-        sendView(View::All, player);
+        sendView(player, View::All);
     }
 };
 
@@ -228,16 +235,10 @@ ChooseLandAdvancedUtilGUI::ChooseLandAdvancedUtilGUI(
     ChooseCallback                   callback,
     BackSimpleForm<>::ButtonCallback back
 ) {
-    impl_ = std::make_shared<Impl>(std::move(lands), std::move(callback), std::move(back));
+    impl_ = new Impl(std::move(lands), std::move(callback), std::move(back));
 }
 
-void ChooseLandAdvancedUtilGUI::sendTo(Player& player) {
-    impl_->sendTo(player);
-
-#ifdef DEBUG
-    GlobalFuckSharedResourceMemoryLeak<Impl>.add(impl_);
-#endif
-}
+void ChooseLandAdvancedUtilGUI::sendTo(Player& player) { impl_->sendTo(player); }
 
 
 } // namespace land
