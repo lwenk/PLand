@@ -118,7 +118,8 @@ LL_TYPE_INSTANCE_HOOK(
     ::BlockPos const& pos,
     int               chance,
     ::Randomize&      randomize,
-    int               age
+    int               age,
+    ::BlockPos const& firePos
 ) {
     // 获取领地注册表实例
     auto* db   = PLand::getInstance().getLandRegistry();

@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [#156] 修复新创建的领地未正常持久化保存 @engsr6982
 
+### 🧹 其他改动
+
+- [#161] 适配 DebugShape v0.5.0 ABI @engsr6982
+- 适配 LeviLamina v1.7.0 @engsr6982
+- 适配 iListenAttentively v0.10.0 @engsr6982
+
 ## [0.15.0] - 2025-10-21
 
 ### ✨ 新增功能
