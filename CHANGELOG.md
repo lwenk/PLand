@@ -5,11 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.16.0] - 2025-11-?
 
 ### 🐛 问题修复
 
 - [#156] 修复新创建的领地未正常持久化保存 @engsr6982
+- [#158] 修复铜傀儡能开箱的问题 @yangyangzhong82
+- [#159] 修复钓鱼竿仍然能在无权限钓生物的问题 @yangyangzhong82
 
 ### 🧹 其他改动
 

@@ -21,7 +21,7 @@
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/Level.h"
 #include "mc/world/level/block/FireBlock.h"
-
+#include "mc/world/level/block/actor/ChestBlockActor.h"
 namespace land {
 
 
@@ -131,12 +131,39 @@ LL_TYPE_INSTANCE_HOOK(
     }
 }
 
+
+
+// Fix [#158](https://github.com/engsr6982/PLand/issues/158)
+LL_TYPE_INSTANCE_HOOK(
+    ChestBlockActorOpenHook,
+    ll::memory::HookPriority::Normal,
+    ChestBlockActor,
+    &ChestBlockActor::$startOpen,
+    void,
+    ::Actor& actor
+) {
+    if (actor.isPlayer()) {
+        origin(actor);
+        return;
+    }
+    // 获取领地注册表实例
+    auto* db   = PLand::getInstance().getLandRegistry();
+    auto  land = db->getLandAt(this->mPosition, actor.getDimensionId());
+
+
+    if (land && !land->getPermTable().allowOpenChest) {
+        return;
+    }
+    origin(actor);
+}
+
 // impl EventListener
 void EventListener::registerHooks() {
     RegisterHookIf<MobHurtHook>(Config::cfg.hooks.registerMobHurtHook);
     RegisterHookIf<FishingHookHitHook>(Config::cfg.hooks.registerFishingHookHitHook);
     RegisterHookIf<LayEggGoalHook>(Config::cfg.hooks.registerLayEggGoalHook);
     RegisterHookIf<FireBlockBurnHook>(Config::cfg.hooks.registerFireBlockBurnHook);
+    RegisterHookIf<ChestBlockActorOpenHook>(Config::cfg.hooks.registerChestBlockActorOpenHook);
 }
 
 

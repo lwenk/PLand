@@ -121,6 +121,7 @@ struct Config {
         bool registerFishingHookHitHook{true}; // 注册钓鱼竿Hook
         bool registerLayEggGoalHook{true};     // 注册产卵AI目标Hook
         bool registerFireBlockBurnHook{true};  // 注册火焰蔓延Hook
+        bool registerChestBlockActorOpenHook{true}; // 注册箱子打开Hook
     } hooks;
 
     struct {
