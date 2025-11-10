@@ -1,7 +1,7 @@
 #pragma once
 #include "EconomyConfig.h"
 #include "pland/Global.h"
-#include "pland/economy/impl/IEconomyInterface.h"
+#include "pland/economy/impl/IEconomy.h"
 #include <memory>
 #include <mutex>
 
@@ -15,8 +15,8 @@ namespace land {
 
 
 class EconomySystem final {
-    std::shared_ptr<internals::IEconomyInterface> mEconomySystem;
-    mutable std::mutex                            mInstanceMutex;
+    std::shared_ptr<economy::IEconomy> mEconomySystem;
+    mutable std::mutex                 mInstanceMutex;
 
     explicit EconomySystem();
 
@@ -31,12 +31,12 @@ public:
 
     LDNDAPI EconomyConfig& getConfig() const;
 
-    LDNDAPI std::shared_ptr<internals::IEconomyInterface> getEconomyInterface() const;
+    LDNDAPI std::shared_ptr<economy::IEconomy> getEconomyInterface() const;
 
-    LDNDAPI std::shared_ptr<internals::IEconomyInterface> operator->() const;
+    LDNDAPI std::shared_ptr<economy::IEconomy> operator->() const;
 
 private:
-    std::shared_ptr<internals::IEconomyInterface> createEconomySystem() const;
+    std::shared_ptr<economy::IEconomy> createEconomySystem() const;
 };
 
 
