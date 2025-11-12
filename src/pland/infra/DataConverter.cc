@@ -5,7 +5,6 @@
 #include "pland/infra/DataConverter.h"
 #include "pland/land/Land.h"
 #include "pland/land/LandRegistry.h"
-#include "pland/utils/JSON.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -62,14 +61,6 @@ void DataConverter::writeToDb(std::vector<SharedLand> const& data) {
     for (auto& land : data) {
         writeToDb(land);
     }
-}
-
-template <class T>
-T DataConverter::reflection(nlohmann::json const& json) const {
-    T    obj;
-    auto mutableJson = json; // 创建可修改的副本
-    JSON::jsonToStructTryPatch(mutableJson, obj);
-    return obj;
 }
 
 template <typename... Args>
@@ -216,8 +207,8 @@ bool iLandConverter::execute() {
 
     auto& logger = land::PLand::getInstance().getSelf().getLogger();
     // 反射
-    mRelationShip = reflection<RawRelationShip>(*rawRelationShipJSON);
-    mData         = reflection<RawData>(*rawDataJSON);
+    json_util::json2structWithDiffPatch(*rawRelationShipJSON, mRelationShip);
+    json_util::json2structWithDiffPatch(*rawDataJSON, mData);
     if (mRelationShip.version != 284 || mData.version != 284) {
         logger.warn(
             "The version of the data file does not match the current version, the conversion may not be accurate"

@@ -13,7 +13,7 @@
 #include "pland/land/Land.h"
 #include "pland/land/LandContext.h"
 #include "pland/land/LandTemplatePermTable.h"
-#include "pland/utils/JSON.h"
+#include "pland/utils/JsonUtil.h"
 #include "pland/utils/Utils.h"
 #include <algorithm>
 #include <chrono>
@@ -41,7 +41,7 @@ void LandRegistry::_loadOperators() {
     if (!mDB->has(DbOperatorDataKey)) {
         mDB->set(DbOperatorDataKey, "[]"); // empty array
     }
-    auto ops = JSON::parse(*mDB->get(DbOperatorDataKey));
+    auto ops = nlohmann::json::parse(*mDB->get(DbOperatorDataKey));
     for (auto& op : ops) {
         auto uuidStr = op.get<std::string>();
         if (!mce::UUID::canParse(uuidStr)) {
@@ -55,14 +55,14 @@ void LandRegistry::_loadPlayerSettings() {
     if (!mDB->has(DbPlayerSettingDataKey)) {
         mDB->set(DbPlayerSettingDataKey, "{}"); // empty object
     }
-    auto settings = JSON::parse(*mDB->get(DbPlayerSettingDataKey));
+    auto settings = nlohmann::json::parse(*mDB->get(DbPlayerSettingDataKey));
     if (!settings.is_object()) {
         throw std::runtime_error("player settings is not an object");
     }
 
     for (auto& [key, value] : settings.items()) {
         PlayerSettings settings_;
-        JSON::jsonToStructTryPatch(value, settings_);
+        json_util::json2structWithDiffPatch(value, settings_);
         mPlayerSettings.emplace(key, std::move(settings_));
     }
 }
@@ -168,7 +168,7 @@ void LandRegistry::_loadLands() {
     for (auto [key, value] : iter) {
         if (!isLandData(key)) continue;
 
-        auto json = JSON::parse(value);
+        auto json = nlohmann::json::parse(value);
         _migrateLegacyKeysIfNeeded(json);
 
         auto land = Land::make();
@@ -187,7 +187,7 @@ void LandRegistry::_loadLands() {
 void LandRegistry::_loadLandTemplatePermTable() {
     if (!mDB->has(DbTemplatePermKey)) {
         auto t = LandPermTable{};
-        mDB->set(DbTemplatePermKey, JSON::structTojson(t).dump());
+        mDB->set(DbTemplatePermKey, json_util::struct2json(t).dump());
     }
 
     auto rawJson = mDB->get(DbTemplatePermKey);
@@ -198,7 +198,7 @@ void LandRegistry::_loadLandTemplatePermTable() {
         }
 
         auto t = LandPermTable{};
-        JSON::jsonToStructTryPatch(json, t); // 反射并补丁
+        json_util::json2structWithDiffPatch(json, t); // 反射并补丁
 
         mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(t);
     } catch (...) {
@@ -239,12 +239,12 @@ namespace land {
 
 void LandRegistry::save() {
     std::shared_lock<std::shared_mutex> lock(mMutex); // 获取锁
-    mDB->set(DbOperatorDataKey, JSON::stringify(JSON::structTojson(mLandOperators)));
+    mDB->set(DbOperatorDataKey, json_util::struct2json(mLandOperators).dump());
 
-    mDB->set(DbPlayerSettingDataKey, JSON::stringify(JSON::structTojson(mPlayerSettings)));
+    mDB->set(DbPlayerSettingDataKey, json_util::struct2json(mPlayerSettings).dump());
 
     if (mLandTemplatePermTable->mDirtyCounter.isDirty()) {
-        if (mDB->set(DbTemplatePermKey, JSON::structTojson(mLandTemplatePermTable->mTemplatePermTable).dump())) {
+        if (mDB->set(DbTemplatePermKey, json_util::struct2json(mLandTemplatePermTable->mTemplatePermTable).dump())) {
             mLandTemplatePermTable->mDirtyCounter.reset();
         }
     }

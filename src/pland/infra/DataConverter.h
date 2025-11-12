@@ -2,12 +2,12 @@
 #include "nlohmann/json_fwd.hpp"
 #include "pland/Global.h"
 #include "pland/land/Land.h"
+#include "pland/utils/JsonUtil.h"
 #include <filesystem>
 #include <memory>
 #include <optional>
 #include <unordered_map>
 #include <vector>
-
 
 namespace land {
 
@@ -31,9 +31,6 @@ public:
     void writeToDb(SharedLand const& data);
 
     void writeToDb(std::vector<SharedLand> const& data);
-
-    template <class T>
-    T reflection(nlohmann::json const& json) const;
 
     template <typename... Args>
     void printProgress(size_t progress, size_t total, fmt::format_string<Args...> fmt, Args&&... args);

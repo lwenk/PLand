@@ -6,7 +6,7 @@
 #include "pland/PLand.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandRegistry.h"
-#include "pland/utils/JSON.h"
+#include "pland/utils/JsonUtil.h"
 #include <stack>
 #include <unordered_set>
 #include <vector>
@@ -307,10 +307,10 @@ void Land::updateXUIDToUUID(mce::UUID const& ownerUUID) {
 }
 
 void Land::load(nlohmann::json& json) {
-    JSON::jsonToStruct(json, mContext);
+    json_util::json2struct(json, mContext);
     _initCache();
 }
-nlohmann::json Land::dump() const { return JSON::structTojson(mContext); }
+nlohmann::json Land::dump() const { return json_util::struct2json(mContext); }
 void           Land::save(bool force) {
     if (isDirty() || force) {
         if (PLand::getInstance().getLandRegistry()->save(*this)) {

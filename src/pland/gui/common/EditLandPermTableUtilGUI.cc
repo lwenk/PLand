@@ -1,7 +1,7 @@
 #include "EditLandPermTableUtilGUI.h"
 #include "ll/api/form/CustomForm.h"
 #include "pland/land/LandContext.h"
-#include "pland/utils/JSON.h"
+#include "pland/utils/JsonUtil.h"
 
 namespace land {
 
@@ -12,7 +12,7 @@ void EditLandPermTableUtilGUI::sendTo(Player& player, const LandPermTable& table
     auto& i18n       = ll::i18n::getInstance();
     auto  localeCode = GetPlayerLocaleCodeFromSettings(player);
 
-    auto json = JSON::structTojson(table);
+    auto json = json_util::struct2json(table);
     for (auto& [k, v] : json.items()) {
         fm.appendToggle(k, (std::string)i18n.get(k, localeCode), v);
     }
@@ -31,7 +31,7 @@ void EditLandPermTableUtilGUI::sendTo(Player& player, const LandPermTable& table
             }
 
             LandPermTable obj{};
-            JSON::jsonToStructNoMerge(copy, obj);
+            json_util::json2struct(copy, obj);
 
             cb(pl, obj);
         }
