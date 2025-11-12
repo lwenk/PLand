@@ -101,6 +101,9 @@ bool PLand::enable() {
 
             mImpl->mTelemetry.reset();
             mImpl->mTelemetry = std::make_unique<network::Telemetry>(this);
+
+            mImpl->mDrawHandleManager.reset();
+            mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
         }
     );
 
