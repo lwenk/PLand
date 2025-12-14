@@ -1,6 +1,5 @@
 #include "DrawHandleManager.h"
 #include "DrawerType.h"
-#include "impl/BSCIHandle.h"
 #include "impl/DebugShapeHandle.h"
 #include "impl/DefaultParticleHandle.h"
 #include "mc/world/actor/player/Player.h"
@@ -15,18 +14,6 @@ namespace land {
 DrawHandleManager::DrawHandleManager() {
     auto& logger = PLand::getInstance().getSelf().getLogger();
     switch (Config::cfg.land.drawHandleBackend) {
-    case DrawerType::BSCI: {
-        if (!drawer::detail::BSCIHandle::isBsciModuleLoaded()) {
-            logger.warn(
-                "[DrawHandleManager] The BSCI module is not loaded, and the plugin uses "
-                "the built-in particle system!"
-            );
-            logger.warn("[DrawHandleManager] BSCI 模块未加载，插件将使用内置粒子系统!");
-            Config::cfg.land.drawHandleBackend = DrawerType::DefaultParticle;
-            Config::trySave();
-        }
-        break;
-    }
     case DrawerType::DebugShape: {
         if (!drawer::detail::DebugShapeHandle::isDebugShapeLoaded()) {
             logger.warn(
@@ -50,8 +37,6 @@ std::unique_ptr<drawer::IDrawerHandle> DrawHandleManager::createHandle() const {
     switch (Config::cfg.land.drawHandleBackend) {
     case DrawerType::DefaultParticle:
         return std::make_unique<drawer::detail::DefaultParticleHandle>();
-    case DrawerType::BSCI:
-        return std::make_unique<drawer::detail::BSCIHandle>();
     case DrawerType::DebugShape:
         return std::make_unique<drawer::detail::DebugShapeHandle>();
     }
