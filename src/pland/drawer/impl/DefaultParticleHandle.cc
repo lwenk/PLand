@@ -95,12 +95,11 @@ public:
                 if (quit->load()) {
                     break;
                 }
-
-                if (auto* player = mOwner.getTargetPlayer()) {
+                mOwner.getTargetPlayer().and_then([this](Player& player) {
                     for (auto& [id, spawner] : mSpawners) {
-                        spawner.tick(*player);
+                        spawner.tick(player);
                     }
-                }
+                });
             }
             co_return;
         }).launch(ll::thread::ServerThreadExecutor::getDefault());

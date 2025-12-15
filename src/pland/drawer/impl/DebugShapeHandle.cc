@@ -126,9 +126,7 @@ GeoId DebugShapeHandle::draw(LandAABB const& aabb, DimensionType dimId, mce::Col
     auto box = newBoundsBox(toMinecraftAABB(aabb), color);
     box->setColor(color);
     box->setDimensionId(dimId);
-    if (auto* player = getTargetPlayer()) {
-        box->draw(*player);
-    }
+    getTargetPlayer().and_then([&](Player& player) { box->draw(player); });
 
     auto id = allocatedID();
     impl_->mShapes.emplace(id, std::move(box));
@@ -142,9 +140,7 @@ void DebugShapeHandle::draw(std::shared_ptr<Land> const& land, mce::Color const&
     auto box = newBoundsBox(toMinecraftAABB(land->getAABB()), color);
     box->setColor(color);
     box->setDimensionId(land->getDimensionId());
-    if (auto* player = getTargetPlayer()) {
-        box->draw(*player);
-    }
+    getTargetPlayer().and_then([&](Player& player) { box->draw(player); });
     impl_->mLandShapes.emplace(land->getId(), std::move(box));
 }
 
