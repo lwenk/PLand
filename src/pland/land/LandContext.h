@@ -69,79 +69,79 @@ struct LandPermTable {
     bool allowEndermanLeaveBlock{false};  // 末影人放下方块
 
     // === 兼容性映射(废弃，保留用于数据迁移) ===
-    bool allowOpenChest{false};       // -> useStorageBlocks
-    bool allowAxePeeled{false};       // -> useTools
-    bool allowRideTrans{false};       // -> allowRideEntity
-    bool useAnvil{false};             // -> useCraftingBlocks
-    bool useBarrel{false};            // -> useStorageBlocks
-    bool useBeacon{false};            // -> useUtilityBlocks
-    bool useBell{false};              // -> useDecorative
-    bool useBlastFurnace{false};      // -> useFurnaces
-    bool useBrewingStand{false};      // -> useCraftingBlocks
-    bool useCampfire{false};          // -> useUtilityBlocks
-    bool useFlintAndSteel{false};     // -> useTools
-    bool useCartographyTable{false};  // -> useCraftingBlocks
-    bool useComposter{false};         // -> useUtilityBlocks
-    bool useCraftingTable{false};     // -> useCraftingBlocks
-    bool useDaylightDetector{false};  // -> useRedstoneBlocks
-    bool useDispenser{false};         // -> useRedstoneBlocks
-    bool useDropper{false};           // -> useRedstoneBlocks
-    bool useEnchantingTable{false};   // -> useCraftingBlocks
-    bool useDoor{false};              // -> useMovement
-    bool useFenceGate{false};         // -> useMovement
-    bool useFurnace{false};           // -> useFurnaces
-    bool useGrindstone{false};        // -> useCraftingBlocks
-    bool useHopper{false};            // -> useStorageBlocks
-    bool useJukebox{false};           // -> useDecorative
-    bool useLoom{false};              // -> useCraftingBlocks
-    bool useStonecutter{false};       // -> useCraftingBlocks
-    bool useNoteBlock{false};         // -> useDecorative
-    bool useCrafter{false};           // -> useCraftingBlocks
-    bool useChiseledBookshelf{false}; // -> useStorageBlocks
-    bool useComparator{false};        // -> useRedstoneBlocks
-    bool useRepeater{false};          // -> useRedstoneBlocks
-    bool useShulkerBox{false};        // -> useStorageBlocks
-    bool useSmithingTable{false};     // -> useCraftingBlocks
-    bool useSmoker{false};            // -> useFurnaces
-    bool useTrapdoor{false};          // -> useMovement
-    bool useLectern{false};           // -> useUtilityBlocks
-    bool useCauldron{false};          // -> useUtilityBlocks
-    bool useLever{false};             // -> useRedstoneBlocks
-    bool useButton{false};            // -> useRedstoneBlocks
-    bool useRespawnAnchor{false};     // -> useUtilityBlocks
-    bool useItemFrame{false};         // -> useDecorative
-    bool usePressurePlate{false};     // -> useMovement
-    bool useArmorStand{false};        // -> useDecorative
-    bool useBoneMeal{false};          // -> useTools
-    bool useHoe{false};               // -> useTools
-    bool useShovel{false};            // -> useTools
-    bool useVault{false};             // -> useStorageBlocks
-    bool useBeeNest{false};           // -> useStorageBlocks
-    bool placeBoat{false};            // -> placeVehicles
-    bool placeMinecart{false};        // -> placeVehicles
-    bool editSign{false};             // -> editSigns
+    [[deprecated]] bool allowOpenChest{false};       // -> useStorageBlocks
+    [[deprecated]] bool allowAxePeeled{false};       // -> useTools
+    [[deprecated]] bool allowRideTrans{false};       // -> allowRideEntity
+    [[deprecated]] bool useAnvil{false};             // -> useCraftingBlocks
+    [[deprecated]] bool useBarrel{false};            // -> useStorageBlocks
+    [[deprecated]] bool useBeacon{false};            // -> useUtilityBlocks
+    [[deprecated]] bool useBell{false};              // -> useDecorative
+    [[deprecated]] bool useBlastFurnace{false};      // -> useFurnaces
+    [[deprecated]] bool useBrewingStand{false};      // -> useCraftingBlocks
+    [[deprecated]] bool useCampfire{false};          // -> useUtilityBlocks
+    [[deprecated]] bool useFlintAndSteel{false};     // -> useTools
+    [[deprecated]] bool useCartographyTable{false};  // -> useCraftingBlocks
+    [[deprecated]] bool useComposter{false};         // -> useUtilityBlocks
+    [[deprecated]] bool useCraftingTable{false};     // -> useCraftingBlocks
+    [[deprecated]] bool useDaylightDetector{false};  // -> useRedstoneBlocks
+    [[deprecated]] bool useDispenser{false};         // -> useRedstoneBlocks
+    [[deprecated]] bool useDropper{false};           // -> useRedstoneBlocks
+    [[deprecated]] bool useEnchantingTable{false};   // -> useCraftingBlocks
+    [[deprecated]] bool useDoor{false};              // -> useMovement
+    [[deprecated]] bool useFenceGate{false};         // -> useMovement
+    [[deprecated]] bool useFurnace{false};           // -> useFurnaces
+    [[deprecated]] bool useGrindstone{false};        // -> useCraftingBlocks
+    [[deprecated]] bool useHopper{false};            // -> useStorageBlocks
+    [[deprecated]] bool useJukebox{false};           // -> useDecorative
+    [[deprecated]] bool useLoom{false};              // -> useCraftingBlocks
+    [[deprecated]] bool useStonecutter{false};       // -> useCraftingBlocks
+    [[deprecated]] bool useNoteBlock{false};         // -> useDecorative
+    [[deprecated]] bool useCrafter{false};           // -> useCraftingBlocks
+    [[deprecated]] bool useChiseledBookshelf{false}; // -> useStorageBlocks
+    [[deprecated]] bool useComparator{false};        // -> useRedstoneBlocks
+    [[deprecated]] bool useRepeater{false};          // -> useRedstoneBlocks
+    [[deprecated]] bool useShulkerBox{false};        // -> useStorageBlocks
+    [[deprecated]] bool useSmithingTable{false};     // -> useCraftingBlocks
+    [[deprecated]] bool useSmoker{false};            // -> useFurnaces
+    [[deprecated]] bool useTrapdoor{false};          // -> useMovement
+    [[deprecated]] bool useLectern{false};           // -> useUtilityBlocks
+    [[deprecated]] bool useCauldron{false};          // -> useUtilityBlocks
+    [[deprecated]] bool useLever{false};             // -> useRedstoneBlocks
+    [[deprecated]] bool useButton{false};            // -> useRedstoneBlocks
+    [[deprecated]] bool useRespawnAnchor{false};     // -> useUtilityBlocks
+    [[deprecated]] bool useItemFrame{false};         // -> useDecorative
+    [[deprecated]] bool usePressurePlate{false};     // -> useMovement
+    [[deprecated]] bool useArmorStand{false};        // -> useDecorative
+    [[deprecated]] bool useBoneMeal{false};          // -> useTools
+    [[deprecated]] bool useHoe{false};               // -> useTools
+    [[deprecated]] bool useShovel{false};            // -> useTools
+    [[deprecated]] bool useVault{false};             // -> useStorageBlocks
+    [[deprecated]] bool useBeeNest{false};           // -> useStorageBlocks
+    [[deprecated]] bool placeBoat{false};            // -> placeVehicles
+    [[deprecated]] bool placeMinecart{false};        // -> placeVehicles
+    [[deprecated]] bool editSign{false};             // -> editSigns
 };
 
 
 // ! 注意：如果 LandContext 有更改，则必须递增 LandContextVersion，否则导致加载异常
 constexpr int LandContextVersion = 26;
 struct LandContext {
-    int                      version{LandContextVersion}; // 版本号
-    LandAABB                 mPos{};                      // 领地对角坐标
-    LandPos                  mTeleportPos{};              // 领地传送坐标
-    LandID                   mLandID{LandID(-1)};         // 领地唯一ID  (由 LandRegistry::addLand() 时分配)
-    LandDimid                mLandDimid{};                // 领地所在维度
-    bool                     mIs3DLand{};                 // 是否为3D领地
-    LandPermTable            mLandPermTable{};            // 领地权限
-    std::string              mLandOwner{};                // 领地主人(默认UUID,其余情况看mOwnerDataIsXUID)
-    std::vector<std::string> mLandMembers{};              // 领地成员
+    int                      version{LandContextVersion};           // 版本号
+    LandAABB                 mPos{};                                // 领地对角坐标
+    LandPos                  mTeleportPos{};                        // 领地传送坐标
+    LandID                   mLandID{LandID(-1)};                   // 领地唯一ID  (由 LandRegistry::addLand() 时分配)
+    LandDimid                mLandDimid{};                          // 领地所在维度
+    bool                     mIs3DLand{};                           // 是否为3D领地
+    LandPermTable            mLandPermTable{};                      // 领地权限
+    std::string              mLandOwner{};                          // 领地主人(默认UUID,其余情况看mOwnerDataIsXUID)
+    std::vector<std::string> mLandMembers{};                        // 领地成员
     std::string              mLandName{"Unnamed territories"_tr()}; // 领地名称
     std::string              mLandDescribe{"No description"_tr()};  // 领地描述
     int                      mOriginalBuyPrice{0};                  // 原始购买价格
-    bool                     mIsConvertedLand{false}; // 是否为转换后的领地(其它插件创建的领地)
-    bool mOwnerDataIsXUID{false}; // 领地主人数据是否为XUID (如果为true，则主人上线自动转换为UUID)
-    LandID              mParentLandID{LandID(-1)}; // 父领地ID
-    std::vector<LandID> mSubLandIDs{};             // 子领地ID
+    bool                     mIsConvertedLand{false};               // 是否为转换后的领地(其它插件创建的领地)
+    bool                     mOwnerDataIsXUID{false};   // 领地主人数据是否为XUID (如果为true，则主人上线自动转换为UUID)
+    LandID                   mParentLandID{LandID(-1)}; // 父领地ID
+    std::vector<LandID>      mSubLandIDs{};             // 子领地ID
 };
 
 STATIC_ASSERT_AGGREGATE(LandPermTable);
