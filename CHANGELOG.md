@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🐛 问题修复
+
+- 调整 mod 析构顺序，修复可能的崩溃问题 @engsr6982
+
+### 🧩 逻辑优化
+
+- 重构权限表，简化权限模型 @yangyangzhong82
+- 移除对 `BedrockServerClientInterface` 绘制后端的代码支持 @yangyangzhong82
+- [#162] 改进领地绘制处理，绘制不再对所有玩家可见 @yangyangzhong82
+
+### 🧹 其他改动
+
+- 领地绘制支持热重载 @engsr6982
+
 ## [0.16.0] - 2025-11-10
 
 ### 🐛 问题修复
