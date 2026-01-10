@@ -1,7 +1,7 @@
 add_rules("mode.debug", "mode.release")
 
 add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
-add_repositories("engsr6982-repo https://github.com/engsr6982/xmake-repo.git")
+add_repositories("iceblcokmc https://github.com/IceBlcokMC/xmake-repo.git")
 add_repositories("miracleforest-repo https://github.com/MiracleForest/xmake-repo.git")
 
 
@@ -12,9 +12,11 @@ add_requires("levibuildscript")
 -- MiracleForest
 add_requires("ilistenattentively 0.10.0")
 
+-- IceBlockMC
+add_requires("ll-bstats 0.1.2")
+
 -- xmake
 add_requires("exprtk 0.0.3")
-add_requires("cpr[ssl=y] 1.12.0") -- 遥测
 
 if has_config("devtool") then
     add_requires("imgui v1.91.6-docking", {configs = { opengl3 = true, glfw = true }})
@@ -70,7 +72,7 @@ target("PLand")
         "levilamina",
         "exprtk",
         "ilistenattentively",
-        "cpr"
+        "ll-bstats"
     )
 
     add_configfiles("src/BuildInfo.h.in")

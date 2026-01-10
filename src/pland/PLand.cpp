@@ -14,6 +14,7 @@
 #include "ll/api/utils/SystemUtils.h"
 
 #include "drawer/DrawHandleManager.h"
+#include "pland/adapter/telemetry/Telemetry.h"
 #include "pland/command/Command.h"
 #include "pland/economy/EconomySystem.h"
 #include "pland/events/ConfigReloadEvent.h"
@@ -22,7 +23,6 @@
 #include "pland/infra/SafeTeleport.h"
 #include "pland/land/LandRegistry.h"
 #include "pland/land/LandScheduler.h"
-#include "pland/network/telemetry/Telemetry.h"
 #include "pland/selector/SelectorManager.h"
 
 
@@ -47,7 +47,7 @@ struct PLand::Impl {
     std::unique_ptr<SelectorManager>                mSelectorManager{nullptr};
     std::unique_ptr<DrawHandleManager>              mDrawHandleManager{nullptr};
     ll::event::ListenerPtr                          mConfigReloadListener{nullptr};
-    std::unique_ptr<network::Telemetry>             mTelemetry{nullptr};
+    std::unique_ptr<adapter::Telemetry>             mTelemetry{nullptr};
 
 #ifdef LD_DEVTOOL
     std::unique_ptr<devtool::DevToolApp> mDevToolApp{nullptr};
@@ -90,7 +90,10 @@ bool PLand::enable() {
     mImpl->mSafeTeleport      = std::make_unique<SafeTeleport>();
     mImpl->mSelectorManager   = std::make_unique<SelectorManager>();
     mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
-    mImpl->mTelemetry         = std::make_unique<network::Telemetry>(this);
+    mImpl->mTelemetry         = std::make_unique<adapter::Telemetry>();
+    if (Config::cfg.internal.telemetry) {
+        mImpl->mTelemetry->launch(*getThreadPool());
+    }
 
     mImpl->mConfigReloadListener = ll::event::EventBus::getInstance().emplaceListener<events::ConfigReloadEvent>(
         [this](events::ConfigReloadEvent& ev [[maybe_unused]]) {
@@ -99,8 +102,11 @@ bool PLand::enable() {
 
             EconomySystem::getInstance().reloadEconomySystem();
 
-            mImpl->mTelemetry.reset();
-            mImpl->mTelemetry = std::make_unique<network::Telemetry>(this);
+            if (ev.getConfig().internal.telemetry) {
+                mImpl->mTelemetry->launch(*getThreadPool());
+            } else {
+                mImpl->mTelemetry->shutdown();
+            }
 
             mImpl->mDrawHandleManager.reset();
             mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
