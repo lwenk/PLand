@@ -1,12 +1,15 @@
 #pragma once
 #include "ISelector.h"
+#include "pland/Global.h"
+
 #include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/event/ListenerBase.h"
-#include "pland/Global.h"
+
 #include <unordered_map>
 
 
 namespace land {
+class Debouncer;
 
 
 /**
@@ -15,7 +18,7 @@ namespace land {
  */
 class SelectorManager final {
     std::unordered_map<mce::UUID, std::unique_ptr<ISelector>> mSelectors{};
-    std::unordered_map<mce::UUID, std::time_t>                mStabilization{};
+    std::unordered_map<mce::UUID, Debouncer>                  mStabilization{};
     ll::event::ListenerPtr                                    mListener{nullptr};
     std::shared_ptr<std::atomic<bool>>                        mCoroStop{nullptr};
     std::shared_ptr<ll::coro::InterruptableSleep>             mInterruptableSleep{nullptr};
