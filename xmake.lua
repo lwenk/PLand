@@ -61,8 +61,7 @@ target("PLand")
     add_defines(
         "NOMINMAX",
         "UNICODE",
-        "LDAPI_EXPORT",
-        "_HAS_CXX23=1"
+        "LDAPI_EXPORT"
     )
     add_includedirs("src")
     add_files("src/**.cpp", "src/**.cc")

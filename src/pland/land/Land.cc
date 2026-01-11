@@ -56,7 +56,7 @@ bool            Land::setAABB(LandAABB const& newRange) {
     if (!LandCreateValidator::isLandInForbiddenRange(newRange, getDimensionId())) {
         return false; // 领地范围在禁止领地范围内
     }
-    if (!LandCreateValidator::isLandRangeWithOtherCollision(getSelfFromRegistry(), newRange)) {
+    if (!LandCreateValidator::isLandRangeConflict(getSelfFromRegistry(), newRange)) {
         return false; // 领地范围与其他领地重叠
     }
     mContext.mPos = newRange;

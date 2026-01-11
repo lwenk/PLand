@@ -29,7 +29,12 @@ namespace land {
 
 
 void NewLandGUI::sendChooseLandDim(Player& player) {
-    if (!std::ranges::contains(Config::cfg.land.bought.allowDimensions, player.getDimensionId().id)) {
+    if (std::find(
+            Config::cfg.land.bought.allowDimensions.begin(),
+            Config::cfg.land.bought.allowDimensions.end(),
+            player.getDimensionId().id
+        )
+        == Config::cfg.land.bought.allowDimensions.end()) {
         mc_utils::sendText(player, "你所在的维度无法购买领地"_trf(player));
         return;
     }

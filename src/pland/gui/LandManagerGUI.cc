@@ -23,7 +23,7 @@
 #include "pland/land/LandCreateValidator.h"
 #include "pland/land/LandEvent.h"
 #include "pland/land/LandRegistry.h"
-#include "pland/land/StorageLayerError.h"
+#include "pland/land/StorageError.h"
 #include "pland/selector/ChangeLandRangeSelector.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/utils/McUtils.h"
@@ -364,7 +364,12 @@ void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) 
                 }
 
                 if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(target.getUuid()); !res) {
-                    LandCreateValidator::sendErrorMessage(self, res.error());
+                    if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                        auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                        error.sendTo(self);
+                    } else {
+                        mc_utils::sendText<mc_utils::LogLevel::Error>(self, "插件异常，无法处理此请求"_trf(self));
+                    }
                     return;
                 }
 
@@ -459,7 +464,12 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedL
         }
 
         if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(targetUuid); !res) {
-            LandCreateValidator::sendErrorMessage(self, res.error());
+            if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                error.sendTo(self);
+            } else {
+                mc_utils::sendText<mc_utils::LogLevel::Error>(self, "插件异常，无法处理此请求"_trf(self));
+            }
             return;
         }
 

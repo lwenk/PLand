@@ -12,7 +12,7 @@
 #include "pland/land/LandCreateValidator.h"
 #include "pland/land/LandEvent.h"
 #include "pland/land/LandRegistry.h"
-#include "pland/land/StorageLayerError.h"
+#include "pland/land/StorageError.h"
 #include "pland/selector/ChangeLandRangeSelector.h"
 #include "pland/selector/DefaultSelector.h"
 #include "pland/selector/SelectorManager.h"
@@ -118,7 +118,12 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
             SharedLand landPtr = selector->newLand();
 
             if (auto res = LandCreateValidator::validateCreateOrdinaryLand(pl, landPtr); !res) {
-                LandCreateValidator::sendErrorMessage(pl, res.error());
+                if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                    auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                    error.sendTo(pl);
+                } else {
+                    mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "插件异常，无法处理此请求"_trf(pl));
+                }
                 return;
             }
 
@@ -132,7 +137,6 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
 
             if (auto res = PLand::getInstance().getLandRegistry().addOrdinaryLand(landPtr); !res) {
                 mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "购买领地失败"_trf(pl));
-                StorageLayerError::sendErrorMessage(pl, res.error());
                 (void)economy->add(pl, discountedPrice); // 补回经济
                 return;
             }
@@ -219,7 +223,12 @@ void LandBuyGUI::impl(Player& player, ChangeLandRangeSelector* reSelector) {
             }
 
             if (auto res = LandCreateValidator::validateChangeLandRange(landPtr, *aabb); !res) {
-                LandCreateValidator::sendErrorMessage(pl, res.error());
+                if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                    auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                    error.sendTo(pl);
+                } else {
+                    mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "插件异常，无法处理此请求"_trf(pl));
+                }
                 return;
             }
 
@@ -328,7 +337,12 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* subSelector) {
 
             if (auto res = LandCreateValidator::validateCreateSubLand(pl, subSelector->getParentLand(), *subLandRange);
                 !res) {
-                LandCreateValidator::sendErrorMessage(pl, res.error());
+                if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                    auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                    error.sendTo(pl);
+                } else {
+                    mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "插件异常，无法处理此请求"_trf(pl));
+                }
                 return;
             }
 
