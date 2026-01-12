@@ -12,11 +12,11 @@
 #include "pland/aabb/LandAABB.h"
 #include "pland/infra/Config.h"
 #include "pland/land/Land.h"
-#include "pland/land/LandEvent.h"
 #include "pland/land/LandRegistry.h"
-#include "pland/selector/DefaultSelector.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/selector/SubLandSelector.h"
+#include "pland/service/LandManagementService.h"
+#include "pland/service/ServiceLocator.h"
 #include "pland/utils/McUtils.h"
 
 #include <string>
@@ -29,22 +29,6 @@ namespace land {
 
 
 void NewLandGUI::sendChooseLandDim(Player& player) {
-    if (std::find(
-            Config::cfg.land.bought.allowDimensions.begin(),
-            Config::cfg.land.bought.allowDimensions.end(),
-            player.getDimensionId().id
-        )
-        == Config::cfg.land.bought.allowDimensions.end()) {
-        mc_utils::sendText(player, "你所在的维度无法购买领地"_trf(player));
-        return;
-    }
-
-    PlayerAskCreateLandBeforeEvent ev(player);
-    ll::event::EventBus::getInstance().publish(ev);
-    if (ev.isCancelled()) {
-        return;
-    }
-
     ModalForm(
         PLUGIN_NAME + ("| 选择领地维度"_trf(player)),
         "请选择领地维度\n\n2D: 领地拥有整个Y轴\n3D: 自行选择Y轴范围"_trf(player),
@@ -56,28 +40,20 @@ void NewLandGUI::sendChooseLandDim(Player& player) {
                 return;
             }
 
-            bool land3D = !((bool)res.value());
-            if (land3D && !Config::cfg.land.bought.threeDimensionl.enabled) {
-                mc_utils::sendText(pl, "3D领地功能未启用，请联系管理员"_trf(pl));
-                return;
-            }
-            if (!land3D && !Config::cfg.land.bought.twoDimensionl.enabled) {
-                mc_utils::sendText(pl, "2D领地功能未启用，请联系管理员"_trf(pl));
+            bool is3D = !((bool)res.value());
+
+            auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+
+            auto expected = service.requestCreateOrdinaryLand(pl, is3D);
+            if (!expected) {
+                mc_utils::sendText(pl, expected.error().message());
                 return;
             }
 
-            PlayerAskCreateLandAfterEvent ev(pl, land3D);
-            ll::event::EventBus::getInstance().publish(ev);
-
-            auto selector = std::make_unique<DefaultSelector>(pl, land3D);
-            if (land::PLand::getInstance().getSelectorManager()->startSelection(std::move(selector))) {
-                mc_utils::sendText(
-                    pl,
-                    "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(pl, Config::cfg.selector.tool)
-                );
-            } else {
-                mc_utils::sendText(pl, "选区开启失败，当前存在未完成的选区任务"_trf(pl));
-            }
+            mc_utils::sendText(
+                pl,
+                "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(pl, Config::cfg.selector.tool)
+            );
         });
 }
 

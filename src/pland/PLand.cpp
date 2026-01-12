@@ -24,7 +24,7 @@
 #include "pland/land/LandRegistry.h"
 #include "pland/land/LandScheduler.h"
 #include "pland/selector/SelectorManager.h"
-
+#include "pland/service/ServiceLocator.h"
 
 #ifdef LD_TEST
 #include "TestMain.h"
@@ -41,13 +41,16 @@ struct PLand::Impl {
     ll::mod::NativeMod&                             mSelf;
     std::unique_ptr<ll::thread::ThreadPoolExecutor> mThreadPoolExecutor{nullptr};
     std::unique_ptr<LandRegistry>                   mLandRegistry{nullptr};
-    std::unique_ptr<EventListener>                  mEventListener{nullptr};
     std::unique_ptr<LandScheduler>                  mLandScheduler{nullptr};
+    std::unique_ptr<EventListener>                  mEventListener{nullptr};
     std::unique_ptr<SafeTeleport>                   mSafeTeleport{nullptr};
     std::unique_ptr<SelectorManager>                mSelectorManager{nullptr};
     std::unique_ptr<DrawHandleManager>              mDrawHandleManager{nullptr};
-    ll::event::ListenerPtr                          mConfigReloadListener{nullptr};
     std::unique_ptr<adapter::Telemetry>             mTelemetry{nullptr};
+
+    ll::event::ListenerPtr mConfigReloadListener{nullptr};
+
+    std::unique_ptr<service::ServiceLocator> mServiceLocator{nullptr};
 
 #ifdef LD_DEVTOOL
     std::unique_ptr<devtool::DevToolApp> mDevToolApp{nullptr};
@@ -95,6 +98,8 @@ bool PLand::enable() {
         mImpl->mTelemetry->launch(*getThreadPool());
     }
 
+    mImpl->mServiceLocator = std::make_unique<service::ServiceLocator>(*this);
+
     mImpl->mConfigReloadListener = ll::event::EventBus::getInstance().emplaceListener<events::ConfigReloadEvent>(
         [this](events::ConfigReloadEvent& ev [[maybe_unused]]) {
             mImpl->mEventListener.reset();
@@ -138,6 +143,8 @@ bool PLand::disable() {
     auto& logger = mImpl->mSelf.getLogger();
     mImpl->mTelemetry.reset();
 
+    mImpl->mServiceLocator.reset();
+
     logger.debug("Saving land registry...");
     mImpl->mLandRegistry->save();
 
@@ -172,6 +179,7 @@ LandRegistry&       PLand::getLandRegistry() const { return *mImpl->mLandRegistr
 DrawHandleManager*  PLand::getDrawHandleManager() const { return mImpl->mDrawHandleManager.get(); }
 
 ll::thread::ThreadPoolExecutor* PLand::getThreadPool() const { return mImpl->mThreadPoolExecutor.get(); }
+service::ServiceLocator&        PLand::getServiceLocator() const { return *mImpl->mServiceLocator; }
 
 #ifdef LD_DEVTOOL
 devtool::DevToolApp* PLand::getDevToolApp() const { return mImpl->mDevToolApp.get(); }

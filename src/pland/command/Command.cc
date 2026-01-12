@@ -14,7 +14,6 @@
 #include "pland/infra/DataConverter.h"
 #include "pland/land/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
-#include "pland/selector/SubLandSelector.h"
 #include "pland/utils/McUtils.h"
 
 #include "ll/api/command/Command.h"
@@ -26,44 +25,22 @@
 #include "ll/api/io/Logger.h"
 #include "ll/api/service/Bedrock.h"
 #include "ll/api/service/PlayerInfo.h"
-#include "ll/api/service/Service.h"
-#include "ll/api/utils/HashUtils.h"
 
 
 #include "mc/deps/core/math/Color.h"
-#include "mc/deps/core/string/HashedString.h"
 #include "mc/deps/core/utility/optional_ref.h"
-#include "mc/nbt/CompoundTag.h"
-#include "mc/network/ServerNetworkHandler.h"
 #include "mc/network/packet/LevelChunkPacket.h"
-#include "mc/network/packet/SetTimePacket.h"
-#include "mc/network/packet/TextPacket.h"
 #include "mc/platform/UUID.h"
-#include "mc/server/ServerLevel.h"
-#include "mc/server/ServerPlayer.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOriginType.h"
 #include "mc/server/commands/CommandOutput.h"
-#include "mc/server/commands/CommandParameterOption.h"
-#include "mc/server/commands/CommandPermissionLevel.h"
-#include "mc/server/commands/CommandPositionFloat.h"
-#include "mc/server/commands/CommandRegistry.h"
 #include "mc/server/commands/CommandSelector.h"
 #include "mc/world/actor/Actor.h"
-#include "mc/world/actor/ActorDefinitionIdentifier.h"
-#include "mc/world/actor/ActorType.h"
 #include "mc/world/actor/agent/agent_commands/Command.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/level/BlockPos.h"
-#include "mc/world/level/BlockSource.h"
-#include "mc/world/level/ChunkBlockPos.h"
-#include "mc/world/level/ChunkPos.h"
-#include "mc/world/level/GameType.h"
-#include "mc/world/level/Level.h"
-#include "mc/world/level/block/Block.h"
-#include "mc/world/level/block/actor/BlockActor.h"
-#include "mc/world/level/chunk/LevelChunk.h"
-#include "mc/world/level/dimension/Dimension.h"
+#include "pland/service/LandManagementService.h"
+#include "pland/service/ServiceLocator.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -183,44 +160,18 @@ static auto const New = [](CommandOrigin const& ori, CommandOutput& out, NewPara
     }
 
     case NewType::SubLand: {
-        if (!Config::cfg.land.subLand.enabled) {
-            mc_utils::sendText(out, "子领地功能未启用，请联系管理员"_trf(player));
+        auto expected =
+            PLand::getInstance().getServiceLocator().getLandManagementService().requestCreateSubLand(player);
+        if (!expected) {
+            mc_utils::sendText<mc_utils::LogLevel::Error>(player, expected.error().message());
             return;
         }
-
-        auto land = PLand::getInstance().getLandRegistry().getLandAt(player.getPosition(), player.getDimensionId());
-        if (!land) {
-            mc_utils::sendText(out, "当前位置没有领地"_trf(player));
-            return;
-        }
-
-        auto& uuid = player.getUuid();
-        if (!land->isOwner(uuid)) {
-            mc_utils::sendText(out, "当前位置不是你的领地"_trf(player));
-            return;
-        }
-
-        if (!land->canCreateSubLand()) {
-            mc_utils::sendText(out, "当前领地无法创建子领地"_trf(player));
-            return;
-        }
-
-        auto selector = std::make_unique<SubLandSelector>(player, land);
-        if (PLand::getInstance().getSelectorManager()->startSelection(std::move(selector))) {
-            mc_utils::sendText(
-                player,
-                "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(player, Config::cfg.selector.tool)
-            );
-        } else {
-            mc_utils::sendText(player, "选区开启失败，当前存在未完成的选区任务"_trf(player));
-        }
-
+        mc_utils::sendText(
+            player,
+            "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(player, Config::cfg.selector.tool)
+        );
         break;
     }
-
-    default:
-        // UnImplemented
-        break;
     }
 };
 

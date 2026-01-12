@@ -4,6 +4,13 @@
 #include "Global.h"
 #include "ll/api/mod/NativeMod.h"
 
+
+namespace land {
+namespace service {
+class ServiceLocator;
+}
+} // namespace land
+
 namespace ll {
 namespace thread {
 class ThreadPoolExecutor;
@@ -42,6 +49,8 @@ public: /* public */
     LDNDAPI class DrawHandleManager* getDrawHandleManager() const;
 
     LDNDAPI ll::thread::ThreadPoolExecutor* getThreadPool() const;
+
+    LDNDAPI service::ServiceLocator& getServiceLocator() const;
 
 #ifdef LD_DEVTOOL
     [[nodiscard]] devtool::DevToolApp* getDevToolApp() const;

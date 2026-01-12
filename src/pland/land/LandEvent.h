@@ -12,31 +12,6 @@
 namespace land {
 
 
-// 玩家请求创建领地 (ChooseLandDimAndNewLand)
-class PlayerAskCreateLandBeforeEvent final : public ll::event::Cancellable<ll::event::Event> {
-protected:
-    Player& mPlayer;
-
-public:
-    LDAPI constexpr explicit PlayerAskCreateLandBeforeEvent(Player& player) : Cancellable(), mPlayer(player) {}
-
-    LDNDAPI Player& getPlayer() const;
-};
-class PlayerAskCreateLandAfterEvent final : public ll::event::Event {
-protected:
-    Player& mPlayer;
-    bool    mIs3DLand;
-
-public:
-    LDAPI constexpr explicit PlayerAskCreateLandAfterEvent(Player& player, bool is3DLand)
-    : mPlayer(player),
-      mIs3DLand(is3DLand) {}
-
-    LDNDAPI Player& getPlayer() const;
-    LDNDAPI bool    is3DLand() const;
-};
-
-
 // 玩家购买领地 (LandBuyGUI)
 class PlayerBuyLandBeforeEvent final : public ll::event::Cancellable<ll::event::Event> {
 protected:
