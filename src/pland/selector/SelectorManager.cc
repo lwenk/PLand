@@ -45,7 +45,7 @@ SelectorManager::SelectorManager() {
             }
 
             if (selector->isPointABSet()) {
-                mc_utils::executeCommand("pland buy", &player); // TODO: 优化
+                mc_utils::executeCommand("pland buy", player); // TODO: 优化
                 return;
             }
 

@@ -380,7 +380,7 @@ static auto const This = [](CommandOrigin const& ori, CommandOutput& out) {
 
 
 bool LandCommand::setup() {
-    auto& cmd = ll::command::CommandRegistrar::getInstance().getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
+    auto& cmd = ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
 
     // pland reload
     cmd.overload().text("reload").execute(Lambda::Reload);

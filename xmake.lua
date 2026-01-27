@@ -6,14 +6,14 @@ add_repositories("miracleforest-repo https://github.com/MiracleForest/xmake-repo
 
 
 -- LeviMc(LiteLDev)
-add_requires("levilamina 1.7.0", {configs = {target_type = "server"}})
+add_requires("levilamina 1.9.2", {configs = {target_type = "server"}})
 add_requires("levibuildscript")
 
 -- MiracleForest
-add_requires("ilistenattentively 0.10.0")
+add_requires("ilistenattentively 0.11.0")
 
 -- IceBlockMC
-add_requires("ll-bstats 0.1.2")
+add_requires("ll-bstats 0.2.0")
 
 -- xmake
 add_requires("exprtk 0.0.3")
@@ -55,7 +55,8 @@ target("PLand")
     add_defines(
         "NOMINMAX",
         "UNICODE",
-        "LDAPI_EXPORT"
+        "LDAPI_EXPORT",
+        "LL_PLAT_S"
     )
     add_includedirs("src")
     add_files("src/**.cpp", "src/**.cc")

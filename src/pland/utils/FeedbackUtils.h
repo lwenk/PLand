@@ -54,8 +54,7 @@ inline void sendError(CommandOutput& output, ll::Error const& error) { sendError
 template <typename... Args>
 void sendTextTip(Player& p, std::string_view fmt, Args&&... args) {
     TextPacket pkt{};
-    pkt.mType    = TextPacketType::Tip;
-    pkt.mMessage = fmt_str(fmt, std::forward<Args>(args)...);
+    pkt.mBody = TextPacketPayload::MessageOnly{TextPacketType::Tip, fmt_str(fmt, std::forward<Args>(args)...)};
     pkt.sendTo(p);
 }
 

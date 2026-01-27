@@ -60,14 +60,14 @@ namespace mc_utils {
     throw std::runtime_error("dimension not found");
 }
 
-inline void executeCommand(const std::string& cmd, Player* player) {
+inline void executeCommand(const std::string& cmd, Player& player) {
     auto& minecraftCommands = ll::service::getMinecraft()->mCommands;
     if (!minecraftCommands) {
         return;
     }
     CommandContext ctx = CommandContext(
         cmd,
-        std::make_unique<PlayerCommandOrigin>(PlayerCommandOrigin(*player)),
+        std::make_unique<PlayerCommandOrigin>(player.getLevel(), player.getOrCreateUniqueID()),
         CommandVersion::CurrentVersion()
     );
     minecraftCommands->executeCommand(ctx, true);

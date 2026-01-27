@@ -19,14 +19,15 @@
 
 
 // Fix LNK2019: "public: __cdecl MolangVariableMap::MolangVariableMap(class MolangVariableMap const &)"
-MolangVariableMap::MolangVariableMap(MolangVariableMap const& rhs) {
-    mMapFromVariableIndexToVariableArrayOffset = rhs.mMapFromVariableIndexToVariableArrayOffset;
-    mVariables                                 = {};
-    for (auto& ptr : *rhs.mVariables) {
-        mVariables->push_back(std::make_unique<MolangVariable>(*ptr));
-    }
-    mHasPublicVariables = rhs.mHasPublicVariables;
-}
+// MolangVariableMap::MolangVariableMap(MolangVariableMap const& rhs) {
+//     mMapFromVariableIndexToVariableArrayOffset = rhs.mMapFromVariableIndexToVariableArrayOffset;
+//     mVariables                                 = {};
+//     for (auto& ptr : *rhs.mVariables) {
+//         mVariables->push_back(std::make_unique<MolangVariable>(*ptr));
+//     }
+//     mHasPublicVariables = rhs.mHasPublicVariables;
+// }
+MolangScriptArg::MolangScriptArg() = default;
 
 namespace land::drawer::detail {
 

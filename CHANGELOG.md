@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-01-27
+
 ### 🐛 问题修复
 
 - 调整 mod 析构顺序，修复可能的崩溃 @engsr6982
@@ -22,8 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🧹 其他改动
 
 - 领地绘制支持热重载 @engsr6982
-- 移除 `PlayerAskCreateLandBeforeEvent` 事件 @engsr6982 
+- 移除 `PlayerAskCreateLandBeforeEvent` 事件 @engsr6982
 - 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
+- 适配 Levilamina v1.9.x @engsr6982
 
 ## [0.16.0] - 2025-11-10
 
