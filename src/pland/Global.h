@@ -1,7 +1,8 @@
 #pragma once
 #include "ll/api/i18n/I18n.h"
+
 #include "mc/platform/UUID.h"
-#include <expected>
+
 #include <type_traits>
 #include <unordered_map>
 
@@ -45,14 +46,10 @@ enum class LandPermType : int {
 
 extern std::unordered_map<mce::UUID, std::string> GlobalPlayerLocaleCodeCached;
 LDNDAPI extern std::string
-GetPlayerLocaleCodeFromSettings(Player& player); // PLand::getInstance().getLandRegistry()->getPlayerLocaleCode
+GetPlayerLocaleCodeFromSettings(Player& player); // PLand::getInstance().getLandRegistry().getPlayerLocaleCode
 
 
 inline int constexpr GlobalSubLandMaxNestedLevel = 16; // 子领地最大嵌套层数
-
-
-template <typename T, typename E = std::string>
-using Result = std::expected<T, E>;
 
 } // namespace land
 

@@ -3,6 +3,7 @@
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/command/Command.h"
+#include "pland/drawer/DrawHandleManager.h"
 #include "pland/events/ConfigReloadEvent.h"
 #include "pland/gui/LandBuyGUI.h"
 #include "pland/gui/LandMainMenuGUI.h"
@@ -11,14 +12,12 @@
 #include "pland/gui/NewLandGUI.h"
 #include "pland/infra/Config.h"
 #include "pland/infra/DataConverter.h"
-#include "pland/infra/DrawHandleManager.h"
-#include "pland/infra/draw/IDrawHandle.h"
 #include "pland/land/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
-#include "pland/selector/SubLandSelector.h"
+#include "pland/service/LandManagementService.h"
+#include "pland/service/ServiceLocator.h"
+#include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
-#include "pland/utils/Utils.h"
-
 
 #include "ll/api/command/Command.h"
 #include "ll/api/command/CommandHandle.h"
@@ -29,44 +28,21 @@
 #include "ll/api/io/Logger.h"
 #include "ll/api/service/Bedrock.h"
 #include "ll/api/service/PlayerInfo.h"
-#include "ll/api/service/Service.h"
-#include "ll/api/utils/HashUtils.h"
 
 
 #include "mc/deps/core/math/Color.h"
-#include "mc/deps/core/string/HashedString.h"
 #include "mc/deps/core/utility/optional_ref.h"
-#include "mc/nbt/CompoundTag.h"
-#include "mc/network/ServerNetworkHandler.h"
 #include "mc/network/packet/LevelChunkPacket.h"
-#include "mc/network/packet/SetTimePacket.h"
-#include "mc/network/packet/TextPacket.h"
 #include "mc/platform/UUID.h"
-#include "mc/server/ServerLevel.h"
-#include "mc/server/ServerPlayer.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOriginType.h"
 #include "mc/server/commands/CommandOutput.h"
-#include "mc/server/commands/CommandParameterOption.h"
-#include "mc/server/commands/CommandPermissionLevel.h"
-#include "mc/server/commands/CommandPositionFloat.h"
-#include "mc/server/commands/CommandRegistry.h"
 #include "mc/server/commands/CommandSelector.h"
 #include "mc/world/actor/Actor.h"
-#include "mc/world/actor/ActorDefinitionIdentifier.h"
-#include "mc/world/actor/ActorType.h"
 #include "mc/world/actor/agent/agent_commands/Command.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/level/BlockPos.h"
-#include "mc/world/level/BlockSource.h"
-#include "mc/world/level/ChunkBlockPos.h"
-#include "mc/world/level/ChunkPos.h"
-#include "mc/world/level/GameType.h"
-#include "mc/world/level/Level.h"
-#include "mc/world/level/block/Block.h"
-#include "mc/world/level/block/actor/BlockActor.h"
-#include "mc/world/level/chunk/LevelChunk.h"
-#include "mc/world/level/dimension/Dimension.h"
+
 
 #include <algorithm>
 #include <filesystem>
@@ -84,7 +60,7 @@ namespace land {
 
 #define CHECK_TYPE(ori, out, type)                                                                                     \
     if (ori.getOriginType() != type) {                                                                                 \
-        mc_utils::sendText(out, "此命令仅限 {} 使用!"_tr(magic_enum::enum_name(type)));                                \
+        feedback_utils::sendErrorText(out, "此命令仅限 {} 使用!"_tr(magic_enum::enum_name(type)));                     \
         return;                                                                                                        \
     }
 
@@ -116,11 +92,11 @@ struct OperatorParam {
 };
 static auto const Operator = [](CommandOrigin const& ori, CommandOutput& out, OperatorParam const& param) {
     CHECK_TYPE(ori, out, CommandOriginType::DedicatedServer);
-    auto& db  = *PLand::getInstance().getLandRegistry();
+    auto& db  = PLand::getInstance().getLandRegistry();
     auto  pls = param.player.results(ori).data;
 
     if (pls->empty()) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(out, "未找到任何玩家，请确保玩家在线后重试"_tr());
+        feedback_utils::sendErrorText(out, "未找到任何玩家，请确保玩家在线后重试"_tr());
         return;
     }
 
@@ -132,15 +108,15 @@ static auto const Operator = [](CommandOrigin const& ori, CommandOutput& out, Op
         auto  name = pl->getRealName();
         if (param.type == OperatorType::Op) {
             if (db.isOperator(uid)) {
-                mc_utils::sendText(out, "{} 已经是管理员，请不要重复添加"_tr(name));
+                feedback_utils::sendErrorText(out, "{} 已经是管理员，请不要重复添加"_tr(name));
             } else {
-                if (db.addOperator(uid)) mc_utils::sendText(out, "{} 已经被添加为管理员"_tr(name));
+                if (db.addOperator(uid)) feedback_utils::sendText(out, "{} 已经被添加为管理员"_tr(name));
             }
         } else {
             if (db.isOperator(uid)) {
-                if (db.removeOperator(uid)) mc_utils::sendText(out, "{} 已经被移除管理员"_tr(name));
+                if (db.removeOperator(uid)) feedback_utils::sendText(out, "{} 已经被移除管理员"_tr(name));
             } else {
-                mc_utils::sendText(out, "{} 不是管理员，无需移除"_tr(name));
+                feedback_utils::sendErrorText(out, "{} 不是管理员，无需移除"_tr(name));
             }
         }
     }
@@ -148,9 +124,9 @@ static auto const Operator = [](CommandOrigin const& ori, CommandOutput& out, Op
 
 static auto const ListOperator = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::DedicatedServer);
-    auto& operators = PLand::getInstance().getLandRegistry()->getOperators();
+    auto& operators = PLand::getInstance().getLandRegistry().getOperators();
     if (operators.empty()) {
-        mc_utils::sendText(out, "当前没有管理员"_tr());
+        feedback_utils::sendErrorText(out, "当前没有管理员"_tr());
         return;
     }
 
@@ -166,7 +142,7 @@ static auto const ListOperator = [](CommandOrigin const& ori, CommandOutput& out
         }
         oss << " | ";
     }
-    mc_utils::sendText(out, oss.str());
+    feedback_utils::sendText(out, oss.str());
     return;
 };
 
@@ -186,44 +162,18 @@ static auto const New = [](CommandOrigin const& ori, CommandOutput& out, NewPara
     }
 
     case NewType::SubLand: {
-        if (!Config::cfg.land.subLand.enabled) {
-            mc_utils::sendText(out, "子领地功能未启用，请联系管理员"_trf(player));
+        auto expected =
+            PLand::getInstance().getServiceLocator().getLandManagementService().requestCreateSubLand(player);
+        if (!expected) {
+            feedback_utils::sendErrorText(player, expected.error().message());
             return;
         }
-
-        auto land = PLand::getInstance().getLandRegistry()->getLandAt(player.getPosition(), player.getDimensionId());
-        if (!land) {
-            mc_utils::sendText(out, "当前位置没有领地"_trf(player));
-            return;
-        }
-
-        auto& uuid = player.getUuid();
-        if (!land->isOwner(uuid)) {
-            mc_utils::sendText(out, "当前位置不是你的领地"_trf(player));
-            return;
-        }
-
-        if (!land->canCreateSubLand()) {
-            mc_utils::sendText(out, "当前领地无法创建子领地"_trf(player));
-            return;
-        }
-
-        auto selector = std::make_unique<SubLandSelector>(player, land);
-        if (PLand::getInstance().getSelectorManager()->startSelection(std::move(selector))) {
-            mc_utils::sendText(
-                player,
-                "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(player, Config::cfg.selector.tool)
-            );
-        } else {
-            mc_utils::sendText(player, "选区开启失败，当前存在未完成的选区任务"_trf(player));
-        }
-
+        feedback_utils::sendText(
+            player,
+            "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(player, Config::cfg.selector.tool)
+        );
         break;
     }
-
-    default:
-        // UnImplemented
-        break;
     }
 };
 
@@ -236,10 +186,7 @@ static auto const Set = [](CommandOrigin const& ori, CommandOutput& out, SetPara
     auto& player = *static_cast<Player*>(ori.getEntity());
 
     if (!PLand::getInstance().getSelectorManager()->hasSelector(player)) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(
-            out,
-            "您还没有开启领地选区，请先使用 /pland new 命令"_trf(player)
-        );
+        feedback_utils::sendErrorText(out, "您还没有开启领地选区，请先使用 /pland new 命令"_trf(player));
         return;
     }
 
@@ -257,7 +204,7 @@ static auto const Cancel = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
     PLand::getInstance().getSelectorManager()->stopSelection(player);
-    mc_utils::sendText(out, "已取消新建领地"_trf(player));
+    feedback_utils::sendText(out, "已取消新建领地"_trf(player));
 };
 
 
@@ -271,9 +218,9 @@ static auto const Reload = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::DedicatedServer);
     if (Config::tryLoad()) {
         ll::event::EventBus::getInstance().publish(events::ConfigReloadEvent{Config::cfg});
-        mc_utils::sendText(out, "领地系统配置已重新加载"_tr());
+        feedback_utils::sendText(out, "领地系统配置已重新加载"_tr());
     } else {
-        mc_utils::sendText(out, "领地系统配置加载失败，请检查配置文件"_tr());
+        feedback_utils::sendErrorText(out, "领地系统配置加载失败，请检查配置文件"_tr());
     }
 };
 
@@ -286,31 +233,31 @@ static auto const Draw = [](CommandOrigin const& ori, CommandOutput& out, DrawPa
     CHECK_TYPE(ori, out, CommandOriginType::Player);
 
     auto& player = *static_cast<Player*>(ori.getEntity());
-    auto& db     = *PLand::getInstance().getLandRegistry();
+    auto& db     = PLand::getInstance().getLandRegistry();
     auto  handle = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(player);
 
     switch (param.type) {
     case DrawType::Disable: {
         handle->clearLand();
-        mc_utils::sendText(out, "领地绘制已关闭"_trf(player));
+        feedback_utils::sendText(out, "领地绘制已关闭"_trf(player));
         break;
     }
 
     case DrawType::CurrentLand: {
         auto land = db.getLandAt(player.getPosition(), player.getDimensionId().id);
         if (!land) {
-            mc_utils::sendText<mc_utils::LogLevel::Error>(out, "您当前不在领地内"_trf(player));
+            feedback_utils::sendErrorText(out, "您当前不在领地内"_trf(player));
             return;
         }
         handle->draw(land, mce::Color::GREEN());
-        mc_utils::sendText(out, "已绘制领地"_trf(player));
+        feedback_utils::sendText(out, "已绘制领地"_trf(player));
         break;
     }
 
     case DrawType::NearLand: {
         auto lands = db.getLandAt(player.getPosition(), Config::cfg.land.drawRange, player.getDimensionId().id);
         for (auto& land : lands) handle->draw(land, mce::Color::WHITE());
-        mc_utils::sendText(out, "已绘制附近 {} 个领地"_trf(player, lands.size()));
+        feedback_utils::sendText(out, "已绘制附近 {} 个领地"_trf(player, lands.size()));
         break;
     }
     }
@@ -349,16 +296,16 @@ static auto const SetLandTeleportPos = [](CommandOrigin const& ori, CommandOutpu
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
 
-    auto& db   = *PLand::getInstance().getLandRegistry();
+    auto& db   = PLand::getInstance().getLandRegistry();
     auto  land = db.getLandAt(player.getPosition(), player.getDimensionId().id);
     if (!land) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(out, "您当前不在领地内"_trf(player));
+        feedback_utils::sendErrorText(out, "您当前不在领地内"_trf(player));
         return;
     }
 
     auto& uuid = player.getUuid();
     if (!land->isOwner(uuid) && !db.isOperator(uuid)) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(out, "您不是领地主人，无法设置传送点"_trf(player));
+        feedback_utils::sendErrorText(out, "您不是领地主人，无法设置传送点"_trf(player));
         return;
     }
     land->setTeleportPos(LandPos::make(player.getPosition()));
@@ -397,7 +344,7 @@ static auto const SetLanguage = [](CommandOrigin const& ori, CommandOutput& out)
         auto lang = std::get<std::string>(res->at("lang"));
 
         auto& uuid     = pl.getUuid();
-        auto& db       = *PLand::getInstance().getLandRegistry();
+        auto& db       = PLand::getInstance().getLandRegistry();
         auto  settings = db.getPlayerSettings(uuid);
         if (!settings) {
             db.setPlayerSettings(uuid, PlayerSettings{});
@@ -406,7 +353,7 @@ static auto const SetLanguage = [](CommandOrigin const& ori, CommandOutput& out)
 
         settings->localeCode               = lang;
         GlobalPlayerLocaleCodeCached[uuid] = lang;
-        mc_utils::sendText<mc_utils::LogLevel::Info>(pl, "语言包已切换为: {}"_trf(pl, lang));
+        feedback_utils::sendText(pl, "语言包已切换为: {}"_trf(pl, lang));
     });
 };
 
@@ -414,15 +361,15 @@ static auto const This = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
 
-    auto land = PLand::getInstance().getLandRegistry()->getLandAt(player.getPosition(), player.getDimensionId());
+    auto land = PLand::getInstance().getLandRegistry().getLandAt(player.getPosition(), player.getDimensionId());
     if (!land) {
-        mc_utils::sendText<mc_utils::LogLevel::Info>(player, "当前位置没有领地"_trf(player));
+        feedback_utils::sendText(player, "当前位置没有领地"_trf(player));
         return;
     }
 
     auto& uuid = player.getUuid();
-    if (!land->isOwner(uuid) && !PLand::getInstance().getLandRegistry()->isOperator(uuid)) {
-        mc_utils::sendText<mc_utils::LogLevel::Info>(player, "当前位置不是你的领地"_trf(player));
+    if (!land->isOwner(uuid) && !PLand::getInstance().getLandRegistry().isOperator(uuid)) {
+        feedback_utils::sendText(player, "当前位置不是你的领地"_trf(player));
         return;
     }
 
@@ -433,7 +380,7 @@ static auto const This = [](CommandOrigin const& ori, CommandOutput& out) {
 
 
 bool LandCommand::setup() {
-    auto& cmd = ll::command::CommandRegistrar::getInstance().getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
+    auto& cmd = ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
 
     // pland reload
     cmd.overload().text("reload").execute(Lambda::Reload);

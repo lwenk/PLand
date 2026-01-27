@@ -1,10 +1,11 @@
 #pragma once
 #include "LandDimensionChunkMap.h"
 #include "LandIdAllocator.h"
-#include "StorageLayerError.h"
-#include "ll/api/data/KeyValueDB.h"
 #include "pland/Global.h"
 #include "pland/land/Land.h"
+
+#include "ll/api/data/KeyValueDB.h"
+
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -61,9 +62,9 @@ private: //! private 方法非线程安全
 
     LandID getNextLandID() const;
 
-    Result<void, StorageLayerError::Error> _removeLand(SharedLand const& ptr);
+    ll::Expected<> _removeLand(SharedLand const& ptr);
 
-    Result<void, StorageLayerError::Error> _addLand(SharedLand land);
+    ll::Expected<> _addLand(SharedLand land);
 
 public:
     LD_DISABLE_COPY_AND_MOVE(LandRegistry);
@@ -94,9 +95,9 @@ public:
 
     LDAPI void refreshLandRange(SharedLand const& ptr); // 刷新领地范围
 
-    LDNDAPI Result<void, StorageLayerError::Error> addOrdinaryLand(SharedLand const& land);
+    LDNDAPI ll::Expected<> addOrdinaryLand(SharedLand const& land);
 
-    LDNDAPI Result<void, StorageLayerError::Error> addSubLand(SharedLand const& parent, SharedLand const& sub);
+    LDNDAPI ll::Expected<> addSubLand(SharedLand const& parent, SharedLand const& sub);
 
     /**
      * @brief 移除领地
@@ -107,27 +108,27 @@ public:
     /**
      * @brief 移除普通领地
      */
-    LDNDAPI Result<void, StorageLayerError::Error> removeOrdinaryLand(SharedLand const& ptr);
+    LDNDAPI ll::Expected<> removeOrdinaryLand(SharedLand const& ptr);
 
     /**
      * @brief 移除子领地
      */
-    LDNDAPI Result<void, StorageLayerError::Error> removeSubLand(SharedLand const& ptr);
+    LDNDAPI ll::Expected<> removeSubLand(SharedLand const& ptr);
 
     /**
      * @brief 移除领地和其子领地
      */
-    LDNDAPI Result<void, StorageLayerError::Error> removeLandAndSubLands(SharedLand const& ptr);
+    LDNDAPI ll::Expected<> removeLandAndSubLands(SharedLand const& ptr);
 
     /**
      * @brief 移除当前领地并提升子领地为普通领地
      */
-    LDNDAPI Result<void, StorageLayerError::Error> removeLandAndPromoteSubLands(SharedLand const& ptr);
+    LDNDAPI ll::Expected<> removeLandAndPromoteSubLands(SharedLand const& ptr);
 
     /**
      * @brief 移除当前领地并移交子领地给当前领地的父领地
      */
-    LDNDAPI Result<void, StorageLayerError::Error> removeLandAndTransferSubLands(SharedLand const& ptr);
+    LDNDAPI ll::Expected<> removeLandAndTransferSubLands(SharedLand const& ptr);
 
 
 public: // 领地查询API

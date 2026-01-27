@@ -7,10 +7,6 @@
 
 namespace land {
 
-Player& PlayerAskCreateLandBeforeEvent::getPlayer() const { return mPlayer; }
-Player& PlayerAskCreateLandAfterEvent::getPlayer() const { return mPlayer; }
-bool    PlayerAskCreateLandAfterEvent::is3DLand() const { return mIs3DLand; }
-
 
 Player&    PlayerBuyLandBeforeEvent::getPlayer() const { return mPlayer; }
 ISelector* PlayerBuyLandBeforeEvent::getSelector() const { return mSelector; }
@@ -70,8 +66,6 @@ int const&        LandRangeChangeAfterEvent::getRefundPrice() const { return mRe
         return std::make_unique<EventName##Emitter>();                                                                 \
     }
 
-IMPLEMENT_EVENT_EMITTER(PlayerAskCreateLandBeforeEvent)
-IMPLEMENT_EVENT_EMITTER(PlayerAskCreateLandAfterEvent)
 IMPLEMENT_EVENT_EMITTER(PlayerBuyLandBeforeEvent)
 IMPLEMENT_EVENT_EMITTER(PlayerBuyLandAfterEvent)
 IMPLEMENT_EVENT_EMITTER(PlayerEnterLandEvent)

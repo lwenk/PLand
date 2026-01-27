@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.17.0] - 2026-01-27
+
+### 🐛 问题修复
+
+- 调整 mod 析构顺序，修复可能的崩溃 @engsr6982
+- 修复配置文件 `minHeight` 配置项无效 @engsr6982
+- 修复领地轴方块数量计算错误 @engsr6982
+
+### 🧩 逻辑优化
+
+- 移除对 `BedrockServerClientInterface` 绘制后端的代码支持 @yangyangzhong82
+- [#162] 改进领地绘制处理，绘制不再对所有玩家可见 @yangyangzhong82
+- 重构部分代码，改进异常、消息处理，优化领地选区防抖处理... @engsr6982
+
+### 🧹 其他改动
+
+- 领地绘制支持热重载 @engsr6982
+- 移除 `PlayerAskCreateLandBeforeEvent` 事件 @engsr6982
+- 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
+- 适配 Levilamina v1.9.x @engsr6982
+
 ## [0.16.0] - 2025-11-10
 
 ### 🐛 问题修复

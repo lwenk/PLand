@@ -1,15 +1,18 @@
 #include "SelectorManager.h"
+#include "pland/PLand.h"
+#include "pland/infra/Config.h"
+#include "pland/infra/Debouncer.h"
+#include "pland/utils/McUtils.h"
+
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
 #include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/player/PlayerInteractBlockEvent.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
+
 #include "mc/world/actor/player/Player.h"
-#include "pland/PLand.h"
-#include "pland/infra/Config.h"
-#include "pland/utils/Date.h"
-#include "pland/utils/McUtils.h"
+
 #include <atomic>
 
 
@@ -26,12 +29,15 @@ SelectorManager::SelectorManager() {
             }
 
             // 防抖
-            if (auto iter = mStabilization.find(player.getUuid()); iter != mStabilization.end()) {
-                if (iter->second >= Date::now().getTime()) {
+            {
+                auto iter = mStabilization.find(player.getUuid());
+                if (iter == mStabilization.end()) {
+                    iter = mStabilization.emplace(player.getUuid(), 80).first; // ms
+                }
+                if (!iter->second.ready()) {
                     return;
                 }
             }
-            mStabilization[player.getUuid()] = Date::future(50 / 1000).getTime(); // 50ms
 
             if (ev.item().getTypeName() != Config::cfg.selector.tool) {
                 return;
@@ -43,7 +49,7 @@ SelectorManager::SelectorManager() {
             }
 
             if (selector->isPointABSet()) {
-                mc_utils::executeCommand("pland buy", &player); // TODO: 优化
+                mc_utils::executeCommand("pland buy", player); // TODO: 优化
                 return;
             }
 

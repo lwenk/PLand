@@ -1,8 +1,8 @@
 #include "pland/economy/EconomySystem.h"
 #include "pland/PLand.h"
-#include "pland/economy/impl/EmtpyInterface.h"
-#include "pland/economy/impl/LegacyMoneyInterface.h"
-#include "pland/economy/impl/ScoreBoardInterface.h"
+#include "pland/economy/impl/EmtpyEconomy.h"
+#include "pland/economy/impl/LegacyMoneyEconomy.h"
+#include "pland/economy/impl/ScoreBoardEconomy.h"
 #include "pland/infra/Config.h"
 #include <memory>
 #include <stdexcept>
@@ -11,21 +11,21 @@
 namespace land {
 
 
-std::shared_ptr<internals::IEconomyInterface> EconomySystem::createEconomySystem() const {
+std::shared_ptr<economy::IEconomy> EconomySystem::createEconomySystem() const {
     auto& cfg = getConfig();
     if (!cfg.enabled) {
-        land::PLand::getInstance().getSelf().getLogger().debug("using internals::EmtpyInterface");
-        return std::make_shared<internals::EmtpyInterface>();
+        PLand::getInstance().getSelf().getLogger().debug("using internals::EmptyEconomy");
+        return std::make_shared<economy::detail::EmtpyEconomy>();
     }
 
     switch (cfg.kit) {
-    case land::EconomyKit::LegacyMoney: {
-        land::PLand::getInstance().getSelf().getLogger().debug("using internals::LegacyMoneyInterface");
-        return std::make_shared<internals::LegacyMoneyInterface>();
+    case EconomyKit::LegacyMoney: {
+        PLand::getInstance().getSelf().getLogger().debug("using internals::LegacyMoneyEconomy");
+        return std::make_shared<economy::detail::LegacyMoneyEconomy>();
     }
-    case land::EconomyKit::ScoreBoard: {
-        land::PLand::getInstance().getSelf().getLogger().debug("using internals::ScoreBoardInterface");
-        return std::make_shared<internals::ScoreBoardInterface>();
+    case EconomyKit::ScoreBoard: {
+        PLand::getInstance().getSelf().getLogger().debug("using internals::ScoreBoardEconomy");
+        return std::make_shared<economy::detail::ScoreBoardEconomy>();
     }
     }
 
@@ -37,8 +37,8 @@ EconomySystem& EconomySystem::getInstance() {
     return instance;
 }
 
-std::shared_ptr<internals::IEconomyInterface> EconomySystem::getEconomyInterface() const {
-    std::lock_guard<std::mutex> lock(mInstanceMutex);
+std::shared_ptr<economy::IEconomy> EconomySystem::getEconomyInterface() const {
+    std::lock_guard lock(mInstanceMutex);
     if (!mEconomySystem) {
         throw std::runtime_error("internals::IEconomyInterface not initialized.");
     }
@@ -48,21 +48,20 @@ std::shared_ptr<internals::IEconomyInterface> EconomySystem::getEconomyInterface
 EconomyConfig& EconomySystem::getConfig() const { return Config::cfg.economy; }
 
 void EconomySystem::initEconomySystem() {
-    std::lock_guard<std::mutex> lock(mInstanceMutex);
+    std::lock_guard lock(mInstanceMutex);
     if (!mEconomySystem) {
         mEconomySystem = createEconomySystem();
-        return;
     }
 }
 void EconomySystem::reloadEconomySystem() {
-    std::lock_guard<std::mutex> lock(mInstanceMutex);
+    std::lock_guard lock(mInstanceMutex);
     mEconomySystem = createEconomySystem();
 }
 
 
 EconomySystem::EconomySystem() = default;
 
-std::shared_ptr<internals::IEconomyInterface> EconomySystem::operator->() const { return mEconomySystem; }
+std::shared_ptr<economy::IEconomy> EconomySystem::operator->() const { return mEconomySystem; }
 
 
 } // namespace land

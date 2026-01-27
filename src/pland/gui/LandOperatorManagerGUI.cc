@@ -10,6 +10,7 @@
 #include "pland/land/LandContext.h"
 #include "pland/land/LandRegistry.h"
 #include "pland/land/LandTemplatePermTable.h"
+#include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
 
 
@@ -17,8 +18,8 @@ namespace land {
 
 
 void LandOperatorManagerGUI::sendMainMenu(Player& player) {
-    if (!PLand::getInstance().getLandRegistry()->isOperator(player.getUuid())) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "无权限访问此表单"_trf(player));
+    if (!PLand::getInstance().getLandRegistry().isOperator(player.getUuid())) {
+        feedback_utils::sendErrorText(player, "无权限访问此表单"_trf(player));
         return;
     }
 
@@ -28,9 +29,9 @@ void LandOperatorManagerGUI::sendMainMenu(Player& player) {
     fm.setContent("请选择您要进行的操作"_trf(player));
 
     fm.appendButton("管理脚下领地"_trf(player), "textures/ui/free_download", "path", [](Player& self) {
-        auto lands = PLand::getInstance().getLandRegistry()->getLandAt(self.getPosition(), self.getDimensionId());
+        auto lands = PLand::getInstance().getLandRegistry().getLandAt(self.getPosition(), self.getDimensionId());
         if (!lands) {
-            mc_utils::sendText<mc_utils::LogLevel::Error>(self, "您当前所处位置没有领地"_trf(self));
+            feedback_utils::sendErrorText(self, "您当前所处位置没有领地"_trf(self));
             return;
         }
         LandManagerGUI::sendMainMenu(self, lands);
@@ -39,16 +40,16 @@ void LandOperatorManagerGUI::sendMainMenu(Player& player) {
         sendChoosePlayerFromDb(self, static_cast<void (*)(Player&, mce::UUID const&)>(sendChooseLandGUI));
     });
     fm.appendButton("管理指定领地"_trf(player), "textures/ui/magnifyingGlass", "path", [](Player& self) {
-        // sendChooseLandGUI(self, PLand::getInstance().getLandRegistry()->getLands());
-        sendChooseLandAdvancedGUI(self, PLand::getInstance().getLandRegistry()->getLands());
+        // sendChooseLandGUI(self, PLand::getInstance().getLandRegistry().getLands());
+        sendChooseLandAdvancedGUI(self, PLand::getInstance().getLandRegistry().getLands());
     });
     fm.appendButton("编辑默认权限"_trf(player), "textures/ui/icon_map", "path", [](Player& self) {
         EditLandPermTableUtilGUI::sendTo(
             self,
-            PLand::getInstance().getLandRegistry()->getLandTemplatePermTable().get(),
+            PLand::getInstance().getLandRegistry().getLandTemplatePermTable().get(),
             [](Player& self, LandPermTable newTable) {
-                PLand::getInstance().getLandRegistry()->getLandTemplatePermTable().set(newTable);
-                mc_utils::sendText(self, "权限表已更新"_trf(self));
+                PLand::getInstance().getLandRegistry().getLandTemplatePermTable().set(newTable);
+                feedback_utils::sendText(self, "权限表已更新"_trf(self));
             }
         );
     });
@@ -63,7 +64,7 @@ void LandOperatorManagerGUI::sendChoosePlayerFromDb(Player& player, ChoosePlayer
     fm.setContent("请选择您要管理的玩家"_trf(player));
 
     auto const& infos = ll::service::PlayerInfo::getInstance();
-    auto const  lands = PLand::getInstance().getLandRegistry()->getLands();
+    auto const  lands = PLand::getInstance().getLandRegistry().getLands();
 
     std::unordered_set<mce::UUID> filtered; // 防止重复
     for (auto const& ptr : lands) {
@@ -84,7 +85,7 @@ void LandOperatorManagerGUI::sendChoosePlayerFromDb(Player& player, ChoosePlayer
 
 
 void LandOperatorManagerGUI::sendChooseLandGUI(Player& player, mce::UUID const& targetPlayer) {
-    sendChooseLandAdvancedGUI(player, PLand::getInstance().getLandRegistry()->getLands(targetPlayer));
+    sendChooseLandAdvancedGUI(player, PLand::getInstance().getLandRegistry().getLands(targetPlayer));
 }
 
 void LandOperatorManagerGUI::sendChooseLandAdvancedGUI(Player& player, std::vector<SharedLand> lands) {

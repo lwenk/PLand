@@ -1,26 +1,28 @@
 #include "LandRegistry.h"
 #include "LandCreateValidator.h"
-#include "fmt/core.h"
-#include "ll/api/data/KeyValueDB.h"
-#include "ll/api/i18n/I18n.h"
-#include "mc/platform/UUID.h"
-#include "mc/world/actor/player/Player.h"
-#include "mc/world/level/BlockPos.h"
-#include "nlohmann/json_fwd.hpp"
+#include "StorageError.h"
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
 #include "pland/land/Land.h"
 #include "pland/land/LandContext.h"
 #include "pland/land/LandTemplatePermTable.h"
-#include "pland/utils/JSON.h"
-#include "pland/utils/Utils.h"
+#include "pland/utils/JsonUtil.h"
+
+#include "ll/api/Expected.h"
+#include "ll/api/data/KeyValueDB.h"
+#include "ll/api/i18n/I18n.h"
+
+#include "mc/platform/UUID.h"
+#include "mc/world/actor/player/Player.h"
+#include "mc/world/level/BlockPos.h"
+
+#include "nlohmann/json_fwd.hpp"
+
+#include "fmt/core.h"
+
 #include <algorithm>
 #include <chrono>
-#include <cstddef>
-#include <cstdint>
-#include <ctime>
-#include <expected>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -41,7 +43,7 @@ void LandRegistry::_loadOperators() {
     if (!mDB->has(DbOperatorDataKey)) {
         mDB->set(DbOperatorDataKey, "[]"); // empty array
     }
-    auto ops = JSON::parse(*mDB->get(DbOperatorDataKey));
+    auto ops = nlohmann::json::parse(*mDB->get(DbOperatorDataKey));
     for (auto& op : ops) {
         auto uuidStr = op.get<std::string>();
         if (!mce::UUID::canParse(uuidStr)) {
@@ -55,14 +57,14 @@ void LandRegistry::_loadPlayerSettings() {
     if (!mDB->has(DbPlayerSettingDataKey)) {
         mDB->set(DbPlayerSettingDataKey, "{}"); // empty object
     }
-    auto settings = JSON::parse(*mDB->get(DbPlayerSettingDataKey));
+    auto settings = nlohmann::json::parse(*mDB->get(DbPlayerSettingDataKey));
     if (!settings.is_object()) {
         throw std::runtime_error("player settings is not an object");
     }
 
     for (auto& [key, value] : settings.items()) {
         PlayerSettings settings_;
-        JSON::jsonToStructTryPatch(value, settings_);
+        json_util::json2structWithDiffPatch(value, settings_);
         mPlayerSettings.emplace(key, std::move(settings_));
     }
 }
@@ -168,7 +170,7 @@ void LandRegistry::_loadLands() {
     for (auto [key, value] : iter) {
         if (!isLandData(key)) continue;
 
-        auto json = JSON::parse(value);
+        auto json = nlohmann::json::parse(value);
         _migrateLegacyKeysIfNeeded(json);
 
         auto land = Land::make();
@@ -187,7 +189,7 @@ void LandRegistry::_loadLands() {
 void LandRegistry::_loadLandTemplatePermTable() {
     if (!mDB->has(DbTemplatePermKey)) {
         auto t = LandPermTable{};
-        mDB->set(DbTemplatePermKey, JSON::structTojson(t).dump());
+        mDB->set(DbTemplatePermKey, json_util::struct2json(t).dump());
     }
 
     auto rawJson = mDB->get(DbTemplatePermKey);
@@ -198,7 +200,7 @@ void LandRegistry::_loadLandTemplatePermTable() {
         }
 
         auto t = LandPermTable{};
-        JSON::jsonToStructTryPatch(json, t); // 反射并补丁
+        json_util::json2structWithDiffPatch(json, t); // 反射并补丁
 
         mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(t);
     } catch (...) {
@@ -217,17 +219,17 @@ void LandRegistry::_buildDimensionChunkMap() {
 
 LandID LandRegistry::getNextLandID() const { return mLandIdAllocator->nextId(); }
 
-Result<void, StorageLayerError::Error> LandRegistry::_removeLand(SharedLand const& ptr) {
+ll::Expected<> LandRegistry::_removeLand(SharedLand const& ptr) {
     mDimensionChunkMap.removeLand(ptr);
     if (!mLandCache.erase(ptr->getId())) {
         mDimensionChunkMap.addLand(ptr);
-        return std::unexpected(StorageLayerError::Error::STLMapError);
+        return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to erase land from cache");
     }
 
     if (!this->mDB->del(std::to_string(ptr->getId()))) {
         mLandCache.emplace(ptr->getId(), ptr); // rollback
         mDimensionChunkMap.addLand(ptr);
-        return std::unexpected(StorageLayerError::Error::DBError);
+        return StorageError::make(StorageError::ErrorCode::DatabaseError, "Failed to delete land from database");
     }
     return {};
 }
@@ -239,13 +241,13 @@ namespace land {
 
 void LandRegistry::save() {
     std::shared_lock<std::shared_mutex> lock(mMutex); // 获取锁
-    mDB->set(DbOperatorDataKey, JSON::stringify(JSON::structTojson(mLandOperators)));
+    mDB->set(DbOperatorDataKey, json_util::struct2json(mLandOperators).dump());
 
-    mDB->set(DbPlayerSettingDataKey, JSON::stringify(JSON::structTojson(mPlayerSettings)));
+    mDB->set(DbPlayerSettingDataKey, json_util::struct2json(mPlayerSettings).dump());
 
-    if (mLandTemplatePermTable->mDirtyCounter.isDirty()) {
-        if (mDB->set(DbTemplatePermKey, JSON::structTojson(mLandTemplatePermTable->mTemplatePermTable).dump())) {
-            mLandTemplatePermTable->mDirtyCounter.reset();
+    if (mLandTemplatePermTable->isDirty()) {
+        if (mDB->set(DbTemplatePermKey, json_util::struct2json(mLandTemplatePermTable->get()).dump())) {
+            mLandTemplatePermTable->resetDirty();
         }
     }
 
@@ -356,32 +358,19 @@ bool LandRegistry::hasLand(LandID id) const {
     std::shared_lock<std::shared_mutex> lock(mMutex);
     return mLandCache.find(id) != mLandCache.end();
 }
-Result<void, StorageLayerError::Error> LandRegistry::_addLand(SharedLand land) {
-    if (!land || land->getId() != LandID(-1)) {
-        return std::unexpected(StorageLayerError::Error::InvalidLand);
+ll::Expected<> LandRegistry::_addLand(SharedLand land) {
+    if (!land || land->getId() != static_cast<LandID>(-1)) {
+        return StorageError::make(StorageError::ErrorCode::InvalidLand, "The land is invalid or land ID is not -1");
     }
 
-    LandID id = getNextLandID();
-    if (hasLand(id)) {
-        for (size_t i = 0; i < 3; i++) {
-            id = getNextLandID();
-            if (!hasLand(id)) {
-                break;
-            }
-        }
-        if (hasLand(id)) {
-            return std::unexpected(StorageLayerError::Error::AssignLandIdFailed);
-        }
-    }
-    land->mContext.mLandID = id;
+    land->mContext.mLandID = getNextLandID();
     land->mDirtyCounter.increment();
 
-    std::unique_lock<std::shared_mutex> lock(mMutex);
+    std::unique_lock lock(mMutex);
 
     auto result = mLandCache.emplace(land->getId(), land);
     if (!result.second) {
-        land::PLand::getInstance().getSelf().getLogger().warn("添加领地失败, ID: {}", land->getId());
-        return std::unexpected(StorageLayerError::Error::STLMapError);
+        return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to insert land into cache map");
     }
 
     mDimensionChunkMap.addLand(land);
@@ -393,23 +382,26 @@ void LandRegistry::refreshLandRange(SharedLand const& ptr) {
     mDimensionChunkMap.refreshRange(ptr);
 }
 
-Result<void, StorageLayerError::Error> LandRegistry::addOrdinaryLand(SharedLand const& land) {
+ll::Expected<> LandRegistry::addOrdinaryLand(SharedLand const& land) {
     if (!land->isOrdinaryLand()) {
-        return std::unexpected(StorageLayerError::Error::LandTypeWithRequireTypeNotMatch);
+        return StorageError::make(
+            StorageError::ErrorCode::LandTypeMismatch,
+            "The land type does not match the required type"
+        );
     }
     if (!LandCreateValidator::isLandRangeLegal(land->getAABB(), land->getDimensionId(), land->is3D())
         || !LandCreateValidator::isLandInForbiddenRange(land->getAABB(), land->getDimensionId())
-        || !LandCreateValidator::isLandRangeWithOtherCollision(this, land)) {
-        return std::unexpected(StorageLayerError::Error::LandRangeIllegal);
+        || !LandCreateValidator::isLandRangeConflict(*this, land)) {
+        return StorageError::make(StorageError::ErrorCode::LandRangeIllegal, "The land range is illegal");
     }
     return _addLand(land);
 }
 
-Result<void, StorageLayerError::Error> LandRegistry::addSubLand(SharedLand const& parent, SharedLand const& sub) {
+ll::Expected<> LandRegistry::addSubLand(SharedLand const& parent, SharedLand const& sub) {
     if (!LandCreateValidator::isLandRangeLegal(sub->getAABB(), parent->getDimensionId(), true)
         || !LandCreateValidator::isSubLandPositionLegal(parent, sub->getAABB())
         || parent->getDimensionId() != sub->getDimensionId()) {
-        return std::unexpected(StorageLayerError::Error::LandRangeIllegal);
+        return StorageError::make(StorageError::ErrorCode::LandRangeIllegal, "The land range is illegal");
     }
     auto res = _addLand(sub);
     if (!res) {
@@ -440,22 +432,28 @@ bool LandRegistry::removeLand(LandID landId) {
     }
     return true;
 }
-Result<void, StorageLayerError::Error> LandRegistry::removeOrdinaryLand(SharedLand const& ptr) {
+ll::Expected<> LandRegistry::removeOrdinaryLand(SharedLand const& ptr) {
     if (!ptr->isOrdinaryLand()) {
-        return std::unexpected(StorageLayerError::Error::LandTypeWithRequireTypeNotMatch);
+        return StorageError::make(
+            StorageError::ErrorCode::LandTypeMismatch,
+            "The land type does not match the required type"
+        );
     }
 
     std::unique_lock<std::shared_mutex> lock(mMutex); // 获取锁
     return _removeLand(ptr);
 }
-Result<void, StorageLayerError::Error> LandRegistry::removeSubLand(SharedLand const& ptr) {
+ll::Expected<> LandRegistry::removeSubLand(SharedLand const& ptr) {
     if (!ptr->isSubLand()) {
-        return std::unexpected(StorageLayerError::Error::LandTypeWithRequireTypeNotMatch);
+        return StorageError::make(
+            StorageError::ErrorCode::LandTypeMismatch,
+            "The land type does not match the required type"
+        );
     }
 
     auto parent = ptr->getParentLand();
     if (!parent) {
-        return std::unexpected(StorageLayerError::Error::DataConsistencyError);
+        return StorageError::make(StorageError::ErrorCode::DataConsistencyError, "The parent land is null");
     }
 
     std::unique_lock<std::shared_mutex> lock(mMutex); // 获取锁
@@ -472,9 +470,12 @@ Result<void, StorageLayerError::Error> LandRegistry::removeSubLand(SharedLand co
 
     return result;
 }
-Result<void, StorageLayerError::Error> LandRegistry::removeLandAndSubLands(SharedLand const& ptr) {
+ll::Expected<> LandRegistry::removeLandAndSubLands(SharedLand const& ptr) {
     if (!ptr->isParentLand() && !ptr->isMixLand()) {
-        return std::unexpected(StorageLayerError::Error::LandTypeWithRequireTypeNotMatch);
+        return StorageError::make(
+            StorageError::ErrorCode::LandTypeMismatch,
+            "The land type does not match the required type"
+        );
     }
 
     auto currentId = ptr->getId();
@@ -522,9 +523,12 @@ Result<void, StorageLayerError::Error> LandRegistry::removeLandAndSubLands(Share
     }
     return {};
 }
-Result<void, StorageLayerError::Error> LandRegistry::removeLandAndPromoteSubLands(SharedLand const& ptr) {
+ll::Expected<> LandRegistry::removeLandAndPromoteSubLands(SharedLand const& ptr) {
     if (!ptr->isParentLand()) {
-        return std::unexpected(StorageLayerError::Error::LandTypeWithRequireTypeNotMatch);
+        return StorageError::make(
+            StorageError::ErrorCode::LandTypeMismatch,
+            "The land type does not match the required type"
+        );
     }
 
 
@@ -548,14 +552,17 @@ Result<void, StorageLayerError::Error> LandRegistry::removeLandAndPromoteSubLand
     }
     return result;
 }
-Result<void, StorageLayerError::Error> LandRegistry::removeLandAndTransferSubLands(SharedLand const& ptr) {
+ll::Expected<> LandRegistry::removeLandAndTransferSubLands(SharedLand const& ptr) {
     if (!ptr->isMixLand()) {
-        return std::unexpected(StorageLayerError::Error::LandTypeWithRequireTypeNotMatch);
+        return StorageError::make(
+            StorageError::ErrorCode::LandTypeMismatch,
+            "The land type does not match the required type"
+        );
     }
 
     auto parent = ptr->getParentLand();
     if (!parent) {
-        return std::unexpected(StorageLayerError::Error::DataConsistencyError);
+        return StorageError::make(StorageError::ErrorCode::DataConsistencyError, "The parent land is null");
     }
     auto parentID = parent->getId();
     auto subLands = ptr->getSubLands();

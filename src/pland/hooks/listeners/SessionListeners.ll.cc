@@ -8,8 +8,7 @@
 
 #include "pland/Global.h"
 #include "pland/PLand.h"
-#include "pland/infra/DrawHandleManager.h"
-#include "pland/infra/draw/IDrawHandle.h"
+#include "pland/drawer/DrawHandleManager.h"
 #include "pland/land/Land.h"
 #include "pland/land/LandContext.h"
 #include "pland/land/LandRegistry.h"
@@ -20,7 +19,7 @@
 namespace land {
 
 void EventListener::registerLLSessionListeners() {
-    auto* db     = PLand::getInstance().getLandRegistry();
+    auto* db     = &PLand::getInstance().getLandRegistry();
     auto* bus    = &ll::event::EventBus::getInstance();
     auto* logger = &land::PLand::getInstance().getSelf().getLogger();
 

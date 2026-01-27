@@ -1,22 +1,22 @@
 add_rules("mode.debug", "mode.release")
 
 add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
-add_repositories("engsr6982-repo https://github.com/engsr6982/xmake-repo.git")
+add_repositories("iceblcokmc https://github.com/IceBlcokMC/xmake-repo.git")
 add_repositories("miracleforest-repo https://github.com/MiracleForest/xmake-repo.git")
 
 
 -- LeviMc(LiteLDev)
-local levilamina_version = "1.7.0"
-add_requires("levilamina " .. levilamina_version, {configs = {target_type = "server"}})
+add_requires("levilamina 1.9.2", {configs = {target_type = "server"}})
 add_requires("levibuildscript")
 
 -- MiracleForest
-local ilistenattentively_version = "0.10.0"
-add_requires("ilistenattentively " .. ilistenattentively_version)
+add_requires("ilistenattentively 0.11.0")
+
+-- IceBlockMC
+add_requires("ll-bstats 0.2.0")
 
 -- xmake
 add_requires("exprtk 0.0.3")
-add_requires("cpr[ssl=y] 1.12.0") -- 遥测
 
 if has_config("devtool") then
     add_requires("imgui v1.91.6-docking", {configs = { opengl3 = true, glfw = true }})
@@ -28,26 +28,12 @@ if not has_config("vs_runtime") then
     set_runtimes("MD")
 end
 
-
-option("test") -- 测试
-    set_default(false)
-    set_showmenu(true)
-option_end()
-
 option("devtool") -- 开发工具
     set_default(true)
     set_showmenu(true)
 option_end()
 
-
-rule("gen_version")
-    before_build(function(target)
-        import("scripts.gen_version")()
-    end)
-
-
-target("PLand") -- Change this to your mod name.
-    add_rules("gen_version")
+target("PLand")
     add_rules("@levibuildscript/linkrule")
     add_rules("@levibuildscript/modpacker")
     add_rules("plugin.compile_commands.autoupdate")
@@ -70,7 +56,7 @@ target("PLand") -- Change this to your mod name.
         "NOMINMAX",
         "UNICODE",
         "LDAPI_EXPORT",
-        "_HAS_CXX23=1"
+        "LL_PLAT_S"
     )
     add_includedirs("src")
     add_files("src/**.cpp", "src/**.cc")
@@ -80,27 +66,17 @@ target("PLand") -- Change this to your mod name.
         "levilamina",
         "exprtk",
         "ilistenattentively",
-        "cpr"
+        "ll-bstats"
     )
 
-    add_defines("LEVI_LAMINA_VERSION=\"" .. levilamina_version .. "\"")
-    add_defines("ILISTENATTENTIVELY_VERSION=\"" .. ilistenattentively_version .. "\"")
+    add_configfiles("src/BuildInfo.h.in")
+    set_configdir("src/pland")
 
     add_defines("PLUGIN_NAME=\"[PLand] \"")
 
     if is_mode("debug") then
         add_defines("DEBUG")
         -- add_defines("PLAND_I18N_COLLECT_STRINGS", "LL_I18N_COLLECT_STRINGS", "LL_I18N_COLLECT_STRINGS_CUSTOM")
-    end
-
-    if is_plat("windows") then
-        add_files("resource/Resource.rc")
-    end
-
-    if has_config("test") then
-        add_defines("LD_TEST")
-        add_files("test/**.cc")
-        add_includedirs("test")
     end
 
     if has_config("devtool") then

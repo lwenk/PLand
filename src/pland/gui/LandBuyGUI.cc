@@ -12,11 +12,12 @@
 #include "pland/land/LandCreateValidator.h"
 #include "pland/land/LandEvent.h"
 #include "pland/land/LandRegistry.h"
-#include "pland/land/StorageLayerError.h"
+#include "pland/land/StorageError.h"
 #include "pland/selector/ChangeLandRangeSelector.h"
 #include "pland/selector/DefaultSelector.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/selector/SubLandSelector.h"
+#include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
 #include <climits>
 #include <stack>
@@ -31,13 +32,13 @@ namespace land {
 void LandBuyGUI::impl(Player& player) {
     auto manager = land::PLand::getInstance().getSelectorManager();
     if (!manager->hasSelector(player)) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "请先使用 /pland new 来选择领地"_trf(player));
+        feedback_utils::sendErrorText(player, "请先使用 /pland new 来选择领地"_trf(player));
         return;
     }
 
     auto selector = manager->getSelector(player);
     if (!selector->isPointABSet()) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "您还没有选择领地范围，无法进行购买!"_trf(player));
+        feedback_utils::sendErrorText(player, "您还没有选择领地范围，无法进行购买!"_trf(player));
         return;
     }
 
@@ -57,9 +58,6 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
 
     aabb->fix();
     auto const volume = aabb->getVolume();
-    int const  length = aabb->getDepth();
-    int const  width  = aabb->getWidth();
-    int const  height = aabb->getHeight();
 
     auto   _variables    = PriceCalculate::Variable::make(*aabb, selector->getDimensionId()); // 传入维度ID
     double originalPrice = PriceCalculate::eval(
@@ -76,7 +74,7 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
     if (!Config::cfg.economy.enabled) discountedPrice = 0; // 免费
 
     if (volume >= INT_MAX || originalPrice < 0 || discountedPrice < 0) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "领地体积过大，无法购买"_trf(player));
+        feedback_utils::sendErrorText(player, "领地体积过大，无法购买"_trf(player));
         return;
     }
 
@@ -89,18 +87,20 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
 
     auto fm = BackSimpleForm<>::make();
     fm.setTitle(PLUGIN_NAME + ("| 购买领地"_trf(player)));
-    fm.setContent("领地类型: {}\n体积: {}x{}x{} = {}\n范围: {}\n原价: {}\n折扣价: {}\n{}"_trf(
-        player,
-        is3D ? "3D" : "2D",
-        length,
-        width,
-        height,
-        volume,
-        aabb->toString(),
-        originalPrice,
-        discountedPrice,
-        EconomySystem::getInstance()->getCostMessage(player, discountedPrice)
-    ));
+    fm.setContent(
+        "领地类型: {}\n体积: {}x{}x{} = {}\n范围: {}\n原价: {}\n折扣价: {}\n{}"_trf(
+            player,
+            is3D ? "3D" : "2D",
+            aabb->getBlockCountX(),
+            aabb->getBlockCountZ(),
+            aabb->getBlockCountY(),
+            volume,
+            aabb->toString(),
+            originalPrice,
+            discountedPrice,
+            EconomySystem::getInstance()->getCostMessage(player, discountedPrice)
+        )
+    );
 
     fm.appendButton(
         "确认购买"_trf(player),
@@ -109,28 +109,32 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
         [discountedPrice, selector](Player& pl) {
             auto& economy = EconomySystem::getInstance();
             if (economy->get(pl) < discountedPrice && Config::cfg.economy.enabled) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "您的余额不足，无法购买"_trf(pl));
+                feedback_utils::sendErrorText(pl, "您的余额不足，无法购买"_trf(pl));
                 return; // 预检查经济
             }
 
             SharedLand landPtr = selector->newLand();
 
             if (auto res = LandCreateValidator::validateCreateOrdinaryLand(pl, landPtr); !res) {
-                LandCreateValidator::sendErrorMessage(pl, res.error());
+                if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                    auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                    error.sendTo(pl);
+                } else {
+                    feedback_utils::sendErrorText(pl, "插件异常，无法处理此请求"_trf(pl));
+                }
                 return;
             }
 
             // 扣除经济
             if (!economy->reduce(pl, discountedPrice)) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "您的余额不足，无法购买"_trf(pl));
+                feedback_utils::sendErrorText(pl, "您的余额不足，无法购买"_trf(pl));
                 return;
             }
 
             landPtr->setOriginalBuyPrice(discountedPrice);
 
-            if (auto res = PLand::getInstance().getLandRegistry()->addOrdinaryLand(landPtr); !res) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "购买领地失败"_trf(pl));
-                StorageLayerError::sendErrorMessage(pl, res.error());
+            if (auto res = PLand::getInstance().getLandRegistry().addOrdinaryLand(landPtr); !res) {
+                feedback_utils::sendErrorText(pl, "购买领地失败"_trf(pl));
                 (void)economy->add(pl, discountedPrice); // 补回经济
                 return;
             }
@@ -138,7 +142,7 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
             land::PLand::getInstance().getSelectorManager()->stopSelection(pl);
             ll::event::EventBus::getInstance().publish(PlayerBuyLandAfterEvent{pl, landPtr});
 
-            mc_utils::sendText<mc_utils::LogLevel::Info>(pl, "购买领地成功"_trf(pl));
+            feedback_utils::sendText(pl, "购买领地成功"_trf(pl));
         }
     );
     fm.appendButton("暂存订单"_trf(player), "textures/ui/recipe_book_icon", "path"); // close
@@ -154,9 +158,6 @@ void LandBuyGUI::impl(Player& player, ChangeLandRangeSelector* reSelector) {
 
     aabb->fix();
     auto const volume = aabb->getVolume();
-    int const  length = aabb->getDepth();
-    int const  width  = aabb->getWidth();
-    int const  height = aabb->getHeight();
 
     auto       landPtr       = reSelector->getLand();
     int const& originalPrice = landPtr->getOriginalBuyPrice(); // 原始购买价格
@@ -177,7 +178,7 @@ void LandBuyGUI::impl(Player& player, ChangeLandRangeSelector* reSelector) {
     int refund  = originalPrice - discountedPrice; // 退还差价
 
     if (volume >= INT_MAX || originalPrice < 0 || discountedPrice < 0) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "领地体积过大，无法购买"_trf(player));
+        feedback_utils::sendErrorText(player, "领地体积过大，无法购买"_trf(player));
         return;
     }
 
@@ -190,18 +191,20 @@ void LandBuyGUI::impl(Player& player, ChangeLandRangeSelector* reSelector) {
 
     auto fm = BackSimpleForm<>::make();
     fm.setTitle(PLUGIN_NAME + ("| 购买领地 & 重新选区"_trf(player)));
-    fm.setContent("体积: {0}x{1}x{2} = {3}\n范围: {4}\n原购买价格: {5}\n需补差价: {6}\n需退差价: {7}\n{8}"_trf(
-        player,
-        length,                    // 1
-        width,                     // 2
-        height,                    // 3
-        volume,                    // 4
-        aabb->toString(),          // 5
-        originalPrice,             // 6
-        needPay < 0 ? 0 : needPay, // 7
-        refund < 0 ? 0 : refund,   // 8
-        needPay > 0 ? EconomySystem::getInstance()->getCostMessage(player, needPay) : ""
-    ));
+    fm.setContent(
+        "体积: {0}x{1}x{2} = {3}\n范围: {4}\n原购买价格: {5}\n需补差价: {6}\n需退差价: {7}\n{8}"_trf(
+            player,
+            aabb->getBlockCountX(),
+            aabb->getBlockCountZ(),
+            aabb->getBlockCountY(),
+            volume,                    // 4
+            aabb->toString(),          // 5
+            originalPrice,             // 6
+            needPay < 0 ? 0 : needPay, // 7
+            refund < 0 ? 0 : refund,   // 8
+            needPay > 0 ? EconomySystem::getInstance()->getCostMessage(player, needPay) : ""
+        )
+    );
 
     fm.appendButton(
         "确认购买"_trf(player),
@@ -210,39 +213,44 @@ void LandBuyGUI::impl(Player& player, ChangeLandRangeSelector* reSelector) {
         [needPay, refund, discountedPrice, aabb, landPtr](Player& pl) {
             auto& eco = EconomySystem::getInstance();
             if ((needPay > 0 && eco->get(pl) < needPay) && Config::cfg.economy.enabled) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "您的余额不足，无法购买"_trf(pl));
+                feedback_utils::sendErrorText(pl, "您的余额不足，无法购买"_trf(pl));
                 return; // 预检查经济
             }
 
             if (auto res = LandCreateValidator::validateChangeLandRange(landPtr, *aabb); !res) {
-                LandCreateValidator::sendErrorMessage(pl, res.error());
+                if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                    auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                    error.sendTo(pl);
+                } else {
+                    feedback_utils::sendErrorText(pl, "插件异常，无法处理此请求"_trf(pl));
+                }
                 return;
             }
 
             // 补差价 & 退还差价
             if (needPay > 0) {
                 if (!eco->reduce(pl, needPay)) {
-                    mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "您的余额不足，无法购买"_trf(pl));
+                    feedback_utils::sendErrorText(pl, "您的余额不足，无法购买"_trf(pl));
                     return;
                 }
             } else if (refund > 0) {
                 if (!eco->add(pl, refund)) {
-                    mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "经济系统异常,退还差价失败"_trf(pl));
+                    feedback_utils::sendErrorText(pl, "经济系统异常,退还差价失败"_trf(pl));
                     return;
                 }
             }
 
             if (!landPtr->setAABB(*aabb)) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "领地范围修改失败"_trf(pl));
+                feedback_utils::sendErrorText(pl, "领地范围修改失败"_trf(pl));
                 return;
             }
 
             landPtr->setOriginalBuyPrice(discountedPrice);
-            PLand::getInstance().getLandRegistry()->refreshLandRange(landPtr); // 刷新领地范围
+            PLand::getInstance().getLandRegistry().refreshLandRange(landPtr); // 刷新领地范围
 
             land::PLand::getInstance().getSelectorManager()->stopSelection(pl);
             ll::event::EventBus::getInstance().publish(LandRangeChangeAfterEvent{pl, landPtr, *aabb, needPay, refund});
-            mc_utils::sendText<mc_utils::LogLevel::Info>(pl, "领地范围修改成功"_trf(pl));
+            feedback_utils::sendText(pl, "领地范围修改成功"_trf(pl));
         }
     );
     fm.appendButton("暂存订单"_trf(player), "textures/ui/recipe_book_icon", "path"); // close
@@ -258,9 +266,6 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* subSelector) {
 
     subLandRange->fix();
     auto const volume = subLandRange->getVolume();
-    int const  length = subLandRange->getDepth();
-    int const  width  = subLandRange->getWidth();
-    int const  height = subLandRange->getHeight();
 
     auto   _variables    = PriceCalculate::Variable::make(*subLandRange, subSelector->getDimensionId()); // 传入维度ID
     double originalPrice = PriceCalculate::eval(Config::cfg.land.subLand.calculate, _variables);
@@ -274,7 +279,7 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* subSelector) {
     if (!Config::cfg.economy.enabled) discountedPrice = 0; // 免费
 
     if (volume >= INT_MAX || originalPrice < 0 || discountedPrice < 0) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "领地体积过大，无法购买"_trf(player));
+        feedback_utils::sendErrorText(player, "领地体积过大，无法购买"_trf(player));
         return;
     }
 
@@ -293,15 +298,15 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* subSelector) {
         "[父领地]\n体积: {}x{}x{}={}\n范围: {}\n\n[子领地]\n体积: {}x{}x{}={}\n范围: {}\n\n[价格]\n原价: {}\n折扣价: {}\n{}"_trf(
             player,
             // 父领地
-            parentPos.getDepth(),
-            parentPos.getWidth(),
-            parentPos.getHeight(),
+            parentPos.getBlockCountX(),
+            parentPos.getBlockCountZ(),
+            parentPos.getBlockCountY(),
             parentPos.getVolume(),
             parentPos.toString(),
             // 子领地
-            length,
-            width,
-            height,
+            subLandRange->getBlockCountX(),
+            subLandRange->getBlockCountZ(),
+            subLandRange->getBlockCountY(),
             volume,
             subLandRange->toString(),
             // 价格
@@ -318,19 +323,24 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* subSelector) {
         [discountedPrice, subLandRange, subSelector](Player& pl) {
             auto& economy = EconomySystem::getInstance();
             if (economy->get(pl) < discountedPrice && Config::cfg.economy.enabled) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "您的余额不足，无法购买"_trf(pl));
+                feedback_utils::sendErrorText(pl, "您的余额不足，无法购买"_trf(pl));
                 return; // 预检查经济
             }
 
             if (auto res = LandCreateValidator::validateCreateSubLand(pl, subSelector->getParentLand(), *subLandRange);
                 !res) {
-                LandCreateValidator::sendErrorMessage(pl, res.error());
+                if (res.error().isA<LandCreateValidator::ValidateError>()) {
+                    auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                    error.sendTo(pl);
+                } else {
+                    feedback_utils::sendErrorText(pl, "插件异常，无法处理此请求"_trf(pl));
+                }
                 return;
             }
 
             // 扣除经济
             if (!economy->reduce(pl, discountedPrice)) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "您的余额不足，无法购买"_trf(pl));
+                feedback_utils::sendErrorText(pl, "您的余额不足，无法购买"_trf(pl));
                 return;
             }
 
@@ -338,15 +348,15 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* subSelector) {
             SharedLand subLand = subSelector->newSubLand();
             subLand->setOriginalBuyPrice(discountedPrice); // 保存购买价格
 
-            if (!PLand::getInstance().getLandRegistry()->addSubLand(subSelector->getParentLand(), subLand)) {
-                mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "领地创建失败，请重试"_trf(pl));
+            if (!PLand::getInstance().getLandRegistry().addSubLand(subSelector->getParentLand(), subLand)) {
+                feedback_utils::sendErrorText(pl, "领地创建失败，请重试"_trf(pl));
                 (void)economy->add(pl, discountedPrice); // 补回经济
                 return;
             }
 
             land::PLand::getInstance().getSelectorManager()->stopSelection(pl);
             ll::event::EventBus::getInstance().publish(PlayerBuyLandAfterEvent{pl, subLand});
-            mc_utils::sendText<mc_utils::LogLevel::Info>(pl, "购买领地成功"_trf(pl));
+            feedback_utils::sendText(pl, "购买领地成功"_trf(pl));
         }
     );
     fm.appendButton("暂存订单"_trf(player), "textures/ui/recipe_book_icon", "path"); // close

@@ -6,7 +6,7 @@
 #include "pland/PLand.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandRegistry.h"
-#include "pland/utils/JSON.h"
+#include "pland/utils/JsonUtil.h"
 #include <stack>
 #include <unordered_set>
 #include <vector>
@@ -22,7 +22,7 @@ Land::Land(LandAABB const& pos, LandDimid dimid, bool is3D, mce::UUID const& own
     mContext.mLandDimid     = dimid;
     mContext.mIs3DLand      = is3D;
     mContext.mLandOwner     = owner.asString();
-    mContext.mLandPermTable = PLand::getInstance().getLandRegistry()->getLandTemplatePermTable().get();
+    mContext.mLandPermTable = PLand::getInstance().getLandRegistry().getLandTemplatePermTable().get();
 
     _initCache();
 }
@@ -42,7 +42,7 @@ void Land::_initCache() {
 }
 
 SharedLand Land::getSelfFromRegistry() const {
-    return PLand::getInstance().getLandRegistry()->getLand(mContext.mLandID);
+    return PLand::getInstance().getLandRegistry().getLand(mContext.mLandID);
 }
 
 LandAABB const& Land::getAABB() const { return mContext.mPos; }
@@ -56,7 +56,7 @@ bool            Land::setAABB(LandAABB const& newRange) {
     if (!LandCreateValidator::isLandInForbiddenRange(newRange, getDimensionId())) {
         return false; // 领地范围在禁止领地范围内
     }
-    if (!LandCreateValidator::isLandRangeWithOtherCollision(getSelfFromRegistry(), newRange)) {
+    if (!LandCreateValidator::isLandRangeConflict(getSelfFromRegistry(), newRange)) {
         return false; // 领地范围与其他领地重叠
     }
     mContext.mPos = newRange;
@@ -125,13 +125,16 @@ void Land::setOriginalBuyPrice(int price) {
     mDirtyCounter.increment();
 }
 
-bool Land::is3D() const { return mContext.mIs3DLand; }
-bool Land::isOwner(mce::UUID const& uuid) const { return mCacheOwner == uuid; }
-bool Land::isMember(mce::UUID const& uuid) const { return mCacheMembers.contains(uuid); }
-bool Land::isConvertedLand() const { return mContext.mIsConvertedLand; }
-bool Land::isOwnerDataIsXUID() const { return mContext.mOwnerDataIsXUID; }
-bool Land::isDirty() const { return mDirtyCounter.isDirty(); }
-void Land::markDirty() { mDirtyCounter.increment(); }
+bool                Land::is3D() const { return mContext.mIs3DLand; }
+bool                Land::isOwner(mce::UUID const& uuid) const { return mCacheOwner == uuid; }
+bool                Land::isMember(mce::UUID const& uuid) const { return mCacheMembers.contains(uuid); }
+bool                Land::isConvertedLand() const { return mContext.mIsConvertedLand; }
+bool                Land::isOwnerDataIsXUID() const { return mContext.mOwnerDataIsXUID; }
+bool                Land::isDirty() const { return mDirtyCounter.isDirty(); }
+void                Land::markDirty() { mDirtyCounter.increment(); }
+void                Land::rollbackDirty() { mDirtyCounter.decrement(); }
+DirtyCounter&       Land::getDirtyCounter() { return mDirtyCounter; }
+DirtyCounter const& Land::getDirtyCounter() const { return mDirtyCounter; }
 
 Land::Type Land::getType() const {
     if (isOrdinaryLand()) [[likely]] {
@@ -170,14 +173,14 @@ SharedLand Land::getParentLand() const {
     if (isParentLand() || !hasParentLand()) {
         return nullptr;
     }
-    return PLand::getInstance().getLandRegistry()->getLand(this->mContext.mParentLandID);
+    return PLand::getInstance().getLandRegistry().getLand(this->mContext.mParentLandID);
 }
 
 std::vector<SharedLand> Land::getSubLands() const {
     if (!hasSubLand()) {
         return {};
     }
-    return PLand::getInstance().getLandRegistry()->getLands(this->mContext.mSubLandIDs);
+    return PLand::getInstance().getLandRegistry().getLands(this->mContext.mSubLandIDs);
 }
 int Land::getNestedLevel() const {
     if (!hasParentLand()) {
@@ -307,13 +310,13 @@ void Land::updateXUIDToUUID(mce::UUID const& ownerUUID) {
 }
 
 void Land::load(nlohmann::json& json) {
-    JSON::jsonToStruct(json, mContext);
+    json_util::json2struct(json, mContext);
     _initCache();
 }
-nlohmann::json Land::dump() const { return JSON::structTojson(mContext); }
+nlohmann::json Land::dump() const { return json_util::struct2json(mContext); }
 void           Land::save(bool force) {
     if (isDirty() || force) {
-        if (PLand::getInstance().getLandRegistry()->save(*this)) {
+        if (PLand::getInstance().getLandRegistry().save(*this)) {
             mDirtyCounter.reset();
         }
     }

@@ -1,19 +1,24 @@
 #include "LandCreateValidator.h"
-#include "ll/api/service/Bedrock.h"
-#include "mc/world/level/Level.h"
-#include "mc/world/level/dimension/Dimension.h"
-#include "mc/world/level/dimension/DimensionHeightRange.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandRegistry.h"
+#include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
+
+#include "ll/api/service/Bedrock.h"
+
+#include "mc/world/level/Level.h"
+#include "mc/world/level/dimension/Dimension.h"
+#include "mc/world/level/dimension/DimensionHeightRange.h"
+
+#include "nonstd/expected.hpp"
 
 
 namespace land {
 
 
-LandCreateValidator::ValidateResult LandCreateValidator::validateCreateOrdinaryLand(Player& player, SharedLand land) {
+ll::Expected<> LandCreateValidator::validateCreateOrdinaryLand(Player& player, SharedLand land) {
     if (auto res = isPlayerLandCountLimitExceeded(player.getUuid()); !res) {
         return res;
     }
@@ -23,27 +28,26 @@ LandCreateValidator::ValidateResult LandCreateValidator::validateCreateOrdinaryL
     if (auto res = isLandInForbiddenRange(land->getAABB(), land->getDimensionId()); !res) {
         return res;
     }
-    if (auto res = isLandRangeWithOtherCollision(land); !res) {
+    if (auto res = isLandRangeConflict(land); !res) {
         return res;
     }
     return {};
 }
 
-LandCreateValidator::ValidateResult LandCreateValidator::validateChangeLandRange(SharedLand land, LandAABB newRange) {
+ll::Expected<> LandCreateValidator::validateChangeLandRange(SharedLand land, LandAABB newRange) {
     if (auto res = isLandRangeLegal(newRange, land->getDimensionId(), land->is3D()); !res) {
         return res;
     }
     if (auto res = isLandInForbiddenRange(newRange, land->getDimensionId()); !res) {
         return res;
     }
-    if (auto res = isLandRangeWithOtherCollision(land, newRange); !res) {
+    if (auto res = isLandRangeConflict(land, newRange); !res) {
         return res;
     }
     return {};
 }
 
-LandCreateValidator::ValidateResult
-LandCreateValidator::validateCreateSubLand(Player& player, SharedLand land, LandAABB const& subRange) {
+ll::Expected<> LandCreateValidator::validateCreateSubLand(Player& player, SharedLand land, LandAABB const& subRange) {
     if (auto res = isPlayerLandCountLimitExceeded(player.getUuid()); !res) {
         return res;
     }
@@ -57,83 +61,86 @@ LandCreateValidator::validateCreateSubLand(Player& player, SharedLand land, Land
 }
 
 
-LandCreateValidator::ValidateResult LandCreateValidator::isPlayerLandCountLimitExceeded(mce::UUID const& uuids) {
-    auto  registry = PLand::getInstance().getLandRegistry();
-    auto  count    = static_cast<int>(registry->getLands(uuids).size());
+ll::Expected<> LandCreateValidator::isPlayerLandCountLimitExceeded(mce::UUID const& uuids) {
+    auto& registry = PLand::getInstance().getLandRegistry();
+    auto  count    = static_cast<int>(registry.getLands(uuids).size());
     auto& maxCount = Config::cfg.land.maxLand;
 
     // 非管理员 && 领地数量超过限制
-    if (!registry->isOperator(uuids) && count >= Config::cfg.land.maxLand) {
-        return std::unexpected(ErrorContext::landCountLimitExceeded(count, maxCount));
+    if (!registry.isOperator(uuids) && count >= Config::cfg.land.maxLand) {
+        return makeError<LandCountExceeded>(count, maxCount);
     }
-
     return {};
 }
 
-LandCreateValidator::ValidateResult
-LandCreateValidator::isLandInForbiddenRange(LandAABB const& range, LandDimid dimid) {
+ll::Expected<> LandCreateValidator::isLandInForbiddenRange(LandAABB const& range, LandDimid dimid) {
     for (auto const& forbiddenRange : Config::cfg.land.bought.forbiddenRanges) {
         if (forbiddenRange.dimensionId == dimid && LandAABB::isCollision(forbiddenRange.aabb, range)) {
-            return std::unexpected(ErrorContext::landInForbiddenRange(range, forbiddenRange.aabb));
+            return makeError<LandInForbiddenRange>(range, forbiddenRange.aabb);
         }
     }
     return {};
 }
 
-LandCreateValidator::ValidateResult
-LandCreateValidator::isLandRangeLegal(LandAABB const& range, LandDimid dimid, bool is3D) {
+ll::Expected<> LandCreateValidator::isLandRangeLegal(LandAABB const& range, LandDimid dimid, bool is3D) {
     auto const& squareRange = Config::cfg.land.bought.squareRange;
 
-    auto const length = range.getDepth();
-    auto const width  = range.getWidth();
-    auto const height = range.getHeight();
+    auto const length = range.getBlockCountX();
+    auto const width  = range.getBlockCountZ();
+    auto const height = range.getBlockCountY();
 
     auto dimension = ll::service::getLevel()->getDimension(dimid).lock();
     if (!dimension) {
-        land::PLand::getInstance().getSelf().getLogger().warn(
-            "LandCreateValidator::isLandRangeLegal: dimension {} is not found",
-            dimid
-        );
-        return std::unexpected(
-            ErrorContext{
-                .code = ErrorCode::Undefined,
-            }
-        );
+        return makeError<ValidateError>(ErrorCode::Undefined);
     }
 
+    // 范围长度和宽度
     if (length < squareRange.min || width < squareRange.min) {
-        return std::unexpected(ErrorContext::landRangeTooSmall(range, squareRange.min));
+        return makeError<LandRangeError>(ErrorCode::LandRangeTooSmall, squareRange.min);
     }
-
     if (length > squareRange.max || width > squareRange.max) {
-        return std::unexpected(ErrorContext::landRangeTooLarge(range, squareRange.max));
+        return makeError<LandRangeError>(ErrorCode::LandRangeTooLarge, squareRange.max);
     }
 
-    if (is3D && range.min.y < dimension->mHeightRange->mMin) {
-        return std::unexpected(ErrorContext::landHeightTooSmall(range, dimension->mHeightRange->mMin));
-    }
-
-    if (is3D && range.max.y > dimension->mHeightRange->mMax) {
-        return std::unexpected(ErrorContext::landHeightTooLarge(range, dimension->mHeightRange->mMax));
+    if (is3D) {
+        // 校验维度范围
+        auto& dimHeightRange = dimension->mHeightRange;
+        if (range.min.y < dimHeightRange->mMin) {
+            return makeError<LandHeightError>(
+                ErrorCode::LandOutOfDimensionHeightRange,
+                range.min.y,
+                dimHeightRange->mMin
+            );
+        }
+        if (range.max.y > dimHeightRange->mMax) {
+            return makeError<LandHeightError>(
+                ErrorCode::LandOutOfDimensionHeightRange,
+                range.max.y,
+                dimHeightRange->mMax
+            );
+        }
+        // 校验业务允许范围
+        if (height < squareRange.minHeight) {
+            return makeError<LandHeightError>(ErrorCode::LandHeightTooSmall, height, squareRange.minHeight);
+        }
     }
 
     return {};
 }
 
-LandCreateValidator::ValidateResult
-LandCreateValidator::isLandRangeWithOtherCollision(SharedLand const& land, std::optional<LandAABB> newRange) {
-    return isLandRangeWithOtherCollision(PLand::getInstance().getLandRegistry(), land, newRange);
+ll::Expected<> LandCreateValidator::isLandRangeConflict(SharedLand const& land, std::optional<LandAABB> newRange) {
+    return isLandRangeConflict(PLand::getInstance().getLandRegistry(), land, newRange);
 }
 
-LandCreateValidator::ValidateResult LandCreateValidator::isLandRangeWithOtherCollision(
-    LandRegistry*           registry,
+ll::Expected<> LandCreateValidator::isLandRangeConflict(
+    LandRegistry&           registry,
     SharedLand const&       land,
     std::optional<LandAABB> newRange
 ) {
     auto&       aabb       = newRange ? *newRange : land->getAABB();
     auto const& minSpacing = Config::cfg.land.minSpacing;
     auto        expanded   = aabb.expanded(minSpacing, Config::cfg.land.minSpacingIncludeY);
-    auto        lands      = registry->getLandAt(expanded.min.as(), expanded.max.as(), land->getDimensionId());
+    auto        lands      = registry.getLandAt(expanded.min.as(), expanded.max.as(), land->getDimensionId());
     if (lands.empty()) {
         return {};
     }
@@ -145,23 +152,20 @@ LandCreateValidator::ValidateResult LandCreateValidator::isLandRangeWithOtherCol
 
         if (LandAABB::isCollision(ld->getAABB(), aabb)) {
             // 领地范围与其他领地冲突
-            return std::unexpected(ErrorContext::landRangeWithOtherCollision(ld));
+            return makeError<LandRangeConflict>(aabb, ld);
         }
         if (!LandAABB::isComplisWithMinSpacing(ld->getAABB(), aabb, minSpacing)) {
             // 领地范围与其他领地间距过小
-            return std::unexpected(
-                ErrorContext::landSpacingTooSmall(ld, LandAABB::getMinSpacing(ld->getAABB(), aabb), minSpacing)
-            );
+            return makeError<LandSpacingError>(LandAABB::getMinSpacing(ld->getAABB(), aabb), minSpacing, ld);
         }
     }
     return {};
 }
 
-LandCreateValidator::ValidateResult
-LandCreateValidator::isSubLandPositionLegal(SharedLand const& land, LandAABB const& subRange) {
+ll::Expected<> LandCreateValidator::isSubLandPositionLegal(SharedLand const& land, LandAABB const& subRange) {
     // 子领地必须位于父领地内
     if (!LandAABB::isContain(land->getAABB(), subRange)) {
-        return std::unexpected(ErrorContext::subLandNotInParent(land, subRange));
+        return makeError<SubLandNotInParent>(land, subRange);
     }
 
     auto const& minSpacing = Config::cfg.land.subLand.minSpacing;
@@ -184,193 +188,120 @@ LandCreateValidator::isSubLandPositionLegal(SharedLand const& land, LandAABB con
 
         if (LandAABB::isCollision(memberAABB, subRange)) {
             // 子领地与家族内其他领地冲突
-            return std::unexpected(ErrorContext::landRangeWithOtherCollision(member));
+            return makeError<LandRangeConflict>(subRange, member);
         }
         if (!LandAABB::isComplisWithMinSpacing(memberAABB, expanded, minSpacing, includeY)) {
             // 子领地与家族内其他领地间距过小
-            return std::unexpected(
-                ErrorContext::landSpacingTooSmall(member, LandAABB::getMinSpacing(memberAABB, expanded), minSpacing)
-            );
+            return makeError<LandSpacingError>(LandAABB::getMinSpacing(memberAABB, expanded), minSpacing, member);
         }
     }
     return {};
 }
 
 
-// ErrorContext
-LandCreateValidator::ErrorContext LandCreateValidator::ErrorContext::undefined() { return {ErrorCode::Undefined}; }
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landCountLimitExceeded(int currentCount, int maxCount) {
-    return {
-        .code         = ErrorCode::LandCountLimitExceeded,
-        .currentCount = currentCount,
-        .maxCount     = maxCount,
-    };
+LandCreateValidator::ValidateError::ValidateError(ErrorCode code) : code(code) {}
+std::string LandCreateValidator::ValidateError::message() const noexcept {
+    return "Land Create Validator Error: {}"_tr(magic_enum::enum_name(code));
 }
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landInForbiddenRange(LandAABB const& range, LandAABB const& forbiddenRange) {
-    return {
-        .code           = ErrorCode::LandInForbiddenRange,
-        .currentRange   = range,
-        .forbiddenRange = forbiddenRange,
-    };
+void LandCreateValidator::ValidateError::sendTo(Player& player) const {
+    feedback_utils::sendErrorText(player, translateError(player.getLocaleCode()));
 }
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landRangeTooSmall(LandAABB const& range, int minRange) {
-    return {
-        .code         = ErrorCode::LandRangeTooSmall,
-        .currentRange = range,
-        .minRange     = minRange,
-    };
-}
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landRangeTooLarge(LandAABB const& range, int maxRange) {
-    return {
-        .code         = ErrorCode::LandRangeTooLarge,
-        .currentRange = range,
-        .maxRange     = maxRange,
-    };
-}
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landHeightTooSmall(LandAABB const& range, int minHeight) {
-    return {
-        .code         = ErrorCode::LandHeightTooSmall,
-        .currentRange = range,
-        .minHeight    = minHeight,
-    };
-}
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landHeightTooLarge(LandAABB const& range, int maxHeight) {
-    return {
-        .code         = ErrorCode::LandHeightTooLarge,
-        .currentRange = range,
-        .maxHeight    = maxHeight,
-    };
-}
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landRangeWithOtherCollision(SharedLand const& conflictLand) {
-    return {
-        .code         = ErrorCode::LandRangeWithOtherCollision,
-        .conflictLand = conflictLand,
-    };
-}
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::landSpacingTooSmall(SharedLand const& conflictLand, int spacing, int minSpacing) {
-    return {
-        .code         = ErrorCode::LandSpacingTooSmall,
-        .conflictLand = conflictLand,
-        .spacing      = spacing,
-        .minSpacing   = minSpacing,
-    };
-}
-
-LandCreateValidator::ErrorContext
-LandCreateValidator::ErrorContext::subLandNotInParent(SharedLand const& land, LandAABB const& subRange) {
-    return {
-        .code         = ErrorCode::SubLandNotInParent,
-        .currentRange = subRange,
-        .conflictLand = land,
-    };
+using ll::operator""_trl;
+std::string LandCreateValidator::ValidateError::translateError(std::string const& localeCode) const {
+    return "验证失败，未知异常"_trl(localeCode);
 }
 
 
-void LandCreateValidator::sendErrorMessage(Player& player, ErrorContext const& ctx) {
-    std::string msg;
+LandCreateValidator::LandCountExceeded::LandCountExceeded(int count, int maxCount)
+: ValidateError(ErrorCode::LandCountLimitExceeded),
+  count(count),
+  maxCount(maxCount) {}
+std::string LandCreateValidator::LandCountExceeded::translateError(std::string const& localeCode) const {
+    return "领地数量超过上限, 当前领地数量: {0}, 最大领地数量: {1}"_trl(localeCode, count, maxCount);
+}
 
-    switch (ctx.code) {
-    case ErrorCode::Undefined: {
-        msg = "未定义错误"_trf(player);
-        break;
-    }
-    case ErrorCode::LandCountLimitExceeded: {
-        msg = "领地数量超过上限, 当前领地数量: {0}, 最大领地数量: {1}"_trf(player, ctx.currentCount, ctx.maxCount);
-        break;
-    }
-    case ErrorCode::LandInForbiddenRange: {
-        msg = "领地范围在禁止区域内，当前范围: {0}, 禁止区域: {1}"_trf(
-            player,
-            ctx.currentRange.toString(),
-            ctx.forbiddenRange.toString()
-        );
-        break;
-    }
-    case ErrorCode::LandRangeTooSmall: {
-        if (ctx.currentRange.getWidth() < ctx.minRange) {
-            msg = "领地宽度过小(z轴)，当前宽度: {0}, 最小宽度: {1}"_trf(
-                player,
-                ctx.currentRange.getWidth(),
-                ctx.minRange
-            );
-        } else {
-            msg = "领地长度过小(x轴)，当前长度: {0}, 最小长度: {1}"_trf(
-                player,
-                ctx.currentRange.getDepth(),
-                ctx.minRange
-            );
-        }
-        break;
-    }
-    case ErrorCode::LandRangeTooLarge: {
-        if (ctx.currentRange.getWidth() > ctx.maxRange) {
-            msg = "领地宽度过大(z轴)，当前宽度: {0}, 最大宽度: {1}"_trf(
-                player,
-                ctx.currentRange.getWidth(),
-                ctx.maxRange
-            );
-        } else {
-            msg = "领地长度过大(x轴)，当前长度: {0}, 最大长度: {1}"_trf(
-                player,
-                ctx.currentRange.getDepth(),
-                ctx.maxRange
-            );
-        }
-        break;
-    }
-    case ErrorCode::LandHeightTooSmall: {
-        msg = "领地高度过低，当前高度: {0}, 最小高度: {1}"_trf(player, ctx.currentRange.getMin().y, ctx.minHeight);
-        break;
-    }
-    case ErrorCode::LandHeightTooLarge: {
-        msg = "领地高度过高，当前高度: {0}, 最大高度: {1}"_trf(player, ctx.currentRange.getMax().y, ctx.maxHeight);
-        break;
-    }
-    case ErrorCode::LandRangeWithOtherCollision: {
-        msg = "当前领地范围与领地 {0}({1}) 重叠，请调整领地范围!"_trf(
-            player,
-            ctx.conflictLand->getName(), // 0
-            ctx.conflictLand->getId()    // 1
-        );
-        break;
-    }
-    case ErrorCode::LandSpacingTooSmall: {
-        msg = "当前领地范围与领地 {0}({1}) 间距过小，请调整领地范围\n当前间距: {2}, 最小间距: {3}"_trf(
-            player,
-            ctx.conflictLand->getName(), // 0
-            ctx.conflictLand->getId(),   // 1
-            ctx.spacing,                 // 2
-            ctx.minSpacing               // 3
-        );
-        break;
-    }
-    case ErrorCode::SubLandNotInParent: {
-        msg = "子领地范围不在父领地范围内，当前范围: {0}, 父领地范围: {1}"_trf(
-            player,
-            ctx.currentRange.toString(),
-            ctx.conflictLand->getAABB().toString()
-        );
-        break;
-    }
-    }
 
-    mc_utils::sendText<mc_utils::LogLevel::Error>(player, msg);
+LandCreateValidator::LandInForbiddenRange::LandInForbiddenRange(LandAABB const& range, LandAABB const& forbiddenRange)
+: ValidateError(ErrorCode::LandInForbiddenRange),
+  range(range),
+  forbiddenRange(forbiddenRange) {}
+std::string LandCreateValidator::LandInForbiddenRange::translateError(std::string const& localeCode) const {
+    return "领地范围在禁止区域内，当前范围: {0}, 禁止区域: {1}"_trl(
+        localeCode,
+        range.toString(),
+        forbiddenRange.toString()
+    );
+}
+
+
+LandCreateValidator::LandRangeError::LandRangeError(ErrorCode code, int limit)
+: ValidateError(code),
+  limitSize(limit) {}
+std::string LandCreateValidator::LandRangeError::translateError(std::string const& localeCode) const {
+    if (code == ErrorCode::LandRangeTooSmall) {
+        return "领地范围过小，最小范围: {0}"_trl(localeCode, this->limitSize);
+    } else if (code == ErrorCode::LandRangeTooLarge) {
+        return "领地范围过大，最大范围: {0}"_trl(localeCode, this->limitSize);
+    } else {
+        return ValidateError::translateError(localeCode);
+    }
+}
+
+
+LandCreateValidator::LandHeightError::LandHeightError(ErrorCode code, int actual, int limit)
+: ValidateError(code),
+  actualHeight(actual),
+  limitHeight(limit) {}
+std::string LandCreateValidator::LandHeightError::translateError(std::string const& localeCode) const {
+    if (code == ErrorCode::LandOutOfDimensionHeightRange) {
+        return "领地过高(维度高度)，当前高度: {0}, 最大高度: {1}(min/max)"_trl(localeCode, actualHeight, limitHeight);
+    } else if (code == ErrorCode::LandHeightTooSmall) {
+        return "领地高度过低 {0}<{1}"_trl(localeCode, this->actualHeight, this->limitHeight);
+    } else {
+        return ValidateError::translateError(localeCode);
+    }
+}
+
+
+LandCreateValidator::LandRangeConflict::LandRangeConflict(LandAABB const& range, std::shared_ptr<Land> conflictLand)
+: ValidateError(ErrorCode::LandRangeConflict),
+  range(range),
+  conflictLand(conflictLand) {}
+std::string LandCreateValidator::LandRangeConflict::translateError(std::string const& localeCode) const {
+    return "当前领地范围与领地 {0}({1}) 重叠，请调整领地范围!"_trl(
+        localeCode,
+        conflictLand->getName(),
+        conflictLand->getId()
+    );
+}
+
+
+LandCreateValidator::LandSpacingError::LandSpacingError(int spacing, int minSpacing, std::shared_ptr<Land> conflictLand)
+: ValidateError(ErrorCode::LandSpacingTooSmall),
+  spacing(spacing),
+  minSpacing(minSpacing),
+  conflictLand(conflictLand) {}
+std::string LandCreateValidator::LandSpacingError::translateError(std::string const& localeCode) const {
+    return "当前领地范围与领地 {0}({1}) 间距过小，请调整领地范围\n当前间距: {2}, 最小间距: {3}"_trl(
+        localeCode,
+        conflictLand->getName(),
+        conflictLand->getId(),
+        spacing,
+        minSpacing
+    );
+}
+
+
+LandCreateValidator::SubLandNotInParent::SubLandNotInParent(std::shared_ptr<Land> parent, LandAABB const& subRange)
+: ValidateError(ErrorCode::SubLandOutOfParentLandRange),
+  parent(parent),
+  subRange(subRange) {}
+std::string LandCreateValidator::SubLandNotInParent::translateError(std::string const& localeCode) const {
+    return "子领地范围不在父领地范围内，当前范围: {0}, 父领地范围: {1}"_trl(
+        localeCode,
+        subRange.toString(),
+        parent->getAABB().toString()
+    );
 }
 
 
