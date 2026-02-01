@@ -14,13 +14,13 @@ class Land;
 namespace land {
 namespace event {
 
-class PlayerRequestChangeLandRangeEvent final : public ll::event::Cancellable<ll::event::PlayerEvent> {
+class PlayerChangeLandRangeEvent final : public ll::event::Cancellable<ll::event::PlayerEvent> {
     std::shared_ptr<Land>       mLand;
     LandAABB const&             mNewRange;
     LandResizeSettlement const& mResizeSettlement;
 
 public:
-    explicit PlayerRequestChangeLandRangeEvent(
+    explicit PlayerChangeLandRangeEvent(
         Player&                     player,
         std::shared_ptr<Land>       land,
         LandAABB const&             newRange,

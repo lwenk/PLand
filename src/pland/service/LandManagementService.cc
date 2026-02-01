@@ -3,7 +3,7 @@
 #include "LandHierarchyService.h"
 #include "pland/events/domain/LandResizedEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
-#include "pland/events/player/PlayerRequestChangeLandRangeEvent.h"
+#include "pland/events/player/PlayerChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerRequestCreateLandEvent.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandCreateValidator.h"
@@ -130,7 +130,7 @@ ll::Expected<> LandManagementService::handleChangeRange(
     auto range = selector->newLandAABB();
     assert(range.has_value());
 
-    auto event = event::PlayerRequestChangeLandRangeEvent{player, land, *range, settlement};
+    auto event = event::PlayerChangeLandRangeEvent{player, land, *range, settlement};
     ll::event::EventBus::getInstance().publish(event);
     if (event.isCancelled()) {
         return ll::makeStringError("操作失败，请求被取消"_trf(player));
