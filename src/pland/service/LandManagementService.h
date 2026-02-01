@@ -1,6 +1,8 @@
 #pragma once
 #include "pland/Global.h"
 
+#include <mc/deps/core/math/Vec3.h>
+
 namespace land {
 struct LandResizeSettlement;
 class Land;
@@ -70,6 +72,9 @@ public:
 
     ll::Expected<> requestDeleteLand(Player& player, std::shared_ptr<Land> land);
 
+    ll::Expected<> ensurePlayerLandCountLimit(mce::UUID const& uuid) const;
+
+    ll::Expected<> setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point);
 
 private:
     ll::Expected<std::shared_ptr<Land>>

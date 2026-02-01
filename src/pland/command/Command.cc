@@ -1,10 +1,10 @@
 #include "magic_enum.hpp"
 
-#include "pland/events/domain/ConfigReloadEvent.h"
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/command/Command.h"
 #include "pland/drawer/DrawHandleManager.h"
+#include "pland/events/domain/ConfigReloadEvent.h"
 #include "pland/gui/LandBuyGUI.h"
 #include "pland/gui/LandMainMenuGUI.h"
 #include "pland/gui/LandManagerGUI.h"
@@ -266,19 +266,21 @@ static auto const SetLandTeleportPos = [](CommandOrigin const& ori, CommandOutpu
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
 
-    auto& db   = PLand::getInstance().getLandRegistry();
-    auto  land = db.getLandAt(player.getPosition(), player.getDimensionId().id);
+    auto& mod      = PLand::getInstance();
+    auto& registry = mod.getLandRegistry();
+    auto  point    = player.getPosition();
+    auto  land     = registry.getLandAt(point, player.getDimensionId().id);
     if (!land) {
         feedback_utils::sendErrorText(out, "您当前不在领地内"_trf(player));
         return;
     }
 
-    auto& uuid = player.getUuid();
-    if (!land->isOwner(uuid) && !db.isOperator(uuid)) {
-        feedback_utils::sendErrorText(out, "您不是领地主人，无法设置传送点"_trf(player));
-        return;
+    auto& service = mod.getServiceLocator().getLandManagementService();
+    if (auto res = service.setLandTeleportPos(player, land, point)) {
+        feedback_utils::notifySuccess(player, "传送点已更新为: {}"_trf(player, point.toString()));
+    } else {
+        feedback_utils::sendError(player, res.error());
     }
-    land->setTeleportPos(LandPos::make(player.getPosition()));
 };
 
 
@@ -350,7 +352,8 @@ static auto const This = [](CommandOrigin const& ori, CommandOutput& out) {
 
 
 bool LandCommand::setup() {
-    auto& cmd = ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
+    auto& cmd =
+        ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
 
     // pland reload
     cmd.overload().text("reload").execute(Lambda::Reload);

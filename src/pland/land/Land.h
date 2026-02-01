@@ -52,7 +52,7 @@ public:
 
     LDNDAPI LandPos const& getTeleportPos() const;
 
-    LDAPI void setTeleportPos(LandPos const& pos);
+    LDAPI bool setTeleportPos(LandPos const& pos);
 
     LDNDAPI LandID getId() const;
 

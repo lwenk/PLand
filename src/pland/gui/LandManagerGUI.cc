@@ -30,6 +30,7 @@
 #include "pland/selector/LandResizeSelector.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/LandHierarchyService.h"
+#include "pland/service/LandManagementService.h"
 #include "pland/service/LandPriceService.h"
 #include "pland/service/ServiceLocator.h"
 #include "pland/utils/FeedbackUtils.h"
@@ -107,8 +108,12 @@ void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
         // 如果玩家在领地内，则显示设置传送点按钮
         if (land->getAABB().hasPos(player.getPosition())) {
             fm.appendButton("设置传送点"_trf(player), "textures/ui/Add-Ons_Nav_Icon36x36", "path", [land](Player& pl) {
-                land->setTeleportPos(LandPos::make(pl.getPosition()));
-                feedback_utils::sendText(pl, "领地传送点已设置!"_trf(pl));
+                auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+                if (auto res = service.setLandTeleportPos(pl, land, pl.getPosition())) {
+                    feedback_utils::notifySuccess(pl, "传送点已设置!"_trf(pl));
+                } else {
+                    feedback_utils::sendError(pl, res.error());
+                }
             });
         }
     }

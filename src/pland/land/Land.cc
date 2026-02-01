@@ -54,9 +54,13 @@ Land::~Land() = default;
 LandAABB const& Land::getAABB() const { return impl->mContext.mPos; }
 
 LandPos const& Land::getTeleportPos() const { return impl->mContext.mTeleportPos; }
-void           Land::setTeleportPos(LandPos const& pos) {
-    impl->mContext.mTeleportPos = pos;
-    impl->mDirtyCounter.increment();
+bool           Land::setTeleportPos(LandPos const& pos) {
+    if (getAABB().hasPos(pos.as<>())) {
+        impl->mContext.mTeleportPos = pos;
+        impl->mDirtyCounter.increment();
+        return true;
+    }
+    return false;
 }
 
 LandID    Land::getId() const { return impl->mContext.mLandID; }

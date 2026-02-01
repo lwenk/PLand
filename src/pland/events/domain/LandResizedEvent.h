@@ -1,8 +1,8 @@
 #pragma once
 #include "pland/Global.h"
 
+#include "LandUpdateBaseEvent.h"
 
-#include <ll/api/event/Event.h>
 #include <memory>
 
 namespace land {
@@ -13,16 +13,13 @@ class Land;
 namespace land {
 namespace event {
 
-class LandResizedEvent final : public ll::event::Event {
-    std::shared_ptr<Land> mLand;
-    LandAABB const&       mNewRange;
+class LandResizedEvent final : public LandUpdateBaseEvent {
+    LandAABB const& mNewRange;
 
 public:
     explicit LandResizedEvent(std::shared_ptr<Land> land, LandAABB const& newRange)
-    : mLand(land),
+    : LandUpdateBaseEvent(std::move(land)),
       mNewRange(newRange) {}
-
-    LDNDAPI std::shared_ptr<Land> const& land() const;
 
     LDNDAPI LandAABB const& newRange() const;
 };

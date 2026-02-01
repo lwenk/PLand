@@ -1,9 +1,8 @@
 #include "LandManagementService.h"
 
-#include "pland/events/domain/LandResizedEvent.h"
 #include "LandHierarchyService.h"
-#include "pland/events/player/PlayerBuyLandAfterEvent.h"
-#include "pland/events/player/PlayerRequestBuyLandEvent.h"
+#include "pland/events/domain/LandResizedEvent.h"
+#include "pland/events/player/PlayerBuyLandEvent.h"
 #include "pland/events/player/PlayerRequestChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerRequestCreateLandEvent.h"
 #include "pland/infra/Config.h"
@@ -84,7 +83,7 @@ ll::Expected<> LandManagementService::requestCreateSubLand(Player& player) {
 ll::Expected<std::shared_ptr<Land>>
 LandManagementService::buyLand(Player& player, DefaultSelector* selector, int64_t money) {
     assert(selector);
-    auto event = event::PlayerRequestBuyLandEvent{player, money, LandType::Ordinary};
+    auto event = event::PlayerBuyLandBeforeEvent{player, money, LandType::Ordinary};
     ll::event::EventBus::getInstance().publish(event);
     if (event.isCancelled()) {
         return ll::makeStringError("操作失败，请求被取消"_trf(player));
@@ -102,7 +101,7 @@ LandManagementService::buyLand(Player& player, DefaultSelector* selector, int64_
 ll::Expected<std::shared_ptr<Land>>
 LandManagementService::buyLand(Player& player, SubLandSelector* selector, int64_t money) {
     assert(selector != nullptr);
-    auto event = event::PlayerRequestBuyLandEvent{player, money, LandType::Sub};
+    auto event = event::PlayerBuyLandBeforeEvent{player, money, LandType::Sub};
     ll::event::EventBus::getInstance().publish(event);
     if (event.isCancelled()) {
         return ll::makeStringError("操作失败，请求被取消"_trf(player));
@@ -157,6 +156,22 @@ ll::Expected<> LandManagementService::handleChangeRange(
 
 ll::Expected<> LandManagementService::requestDeleteLand(Player& player, std::shared_ptr<Land> land) {
     return {}; // TODO: impl
+}
+ll::Expected<> LandManagementService::ensurePlayerLandCountLimit(mce::UUID const& uuid) const {
+    return LandCreateValidator::isPlayerLandCountLimitExceeded(impl->mRegistry, uuid);
+}
+ll::Expected<>
+LandManagementService::setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point) {
+    if (!land->isOwner(player.getUuid()) && !impl->mRegistry.isOperator(player.getUuid())) {
+        return ll::makeStringError("操作失败，您不是领地主人"_trf(player));
+    }
+    if (!land->getAABB().hasPos(point)) {
+        return ll::makeStringError("设置传送点失败，传送点不在领地范围内"_trf(player));
+    }
+    if (!land->setTeleportPos(LandPos::make(point))) {
+        return ll::makeStringError("设置传送点失败"_trf(player));
+    }
+    return {};
 }
 
 ll::Expected<std::shared_ptr<Land>>
