@@ -15,7 +15,7 @@ struct LandPriceService::Impl {
 LandPriceService::LandPriceService(LandHierarchyService& service) : impl(std::make_unique<Impl>(service)) {}
 LandPriceService::~LandPriceService() = default;
 
-ll::Expected<int64_t> LandPriceService::calculatePriceRecursively(
+int64_t LandPriceService::calculatePriceRecursively(
     std::shared_ptr<Land>                                              land,
     std::function<bool(std::shared_ptr<Land> const&, int64_t&)> const& func
 ) const {
@@ -39,6 +39,15 @@ LandPriceService::getOrdinaryLandPrice(LandAABB const& range, int dimId, bool is
 }
 ll::Expected<LandPriceService::PriceResult> LandPriceService::getSubLandPrice(LandAABB const& range, int dimId) const {
     return _getLandPrice(range, dimId, Config::getSubLandPriceCalculateFormula());
+}
+int64_t LandPriceService::getRefundAmount(std::shared_ptr<Land> const& land) const {
+    return PriceCalculate::calculateRefundsPrice(land->getOriginalBuyPrice(), Config::cfg.land.refundRate);
+}
+int64_t LandPriceService::getRefundAmountRecursively(std::shared_ptr<Land> const& land) const {
+    return calculatePriceRecursively(land, [](std::shared_ptr<Land> const& land, int64_t& price) {
+        price += PriceCalculate::calculateRefundsPrice(land->getOriginalBuyPrice(), Config::cfg.land.refundRate);
+        return true;
+    });
 }
 
 ll::Expected<LandPriceService::PriceResult>

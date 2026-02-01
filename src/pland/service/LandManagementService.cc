@@ -1,9 +1,11 @@
 #include "LandManagementService.h"
 
 #include "LandHierarchyService.h"
+#include "LandPriceService.h"
 #include "pland/events/domain/LandResizedEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
 #include "pland/events/player/PlayerChangeLandRangeEvent.h"
+#include "pland/events/player/PlayerDeleteLandEvent.h"
 #include "pland/events/player/PlayerRequestCreateLandEvent.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandCreateValidator.h"
@@ -24,15 +26,17 @@ namespace service {
 struct LandManagementService::Impl {
     LandRegistry&         mRegistry;
     SelectorManager&      mSelectorManager;
-    LandHierarchyService& mLandHierarchyService;
+    LandHierarchyService& mHierarchyService;
+    LandPriceService&     mPriceService;
 };
 
 LandManagementService::LandManagementService(
     LandRegistry&         registry,
     SelectorManager&      selectorManager,
-    LandHierarchyService& service
+    LandHierarchyService& hierarchyService,
+    LandPriceService&     priceService
 )
-: impl(std::make_unique<Impl>(registry, selectorManager, service)) {}
+: impl(std::make_unique<Impl>(registry, selectorManager, hierarchyService, priceService)) {}
 LandManagementService::~LandManagementService() {}
 
 
@@ -154,9 +158,7 @@ ll::Expected<> LandManagementService::handleChangeRange(
     return {};
 }
 
-ll::Expected<> LandManagementService::requestDeleteLand(Player& player, std::shared_ptr<Land> land) {
-    return {}; // TODO: impl
-}
+
 ll::Expected<> LandManagementService::ensurePlayerLandCountLimit(mce::UUID const& uuid) const {
     return LandCreateValidator::isPlayerLandCountLimitExceeded(impl->mRegistry, uuid);
 }
@@ -171,6 +173,33 @@ LandManagementService::setLandTeleportPos(Player& player, std::shared_ptr<Land> 
     if (!land->setTeleportPos(LandPos::make(point))) {
         return ll::makeStringError("设置传送点失败"_trf(player));
     }
+    return {};
+}
+ll::Expected<> LandManagementService::deleteOrdinaryOrSubLand(Player& player, std::shared_ptr<Land> ptr) {
+    auto event = event::PlayerDeleteLandBeforeEvent{player, ptr};
+    ll::event::EventBus::getInstance().publish(event);
+    if (event.isCancelled()) {
+        return ll::makeStringError("操作失败，请求被取消"_trf(player));
+    }
+
+    ll::Expected<> expected;
+    switch (ptr->getType()) {
+    case LandType::Ordinary: {
+        expected = impl->mRegistry.removeOrdinaryLand(ptr);
+    } break;
+    case LandType::Sub:
+        expected = impl->mHierarchyService.deleteSubLand(ptr);
+        break;
+    default:
+        return ll::makeStringError("操作失败，无法删除该类型领地"_trf(player));
+    }
+
+    if (!expected) return expected;
+    if (auto refund = _processLandRefund(player, ptr, true); !refund) {
+        return refund;
+    }
+
+    ll::event::EventBus::getInstance().publish(event::PlayerDeleteLandAfterEvent{player, ptr});
     return {};
 }
 
@@ -238,7 +267,7 @@ ll::Expected<> LandManagementService::_ensureAndAttachSubLand(
         parent,
         sub->getAABB(),
         impl->mRegistry,
-        impl->mLandHierarchyService
+        impl->mHierarchyService
     );
     if (!res) {
         if (res.error().isA<LandCreateValidator::ValidateError>()) {
@@ -247,7 +276,7 @@ ll::Expected<> LandManagementService::_ensureAndAttachSubLand(
         }
         return ll::makeStringError(res.error().message());
     }
-    return impl->mLandHierarchyService.attachSubLand(parent, sub);
+    return impl->mHierarchyService.attachSubLand(parent, sub);
 }
 
 ll::Expected<> LandManagementService::_processResizeSettlement(Player& player, LandResizeSettlement const& settlement) {
@@ -264,6 +293,17 @@ ll::Expected<> LandManagementService::_processResizeSettlement(Player& player, L
         }
         break;
     default:;
+    }
+    return {};
+}
+
+ll::Expected<>
+LandManagementService::_processLandRefund(Player& player, std::shared_ptr<Land> const& land, bool isSingle) {
+    auto price =
+        isSingle ? impl->mPriceService.getRefundAmount(land) : impl->mPriceService.getRefundAmountRecursively(land);
+    auto& economy = EconomySystem::getInstance();
+    if (!economy->add(player, price)) {
+        return ll::makeStringError("经济系统异常,退还差价失败"_trf(player));
     }
     return {};
 }

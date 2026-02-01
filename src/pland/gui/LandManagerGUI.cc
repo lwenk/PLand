@@ -162,19 +162,17 @@ void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) 
     if (!ptr->isOrdinaryLand() && !ptr->isSubLand()) {
         return;
     }
-    int price = PriceCalculate::calculateRefundsPrice(ptr->getOriginalBuyPrice(), Config::cfg.land.refundRate);
-
     ModalForm(
         PLUGIN_NAME + " | 确认删除?"_trf(player),
-        "您确定要删除领地 {} 吗?\n删除领地后，您将获得 {} 金币的退款。\n此操作不可逆,请谨慎操作!"_trf(
+        "您确定要删除领地 '{}' 吗?\n删除领地后，您将获得 {} 金币的退款。\n此操作不可逆,请谨慎操作!"_trf(
             player,
             ptr->getName(),
-            price
+            PLand::getInstance().getServiceLocator().getLandPriceService().getRefundAmount(ptr)
         ),
         "确认"_trf(player),
         "返回"_trf(player)
     )
-        .sendTo(player, [ptr, price](Player& pl, ModalFormResult const& res, FormCancelReason) {
+        .sendTo(player, [ptr](Player& pl, ModalFormResult const& res, FormCancelReason) {
             if (!res) {
                 return;
             }
@@ -183,29 +181,12 @@ void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) 
                 return;
             }
 
-            PlayerDeleteLandBeforeEvent ev(pl, ptr->getId(), price);
-            ll::event::EventBus::getInstance().publish(ev);
-            if (ev.isCancelled()) {
-                return;
+            auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+            if (auto res = service.deleteOrdinaryOrSubLand(pl, ptr)) {
+                feedback_utils::notifySuccess(pl, "删除成功"_trf(pl));
+            } else {
+                feedback_utils::sendError(pl, res.error());
             }
-
-            auto& economy = EconomySystem::getInstance();
-            if (!economy->add(pl, price)) {
-                return;
-            }
-
-            auto result = ptr->isSubLand()
-                            ? PLand::getInstance().getServiceLocator().getLandHierarchyService().deleteSubLand(ptr)
-                            : PLand::getInstance().getLandRegistry().removeOrdinaryLand(ptr);
-            if (!result) {
-                economy->reduce(pl, price);
-                return;
-            }
-
-            auto handle = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(pl);
-            handle->remove(ptr);
-
-            ll::event::EventBus::getInstance().publish(PlayerDeleteLandAfterEvent{pl, ptr->getId()});
         });
 }
 

@@ -30,7 +30,7 @@ public:
      * @param func 自定义处理函数(若为空，则默认对所有领地进行累加)
      * @return 计算结果
      */
-    ll::Expected<int64_t> calculatePriceRecursively(
+    int64_t calculatePriceRecursively(
         std::shared_ptr<Land>                                                         land,
         std::function<bool(std::shared_ptr<Land> const& land, int64_t& price)> const& func = nullptr
     ) const;
@@ -65,6 +65,19 @@ public:
      * @param dimId 领地所在维度
      */
     ll::Expected<PriceResult> getSubLandPrice(LandAABB const& range, int dimId) const;
+
+
+    /**
+     * 获取单个领地退款金额
+     * @param land 领地
+     */
+    int64_t getRefundAmount(std::shared_ptr<Land> const& land) const;
+
+    /**
+     * 递归计算领地退款金额
+     * @param land 领地
+     */
+    int64_t getRefundAmountRecursively(std::shared_ptr<Land> const& land) const;
 
 private:
     ll::Expected<PriceResult>

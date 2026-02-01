@@ -3,6 +3,7 @@
 
 #include <mc/deps/core/math/Vec3.h>
 
+
 namespace land {
 struct LandResizeSettlement;
 class Land;
@@ -14,7 +15,8 @@ class LandRegistry;
 } // namespace land
 namespace land::service {
 class LandHierarchyService;
-}
+class LandPriceService;
+} // namespace land::service
 
 namespace land {
 namespace service {
@@ -24,7 +26,12 @@ class LandManagementService {
     std::unique_ptr<Impl> impl;
 
 public:
-    LandManagementService(LandRegistry& registry, SelectorManager& selectorManager, LandHierarchyService& service);
+    LandManagementService(
+        LandRegistry&         registry,
+        SelectorManager&      selectorManager,
+        LandHierarchyService& hierarchyService,
+        LandPriceService&     priceService
+    );
     ~LandManagementService();
 
     LD_DISABLE_COPY_AND_MOVE(LandManagementService);
@@ -69,12 +76,11 @@ public:
     ll::Expected<>
     handleChangeRange(Player& player, LandResizeSelector* selector, LandResizeSettlement const& settlement);
 
-
-    ll::Expected<> requestDeleteLand(Player& player, std::shared_ptr<Land> land);
-
     ll::Expected<> ensurePlayerLandCountLimit(mce::UUID const& uuid) const;
 
     ll::Expected<> setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point);
+
+    ll::Expected<> deleteOrdinaryOrSubLand(Player& player, std::shared_ptr<Land> ptr);
 
 private:
     ll::Expected<std::shared_ptr<Land>>
@@ -88,6 +94,8 @@ private:
     ll::Expected<> _ensureAndAttachSubLand(Player& player, std::shared_ptr<Land> parent, std::shared_ptr<Land> sub);
 
     ll::Expected<> _processResizeSettlement(Player& player, LandResizeSettlement const& settlement);
+
+    ll::Expected<> _processLandRefund(Player& player, std::shared_ptr<Land> const& land, bool isSingle);
 };
 
 } // namespace service
