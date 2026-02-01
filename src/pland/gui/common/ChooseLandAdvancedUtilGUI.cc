@@ -176,19 +176,19 @@ public:
             mViews.at(View::All).appendButton(text, "textures/ui/icon_recipe_nature", "path", makeCallback(wLand));
 
             switch (land->getType()) {
-            case Land::Type::Ordinary:
+            case LandType::Ordinary:
                 mViews.at(View::OnlyOrdinary)
                     .appendButton(text, "textures/ui/icon_recipe_nature", "path", makeCallback(wLand));
                 break;
-            case Land::Type::Parent:
+            case LandType::Parent:
                 mViews.at(View::OnlyParent)
                     .appendButton(text, "textures/ui/icon_recipe_nature", "path", makeCallback(wLand));
                 break;
-            case Land::Type::Mix:
+            case LandType::Mix:
                 mViews.at(View::OnlyMix)
                     .appendButton(text, "textures/ui/icon_recipe_nature", "path", makeCallback(wLand));
                 break;
-            case Land::Type::Sub:
+            case LandType::Sub:
                 mViews.at(View::OnlySub)
                     .appendButton(text, "textures/ui/icon_recipe_nature", "path", makeCallback(wLand));
                 break;

@@ -14,10 +14,10 @@
 #include "ll/api/utils/SystemUtils.h"
 
 #include "drawer/DrawHandleManager.h"
+#include "events/domain/ConfigReloadEvent.h"
 #include "pland/adapter/telemetry/Telemetry.h"
 #include "pland/command/Command.h"
 #include "pland/economy/EconomySystem.h"
-#include "pland/events/ConfigReloadEvent.h"
 #include "pland/hooks/EventListener.h"
 #include "pland/infra/Config.h"
 #include "pland/infra/SafeTeleport.h"

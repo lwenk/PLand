@@ -18,6 +18,7 @@ struct StorageError : public ll::ErrorInfoBase {
         LandTypeMismatch     = 1 << 4, // 领地类型不匹配
         LandRangeIllegal     = 1 << 5, // 领地范围不合法
         DataConsistencyError = 1 << 6, // 数据一致性错误
+        TransactionError     = 1 << 7, // 事务错误
     };
 
     ErrorCode   mCode{ErrorCode::None};

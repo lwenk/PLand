@@ -3,10 +3,14 @@
 
 #include <memory>
 
+namespace land::service {
+class LandPriceService;
+}
 namespace land {
 class PLand;
 }
 namespace land::service {
+class LandHierarchyService;
 class LandManagementService;
 }
 
@@ -24,6 +28,10 @@ public:
     LD_DISABLE_COPY_AND_MOVE(ServiceLocator);
 
     LandManagementService& getLandManagementService() const;
+
+    LandHierarchyService& getLandHierarchyService() const;
+
+    LandPriceService& getLandPriceService() const;
 };
 
 } // namespace service

@@ -1,13 +1,16 @@
 #include "pland/gui/LandManagerGUI.h"
 #include "LandTeleportGUI.h"
+
 #include "ll/api/event/EventBus.h"
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/ModalForm.h"
 #include "ll/api/form/SimpleForm.h"
 #include "ll/api/service/PlayerInfo.h"
+
 #include "mc/deps/ecs/WeakEntityRef.h"
 #include "mc/world/actor/player/Player.h"
+
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
@@ -24,10 +27,14 @@
 #include "pland/land/LandEvent.h"
 #include "pland/land/LandRegistry.h"
 #include "pland/land/StorageError.h"
-#include "pland/selector/ChangeLandRangeSelector.h"
+#include "pland/selector/LandResizeSelector.h"
 #include "pland/selector/SelectorManager.h"
+#include "pland/service/LandHierarchyService.h"
+#include "pland/service/LandPriceService.h"
+#include "pland/service/ServiceLocator.h"
 #include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
+
 #include <cstdint>
 #include <stack>
 #include <string>
@@ -40,24 +47,26 @@ namespace land {
 
 
 void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
-    auto fm = BackSimpleForm<>::make();
+    auto fm = SimpleForm{};
     fm.setTitle(PLUGIN_NAME + ("| 领地管理 [{}]"_trf(player, land->getId())));
+
+    auto& service = PLand::getInstance().getServiceLocator().getLandHierarchyService();
 
     std::string subContent;
     if (land->isParentLand()) {
-        subContent = "下属子领地: {}"_trf(player, land->getSubLands().size());
+        subContent = "下属子领地: {}"_trf(player, land->getSubLandIDs().size());
     } else if (land->isMixLand()) {
         subContent = "下属子领地: {}\n父领地ID: {}\n父领地名称: {}"_trf(
             player,
-            land->getSubLands().size(),
-            land->getParentLand()->getId(),
-            land->getParentLand() ? land->getParentLand()->getName() : "nullptr"
+            land->getSubLandIDs().size(),
+            service.getParent(land)->getId(),
+            service.getParent(land)->getName()
         );
     } else {
         subContent = "父领地ID: {}\n父领地名称: {}"_trf(
             player,
-            land->hasParentLand() ? (std::to_string(land->getParentLand()->getId())) : "nullptr",
-            land->hasParentLand() ? land->getParentLand()->getName() : "nullptr"
+            land->hasParentLand() ? (std::to_string(service.getParent(land)->getId())) : "null",
+            land->hasParentLand() ? service.getParent(land)->getName() : "null"
         );
     }
 
@@ -115,7 +124,7 @@ void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
     }
 
     fm.appendButton("删除领地"_trf(player), "textures/ui/icon_trash", "path", [land](Player& pl) {
-        sendRemoveConfirmGUI(pl, land);
+        showRemoveConfirm(pl, land);
     });
 
     fm.sendTo(player);
@@ -129,21 +138,26 @@ void LandManagerGUI::sendEditLandPermGUI(Player& player, SharedLand const& ptr) 
 }
 
 
-void LandManagerGUI::sendRemoveConfirmGUI(Player& player, SharedLand const& ptr) {
-    if (ptr->isOrdinaryLand() || ptr->isSubLand()) {
-        _implRemoveWithOrdinaryOrSubLandGUI(player, ptr);
-    } else if (ptr->isParentLand()) {
-        _implRemoveParentLandGUI(player, ptr);
-    } else if (ptr->isMixLand()) {
-        _implRemoveMixLandGUI(player, ptr);
+void LandManagerGUI::showRemoveConfirm(Player& player, SharedLand const& ptr) {
+    switch (ptr->getType()) {
+    case LandType::Ordinary:
+    case LandType::Sub:
+        confirmSimpleDelete(player, ptr);
+        break;
+    case LandType::Parent:
+        confirmParentDelete(player, ptr);
+        break;
+    case LandType::Mix:
+        confirmMixDelete(player, ptr);
+        break;
     }
 }
 
-void LandManagerGUI::_implRemoveWithOrdinaryOrSubLandGUI(Player& player, SharedLand const& ptr) {
-    int price = static_cast<int>(Land::calculatePriceRecursively(ptr, [](SharedLand const& land, llong& price) {
-        price += PriceCalculate::calculateRefundsPrice(land->getOriginalBuyPrice(), Config::cfg.land.refundRate);
-        return true;
-    }));
+void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) {
+    if (!ptr->isOrdinaryLand() && !ptr->isSubLand()) {
+        return;
+    }
+    int price = PriceCalculate::calculateRefundsPrice(ptr->getOriginalBuyPrice(), Config::cfg.land.refundRate);
 
     ModalForm(
         PLUGIN_NAME + " | 确认删除?"_trf(player),
@@ -175,8 +189,9 @@ void LandManagerGUI::_implRemoveWithOrdinaryOrSubLandGUI(Player& player, SharedL
                 return;
             }
 
-            auto result = ptr->isSubLand() ? PLand::getInstance().getLandRegistry().removeSubLand(ptr)
-                                           : PLand::getInstance().getLandRegistry().removeOrdinaryLand(ptr);
+            auto result = ptr->isSubLand()
+                            ? PLand::getInstance().getServiceLocator().getLandHierarchyService().deleteSubLand(ptr)
+                            : PLand::getInstance().getLandRegistry().removeOrdinaryLand(ptr);
             if (!result) {
                 economy->reduce(pl, price);
                 return;
@@ -189,18 +204,19 @@ void LandManagerGUI::_implRemoveWithOrdinaryOrSubLandGUI(Player& player, SharedL
         });
 }
 
-void LandManagerGUI::_implRemoveParentLandGUI(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::confirmParentDelete(Player& player, SharedLand const& ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
     fm.setTitle(PLUGIN_NAME + "| 删除领地 & 父领地"_trf(player));
     fm.setContent(
-        "您当前操作的的是父领地\n当前领地下有 {} 个子领地\n您确定要删除领地吗?"_trf(player, ptr->getSubLands().size())
+        "您当前操作的的是父领地\n当前领地下有 {} 个子领地\n您确定要删除领地吗?"_trf(player, ptr->getSubLandIDs().size())
     );
 
     fm.appendButton("删除当前领地和子领地"_trf(player), [ptr](Player& pl) {
-        int price = static_cast<int>(Land::calculatePriceRecursively(ptr, [](SharedLand const& land, llong& price) {
+        auto& priceService = PLand::getInstance().getServiceLocator().getLandPriceService();
+        auto price = priceService.calculatePriceRecursively(ptr, [](std::shared_ptr<Land> const& land, int64_t& price) {
             price += PriceCalculate::calculateRefundsPrice(land->getOriginalBuyPrice(), Config::cfg.land.refundRate);
             return true;
-        }));
+        });
 
         auto mainLandId = ptr->getId();
 
@@ -257,7 +273,7 @@ void LandManagerGUI::_implRemoveParentLandGUI(Player& player, SharedLand const& 
 
     fm.sendTo(player);
 }
-void LandManagerGUI::_implRemoveMixLandGUI(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::confirmMixDelete(Player& player, SharedLand const& ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
     fm.setTitle(PLUGIN_NAME + "| 删除领地 & 混合领地"_trf(player));
     fm.setContent(
@@ -364,7 +380,7 @@ void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) 
                     return;
                 }
 
-                if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(target.getUuid()); !res) {
+                if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(TODO, target.getUuid()); !res) {
                     if (res.error().isA<LandCreateValidator::ValidateError>()) {
                         auto& error = res.error().as<LandCreateValidator::ValidateError>();
                         error.sendTo(self);
@@ -461,7 +477,7 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedL
             return;
         }
 
-        if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(targetUuid); !res) {
+        if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(TODO, targetUuid); !res) {
             if (res.error().isA<LandCreateValidator::ValidateError>()) {
                 auto& error = res.error().as<LandCreateValidator::ValidateError>();
                 error.sendTo(self);
@@ -538,7 +554,7 @@ void LandManagerGUI::sendChangLandRangeGUI(Player& player, SharedLand const& ptr
             return;
         }
 
-        auto selector = std::make_unique<ChangeLandRangeSelector>(self, ptr);
+        auto selector = std::make_unique<LandResizeSelector>(self, ptr);
         manager->startSelection(std::move(selector));
     });
 }

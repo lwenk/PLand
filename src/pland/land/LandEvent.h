@@ -12,38 +12,6 @@
 namespace land {
 
 
-// 玩家购买领地 (LandBuyGUI)
-class [[deprecated("Waiting for reconstruction")]] PlayerBuyLandBeforeEvent final
-: public ll::event::Cancellable<ll::event::Event> {
-protected:
-    Player&    mPlayer;
-    ISelector* mSelector;
-    int&       mPrice;
-
-public:
-    LDAPI constexpr explicit PlayerBuyLandBeforeEvent(Player& player, ISelector* selector, int& price)
-    : Cancellable(),
-      mPlayer(player),
-      mSelector(selector),
-      mPrice(price) {}
-
-    LDNDAPI Player&    getPlayer() const;
-    LDNDAPI ISelector* getSelector() const;
-    LDNDAPI int&       getPrice() const;
-};
-class [[deprecated("Waiting for reconstruction")]] PlayerBuyLandAfterEvent final : public ll::event::Event {
-protected:
-    Player&    mPlayer;
-    SharedLand mLand;
-
-public:
-    LDAPI explicit PlayerBuyLandAfterEvent(Player& player, SharedLand landData) : mPlayer(player), mLand(landData) {}
-
-    LDNDAPI Player&    getPlayer() const;
-    LDNDAPI SharedLand getLand() const;
-};
-
-
 // 玩家 进入/离开 领地(LandScheduler)
 class [[deprecated("Waiting for reconstruction")]] PlayerEnterLandEvent final : public ll::event::Event {
 protected:
@@ -180,67 +148,6 @@ public:
     LDNDAPI Player& getPlayer() const;
     LDNDAPI mce::UUID const& getNewOwner() const;
     LDNDAPI LandID           getLandID() const;
-};
-
-
-// 领地范围变动(LandBuyWithReSelectGui)
-class [[deprecated("Waiting for reconstruction")]] LandRangeChangeBeforeEvent final
-: public ll::event::Cancellable<ll::event::Event> {
-protected:
-    Player&           mPlayer;      // 操作者
-    SharedLand const& mLand;        // 操作的领地数据
-    LandAABB const&   mNewRange;    // 新范围
-    int const&        mNeedPay;     // 需要支付的价格
-    int const&        mRefundPrice; // 需要退的价格
-
-public:
-    LDAPI LandRangeChangeBeforeEvent(
-        Player&           player,
-        SharedLand const& landData,
-        LandAABB const&   newRange,
-        int const&        needPay,
-        int const&        refundPrice
-    )
-    : Cancellable(),
-      mPlayer(player),
-      mLand(landData),
-      mNewRange(newRange),
-      mNeedPay(needPay),
-      mRefundPrice(refundPrice) {}
-
-    LDNDAPI Player&           getPlayer() const;
-    LDNDAPI SharedLand const& getLand() const;
-    LDNDAPI LandAABB const&   getNewRange() const;
-    LDNDAPI int const&        getNeedPay() const;
-    LDNDAPI int const&        getRefundPrice() const;
-};
-class [[deprecated("Waiting for reconstruction")]] LandRangeChangeAfterEvent final : public ll::event::Event {
-protected:
-    Player&           mPlayer;      // 操作者
-    SharedLand const& mLand;        // 操作的领地数据
-    LandAABB const&   mNewRange;    // 新范围
-    int const&        mNeedPay;     // 需要支付的价格
-    int const&        mRefundPrice; // 需要退的价格
-
-public:
-    LDAPI LandRangeChangeAfterEvent(
-        Player&           player,
-        SharedLand const& landData,
-        LandAABB const&   newRange,
-        int const&        needPay,
-        int const&        refundPrice
-    )
-    : mPlayer(player),
-      mLand(landData),
-      mNewRange(newRange),
-      mNeedPay(needPay),
-      mRefundPrice(refundPrice) {}
-
-    LDNDAPI Player&           getPlayer() const;
-    LDNDAPI SharedLand const& getLand() const;
-    LDNDAPI LandAABB const&   getNewRange() const;
-    LDNDAPI int const&        getNeedPay() const;
-    LDNDAPI int const&        getRefundPrice() const;
 };
 
 

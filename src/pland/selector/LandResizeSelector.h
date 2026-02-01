@@ -6,13 +6,13 @@ namespace land {
 
 class Land;
 
-class ChangeLandRangeSelector final : public ISelector {
+class LandResizeSelector final : public ISelector {
     std::weak_ptr<Land> mLand;           // 领地
     drawer::GeoId       mOldRangeDrawId; // 旧领地范围
 
 public:
-    LDAPI explicit ChangeLandRangeSelector(Player& player, std::shared_ptr<Land> land);
-    LDAPI ~ChangeLandRangeSelector() override;
+    LDAPI explicit LandResizeSelector(Player& player, std::shared_ptr<Land> land);
+    LDAPI ~LandResizeSelector() override;
 
     LDNDAPI std::shared_ptr<Land> getLand() const;
 };

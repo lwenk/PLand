@@ -1,17 +1,16 @@
 #include "magic_enum.hpp"
 
+#include "pland/events/domain/ConfigReloadEvent.h"
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/command/Command.h"
 #include "pland/drawer/DrawHandleManager.h"
-#include "pland/events/ConfigReloadEvent.h"
 #include "pland/gui/LandBuyGUI.h"
 #include "pland/gui/LandMainMenuGUI.h"
 #include "pland/gui/LandManagerGUI.h"
 #include "pland/gui/LandOperatorManagerGUI.h"
 #include "pland/gui/NewLandGUI.h"
 #include "pland/infra/Config.h"
-#include "pland/infra/DataConverter.h"
 #include "pland/land/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/LandManagementService.h"
@@ -263,35 +262,6 @@ static auto const Draw = [](CommandOrigin const& ori, CommandOutput& out, DrawPa
     }
 };
 
-
-struct ImportParam {
-    bool        clearDb;
-    std::string relationship_file;
-    std::string data_file;
-};
-static auto const Import = [](CommandOrigin const& ori, CommandOutput& out, ImportParam const& param) {
-    CHECK_TYPE(ori, out, CommandOriginType::DedicatedServer);
-
-    if (!std::filesystem::exists(param.relationship_file)) {
-        out.error("未找到 relationship.json 文件"_tr());
-        return;
-    }
-    if (!std::filesystem::exists(param.data_file)) {
-        out.error("未找到 data.json 文件"_tr());
-        return;
-    }
-    if (std::filesystem::path(param.relationship_file).filename() != "relationship.json") {
-        out.error("relationship.json 文件名错误"_tr());
-        return;
-    }
-
-    if (iLandConverter(param.relationship_file, param.data_file, param.clearDb).execute()) {
-        out.success("导入成功"_tr());
-    } else {
-        out.error("导入失败"_tr());
-    }
-};
-
 static auto const SetLandTeleportPos = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
@@ -321,8 +291,8 @@ static auto const SetLanguage = [](CommandOrigin const& ori, CommandOutput& out)
     using ll::form::FormCancelReason;
 
     static std::vector<std::string> langs = {
-        PlayerSettings::SERVER_LOCALE_CODE(),
-        PlayerSettings::SYSTEM_LOCALE_CODE()
+        PlayerSettings::SERVER_LOCALE_CODE.data(),
+        PlayerSettings::SYSTEM_LOCALE_CODE.data()
     };
     if (langs.size() == 2) {
         std::filesystem::path const& langDir = land::PLand::getInstance().getSelf().getLangDir();
@@ -419,14 +389,6 @@ bool LandCommand::setup() {
     if (Config::cfg.land.setupDrawCommand) {
         cmd.overload<Lambda::DrawParam>().text("draw").required("type").execute(Lambda::Draw);
     }
-
-    // pland import <land_type> <clear_db> <Args...>
-    cmd.overload<Lambda::ImportParam>()
-        .text("import")
-        .required("clearDb")
-        .required("relationship_file")
-        .required("data_file")
-        .execute(Lambda::Import);
 
     // pland set teleport_pos 设置传送点
     cmd.overload().text("set").text("teleport_pos").execute(Lambda::SetLandTeleportPos);

@@ -37,6 +37,8 @@ using LandID    = int64_t;  // 领地ID
 using ChunkID   = uint64_t; // 区块ID
 using LandDimid = int;      // 领地所在维度
 
+inline constexpr LandID INVALID_LAND_ID = -1; // 无效的领地ID / 默认值
+
 enum class LandPermType : int {
     Operator = 0, // 领地操作员（管理）
     Owner,        // 领地主人

@@ -1,12 +1,12 @@
 #pragma once
 #include "LandContext.h"
-#include "ll/api/base/StdInt.h"
-#include "nlohmann/json.hpp"
+#include "LandType.h"
 #include "pland/Global.h"
 #include "pland/aabb/LandAABB.h"
 #include "pland/infra/DirtyCounter.h"
-#include <cstdint>
-#include <optional>
+
+#include "nlohmann/json.hpp"
+
 #include <unordered_set>
 #include <vector>
 
@@ -18,40 +18,28 @@ class UUID;
 namespace land {
 
 class Land;
-class LandRegistry;
+namespace service {
+class LandHierarchyService;
+class LandManagementService;
+} // namespace service
 
 using SharedLand = std::shared_ptr<Land>; // 共享指针
 using WeakLand   = std::weak_ptr<Land>;   // 弱指针
 
-class Land final {
-public:
-    enum class Type {
-        Ordinary = 0, // 普通领地(无父、无子)
-        Parent   = 1, // 父领地(无父、有子)
-        Mix      = 2, // 混合领地(有父、有子)
-        Sub      = 3, // 子领地(有父、无子)
-    };
-
-private:
-    LandContext  mContext;
-    DirtyCounter mDirtyCounter;
-
-    // cache
-    mutable std::optional<mce::UUID>      mCacheOwner;
-    mutable std::unordered_set<mce::UUID> mCacheMembers;
-
-    friend LandRegistry;
-
-    void _initCache();
-
-    SharedLand getSelfFromRegistry() const;
-
+class Land final : std::enable_shared_from_this<Land> {
 public:
     LD_DISABLE_COPY(Land);
 
     LDAPI explicit Land();
     LDAPI explicit Land(LandContext ctx);
-    LDAPI explicit Land(LandAABB const& pos, LandDimid dimid, bool is3D, mce::UUID const& owner);
+    LDAPI explicit Land(
+        LandAABB const&  pos,
+        LandDimid        dimid,
+        bool             is3D,
+        mce::UUID const& owner,
+        LandPermTable    ptable = {}
+    );
+    LDAPI ~Land();
 
     template <typename... Args>
         requires std::constructible_from<Land, Args...>
@@ -61,13 +49,6 @@ public:
 
 
     LDNDAPI LandAABB const& getAABB() const;
-
-    /**
-     * @brief 修改领地范围(仅限普通领地)
-     * @param pos 领地对角坐标
-     * @warning 修改后务必在 LandRegistry 中刷新领地范围，否则范围不会更新
-     */
-    LDNDAPI bool setAABB(LandAABB const& newRange);
 
     LDNDAPI LandPos const& getTeleportPos() const;
 
@@ -145,7 +126,7 @@ public:
     /**
      * @brief 获取领地类型
      */
-    LDNDAPI Type getType() const;
+    LDNDAPI LandType getType() const;
 
     /**
      * @brief 是否有父领地
@@ -184,14 +165,14 @@ public:
     LDNDAPI bool canCreateSubLand() const;
 
     /**
-     * @brief 获取父领地
+     * @brief 获取父领地 ID
      */
-    LDNDAPI SharedLand getParentLand() const;
+    LDNDAPI LandID getParentLandID() const;
 
     /**
-     * @brief 获取子领地(当前领地名下的所有子领地)
+     * @brief 获取子领地 ID (当前领地名下的所有子领地)
      */
-    LDNDAPI std::vector<SharedLand> getSubLands() const;
+    LDNDAPI std::vector<LandID> getSubLandIDs() const;
 
     /**
      * @brief 获取嵌套层级(相对于父领地)
@@ -199,55 +180,44 @@ public:
     LDNDAPI int getNestedLevel() const;
 
     /**
-     * @brief 获取根领地(即最顶层的普通领地 isOrdinaryLand() == true)
-     */
-    LDNDAPI SharedLand getRootLand() const;
-
-    /**
-     * @brief 获取从当前领地的根领地出发的所有子领地（包含根和当前领地）
-     */
-    LDNDAPI std::unordered_set<SharedLand> getFamilyTree() const;
-
-    /**
-     * @brief 获取当前领地及其所有上级父领地（包含自身）
-     */
-    LDNDAPI std::unordered_set<SharedLand> getSelfAndAncestors() const;
-
-    /**
-     * @brief 获取当前领地及其所有下级子领地（包含自身）
-     */
-    LDNDAPI std::unordered_set<SharedLand> getSelfAndDescendants() const;
-
-    /**
      * @brief 获取一个玩家在当前领地所拥有的权限类别
      */
     LDNDAPI LandPermType getPermType(mce::UUID const& uuid) const;
 
-    LDAPI void updateXUIDToUUID(mce::UUID const& ownerUUID); // xuid -> uuid
+    /**
+     * 迁移领地主人信息 (XUID -> UUID)
+     * @param ownerUUID 领地主人 UUID
+     */
+    LDAPI void migrateOwner(mce::UUID const& ownerUUID);
 
     LDAPI void load(nlohmann::json& json); // 加载数据
-    LDAPI nlohmann::json dump() const;     // 导出数据
-
-    /**
-     * @brief 保存数据(保存到数据库)
-     * @param force 是否强制保存(即使数据未修改)
-     * @note 此函数仅在数据有修改时才会保存，否则不会保存
-     */
-    LDAPI void save(bool force = false);
+    LDAPI nlohmann::json toJson() const;   // 导出数据
 
     LDAPI bool operator==(SharedLand const& other) const;
 
-public:
-    using RecursionCalculationPriceHandle = std::function<bool(SharedLand const& land, llong& price)>;
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl;
+
+    LandContext& _getContext() const;
+
+    void _setCachedNestedLevel(int level);
+
+    void _setLandId(LandID id);
+
+    void _reinit(LandContext context, unsigned int dirtyDiff);
 
     /**
-     * @brief 递归计算领地总价值(子领地)
-     * @param land 领地数据
-     * @param handle 处理函数，返回false则终止递归 (默认)
-     * @return 总价值
+     * @brief 修改领地范围(仅限普通领地)
+     * @warning 修改后务必在 LandRegistry 中刷新领地范围，否则范围不会更新
      */
-    LDAPI static llong
-    calculatePriceRecursively(SharedLand const& land, RecursionCalculationPriceHandle const& handle = {});
+    bool _setAABB(LandAABB const& newRange);
+
+
+    friend class LandRegistry;
+    friend class TransactionContext;
+    friend service::LandHierarchyService;
+    friend service::LandManagementService;
 };
 
 

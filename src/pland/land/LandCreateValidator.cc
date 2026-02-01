@@ -13,13 +13,15 @@
 #include "mc/world/level/dimension/DimensionHeightRange.h"
 
 #include "nonstd/expected.hpp"
+#include "pland/service/LandHierarchyService.h"
 
 
 namespace land {
 
 
-ll::Expected<> LandCreateValidator::validateCreateOrdinaryLand(Player& player, SharedLand land) {
-    if (auto res = isPlayerLandCountLimitExceeded(player.getUuid()); !res) {
+ll::Expected<>
+LandCreateValidator::validateCreateOrdinaryLand(LandRegistry& registry, Player& player, SharedLand land) {
+    if (auto res = isPlayerLandCountLimitExceeded(registry, player.getUuid()); !res) {
         return res;
     }
     if (auto res = isLandRangeLegal(land->getAABB(), land->getDimensionId(), land->is3D()); !res) {
@@ -28,41 +30,47 @@ ll::Expected<> LandCreateValidator::validateCreateOrdinaryLand(Player& player, S
     if (auto res = isLandInForbiddenRange(land->getAABB(), land->getDimensionId()); !res) {
         return res;
     }
-    if (auto res = isLandRangeConflict(land); !res) {
+    if (auto res = isOrdinaryLandRangeConflict(registry, land); !res) {
         return res;
     }
     return {};
 }
 
-ll::Expected<> LandCreateValidator::validateChangeLandRange(SharedLand land, LandAABB newRange) {
+ll::Expected<>
+LandCreateValidator::validateChangeLandRange(LandRegistry& registry, SharedLand land, LandAABB newRange) {
     if (auto res = isLandRangeLegal(newRange, land->getDimensionId(), land->is3D()); !res) {
         return res;
     }
     if (auto res = isLandInForbiddenRange(newRange, land->getDimensionId()); !res) {
         return res;
     }
-    if (auto res = isLandRangeConflict(land, newRange); !res) {
+    if (auto res = isOrdinaryLandRangeConflict(registry, land, newRange); !res) {
         return res;
     }
     return {};
 }
 
-ll::Expected<> LandCreateValidator::validateCreateSubLand(Player& player, SharedLand land, LandAABB const& subRange) {
-    if (auto res = isPlayerLandCountLimitExceeded(player.getUuid()); !res) {
+ll::Expected<> LandCreateValidator::validateCreateSubLand(
+    Player&                        player,
+    SharedLand                     land,
+    LandAABB const&                subRange,
+    LandRegistry&                  registry,
+    service::LandHierarchyService& service
+) {
+    if (auto res = isPlayerLandCountLimitExceeded(registry, player.getUuid()); !res) {
         return res;
     }
     if (auto res = isLandRangeLegal(subRange, land->getDimensionId(), true); !res) {
         return res;
     }
-    if (auto res = isSubLandPositionLegal(land, subRange); !res) {
+    if (auto res = isSubLandPositionLegal(service, land, subRange); !res) {
         return res;
     }
     return {};
 }
 
 
-ll::Expected<> LandCreateValidator::isPlayerLandCountLimitExceeded(mce::UUID const& uuids) {
-    auto& registry = PLand::getInstance().getLandRegistry();
+ll::Expected<> LandCreateValidator::isPlayerLandCountLimitExceeded(LandRegistry& registry, mce::UUID const& uuids) {
     auto  count    = static_cast<int>(registry.getLands(uuids).size());
     auto& maxCount = Config::cfg.land.maxLand;
 
@@ -128,11 +136,8 @@ ll::Expected<> LandCreateValidator::isLandRangeLegal(LandAABB const& range, Land
     return {};
 }
 
-ll::Expected<> LandCreateValidator::isLandRangeConflict(SharedLand const& land, std::optional<LandAABB> newRange) {
-    return isLandRangeConflict(PLand::getInstance().getLandRegistry(), land, newRange);
-}
 
-ll::Expected<> LandCreateValidator::isLandRangeConflict(
+ll::Expected<> LandCreateValidator::isOrdinaryLandRangeConflict(
     LandRegistry&           registry,
     SharedLand const&       land,
     std::optional<LandAABB> newRange
@@ -162,7 +167,11 @@ ll::Expected<> LandCreateValidator::isLandRangeConflict(
     return {};
 }
 
-ll::Expected<> LandCreateValidator::isSubLandPositionLegal(SharedLand const& land, LandAABB const& subRange) {
+ll::Expected<> LandCreateValidator::isSubLandPositionLegal(
+    service::LandHierarchyService& hierarchyService,
+    SharedLand const&              land,
+    LandAABB const&                subRange
+) {
     // 子领地必须位于父领地内
     if (!LandAABB::isContain(land->getAABB(), subRange)) {
         return makeError<SubLandNotInParent>(land, subRange);
@@ -172,8 +181,8 @@ ll::Expected<> LandCreateValidator::isSubLandPositionLegal(SharedLand const& lan
     bool const  includeY   = Config::cfg.land.subLand.minSpacingIncludeY;
     auto        expanded   = subRange.expanded(minSpacing, includeY);
 
-    auto family  = land->getFamilyTree();       // 整个领地家族
-    auto parents = land->getSelfAndAncestors(); // 相对于 land 的所有父领地
+    auto family  = hierarchyService.getFamilyTree(land);       // 整个领地家族
+    auto parents = hierarchyService.getSelfAndAncestors(land); // 相对于 land 的所有父领地
 
     // 子领地不能与家族内其他领地冲突
     for (auto& member : family) {

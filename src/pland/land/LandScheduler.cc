@@ -171,11 +171,11 @@ void LandScheduler::tickEvent() {
             auto& lastLandID = this->mLandIdMap[player];
 
             auto   land          = registry.getLandAt(currentPos, currentDimId);
-            LandID currentLandId = land ? land->getId() : -1;
+            LandID currentLandId = land ? land->getId() : INVALID_LAND_ID;
 
             // 处理维度变化
             if (currentDimId != lastDimId) {
-                if (lastLandID != (LandID)-1) {
+                if (lastLandID != INVALID_LAND_ID) {
                     bus.publish(PlayerLeaveLandEvent{*player, lastLandID}); // 离开上一个维度的领地
                 }
                 lastDimId = currentDimId;
@@ -183,10 +183,10 @@ void LandScheduler::tickEvent() {
 
             // 处理领地变化
             if (currentLandId != lastLandID) {
-                if (lastLandID != (LandID)-1) {
+                if (lastLandID != INVALID_LAND_ID) {
                     bus.publish(PlayerLeaveLandEvent{*player, lastLandID}); // 离开上一个领地
                 }
-                if (currentLandId != (LandID)-1) {
+                if (currentLandId != INVALID_LAND_ID) {
                     bus.publish(PlayerEnterLandEvent{*player, currentLandId}); // 进入新领地
                 }
                 lastLandID = currentLandId;
@@ -204,7 +204,7 @@ void LandScheduler::tickLandTip() {
 
     SetTitlePacket pkt(SetTitlePacket::TitleType::Actionbar);
     for (auto& [player, landId] : mLandIdMap) {
-        if (landId == (LandID)-1) {
+        if (landId == INVALID_LAND_ID) {
             continue;
         }
 

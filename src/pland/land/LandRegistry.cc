@@ -1,6 +1,9 @@
 #include "LandRegistry.h"
 #include "LandCreateValidator.h"
 #include "StorageError.h"
+#include "TransactionContext.h"
+#include "internal/LandDimensionChunkMap.h"
+#include "internal/LandIdAllocator.h"
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
@@ -35,261 +38,263 @@
 
 
 namespace land {
-std::string PlayerSettings::SYSTEM_LOCALE_CODE() { return "system"; }
-std::string PlayerSettings::SERVER_LOCALE_CODE() { return "server"; }
+
+struct LandRegistry::Impl {
+    std::unique_ptr<ll::data::KeyValueDB>         mDB;                             // 领地数据库
+    std::vector<mce::UUID>                        mLandOperators;                  // 领地操作员
+    std::unordered_map<mce::UUID, PlayerSettings> mPlayerSettings;                 // 玩家设置
+    std::unordered_map<LandID, SharedLand>        mLandCache;                      // 领地缓存
+    mutable std::shared_mutex                     mMutex;                          // 读写锁
+    std::unique_ptr<internal::LandIdAllocator>    mLandIdAllocator{nullptr};       // 领地ID分配器
+    internal::LandDimensionChunkMap               mDimensionChunkMap;              // 维度区块映射
+    std::unique_ptr<LandTemplatePermTable>        mLandTemplatePermTable{nullptr}; // 领地模板权限表
+    std::thread                                   mThread;                         // 线程
+    std::atomic<bool>                             mThreadQuit{false};              // 线程退出标志
+    mutable std::mutex                            mThreadMutex;                    // 线程互斥锁(仅 mThreadCV 使用)
+    std::condition_variable                       mThreadCV;                       // 线程条件变量
 
 
-void LandRegistry::_loadOperators() {
-    if (!mDB->has(DbOperatorDataKey)) {
-        mDB->set(DbOperatorDataKey, "[]"); // empty array
-    }
-    auto ops = nlohmann::json::parse(*mDB->get(DbOperatorDataKey));
-    for (auto& op : ops) {
-        auto uuidStr = op.get<std::string>();
-        if (!mce::UUID::canParse(uuidStr)) {
-            PLand::getInstance().getSelf().getLogger().warn("Invalid operator UUID: {}", uuidStr);
+    void _loadOperators() {
+        if (!mDB->has(DbOperatorDataKey)) {
+            mDB->set(DbOperatorDataKey, "[]"); // empty array
         }
-        mLandOperators.emplace_back(uuidStr);
-    }
-}
-
-void LandRegistry::_loadPlayerSettings() {
-    if (!mDB->has(DbPlayerSettingDataKey)) {
-        mDB->set(DbPlayerSettingDataKey, "{}"); // empty object
-    }
-    auto settings = nlohmann::json::parse(*mDB->get(DbPlayerSettingDataKey));
-    if (!settings.is_object()) {
-        throw std::runtime_error("player settings is not an object");
-    }
-
-    for (auto& [key, value] : settings.items()) {
-        PlayerSettings settings_;
-        json_util::json2structWithDiffPatch(value, settings_);
-        mPlayerSettings.emplace(key, std::move(settings_));
-    }
-}
-
-void LandRegistry::_openDatabaseAndEnsureVersion() {
-    auto&       self    = land::PLand::getInstance().getSelf();
-    auto&       logger  = self.getLogger();
-    auto const& dataDir = self.getDataDir();
-    auto const  dbDir   = dataDir / DbDirName;
-
-    bool const isNewCreatedDB = !std::filesystem::exists(dbDir); // 是否是新建的数据库
-
-    auto backup = [&]() {
-        auto const backupDir =
-            dataDir
-            / ("backup_db_" + std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())));
-        std::filesystem::copy(
-            dbDir,
-            backupDir,
-            std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing
-        );
-    };
-
-    if (!mDB) {
-        mDB = std::make_unique<ll::data::KeyValueDB>(dbDir);
-    }
-
-    if (!mDB->has(DbVersionKey)) {
-        if (isNewCreatedDB) {
-            mDB->set(DbVersionKey, std::to_string(LandContextVersion)); // 设置初始版本号
-        } else {
-            mDB->set(DbVersionKey, "-1"); // 数据库存在，但没有版本号，表示是旧版数据库(0.8.1之前)
+        auto ops = nlohmann::json::parse(*mDB->get(DbOperatorDataKey));
+        for (auto& op : ops) {
+            auto uuidStr = op.get<std::string>();
+            if (!mce::UUID::canParse(uuidStr)) {
+                PLand::getInstance().getSelf().getLogger().warn("Invalid operator UUID: {}", uuidStr);
+            }
+            mLandOperators.emplace_back(uuidStr);
         }
     }
+    void _loadPlayerSettings() {
+        if (!mDB->has(DbPlayerSettingDataKey)) {
+            mDB->set(DbPlayerSettingDataKey, "{}"); // empty object
+        }
+        auto settings = nlohmann::json::parse(*mDB->get(DbPlayerSettingDataKey));
+        if (!settings.is_object()) {
+            throw std::runtime_error("player settings is not an object");
+        }
 
-    auto version = std::stoi(*mDB->get(DbVersionKey));
-    if (version != LandContextVersion) {
-        if (version > LandContextVersion) {
-            logger.fatal(
-                "数据库版本过高，当前版本: {}, 期望版本: {}。为了保证数据安全，插件拒绝加载！",
-                version,
-                LandContextVersion
-            );
-            logger.fatal(
-                "The database version is too high, current version: {}, expected version: {}. In order to "
-                "keep the data safe, the plugin refuses to load!",
-                version,
-                LandContextVersion
-            );
-            throw std::runtime_error("The database versions do not match");
+        for (auto& [key, value] : settings.items()) {
+            PlayerSettings settings_;
+            json_util::json2structWithDiffPatch(value, settings_);
+            mPlayerSettings.emplace(key, std::move(settings_));
+        }
+    }
+    void _loadLands() {
+        ll::coro::Generator<std::pair<std::string_view, std::string_view>> iter = mDB->iter();
 
-        } else if (version < LandContextVersion) {
-            logger.warn(
-                "数据库版本过低，当前版本: {}, 期望版本: {}，插件将尝试备份并升级数据库...",
-                version,
-                LandContextVersion
+        LandID safeId{0};
+        for (auto [key, value] : iter) {
+            if (!isLandData(key)) continue;
+
+            auto json = nlohmann::json::parse(value);
+            _migrateLegacyKeysIfNeeded(json);
+
+            auto land = Land::make();
+            land->load(json);
+
+            // 保证landID唯一
+            if (safeId <= land->getId()) {
+                safeId = land->getId() + 1;
+            }
+
+            mLandCache.emplace(land->getId(), std::move(land));
+        }
+
+        mLandIdAllocator = std::make_unique<internal::LandIdAllocator>(safeId); // 初始化ID分配器
+    }
+    void _loadLandTemplatePermTable() {
+        if (!mDB->has(DbTemplatePermKey)) {
+            auto t = LandPermTable{};
+            mDB->set(DbTemplatePermKey, json_util::struct2json(t).dump());
+        }
+
+        auto rawJson = mDB->get(DbTemplatePermKey);
+        try {
+            auto json = nlohmann::json::parse(*rawJson);
+            if (!json.is_object()) {
+                throw std::runtime_error("Template perm table is not an object");
+            }
+
+            auto t = LandPermTable{};
+            json_util::json2structWithDiffPatch(json, t); // 反射并补丁
+
+            mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(t);
+        } catch (...) {
+            mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(LandPermTable{});
+            PLand::getInstance().getSelf().getLogger().error(
+                "Failed to load template perm table, using default perm table instead"
             );
-            logger.warn(
-                "The database version is too low, the current version: {}, the expected version: {}, the "
-                "plugin will try to back up and upgrade the database...",
-                version,
-                LandContextVersion
+        }
+    }
+
+    void _openDatabaseAndEnsureVersion() {
+        auto&       self    = land::PLand::getInstance().getSelf();
+        auto&       logger  = self.getLogger();
+        auto const& dataDir = self.getDataDir();
+        auto const  dbDir   = dataDir / DbDirName;
+
+        bool const isNewCreatedDB = !std::filesystem::exists(dbDir); // 是否是新建的数据库
+
+        auto backup = [&]() {
+            auto const backupDir =
+                dataDir
+                / ("backup_db_" + std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()))
+                );
+            std::filesystem::copy(
+                dbDir,
+                backupDir,
+                std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing
             );
-            mDB.reset();
-            backup();
+        };
+
+        if (!mDB) {
             mDB = std::make_unique<ll::data::KeyValueDB>(dbDir);
-            mDB->set(DbVersionKey, std::to_string(LandContextVersion)); // 更新版本号
-            // 这里只需要修改版本号以及备份，其它兼容转换操作将在 _checkVersionAndTryAdaptBreakingChanges 中进行
-        }
-    }
-}
-
-void LandRegistry::_migrateLegacyKeysIfNeeded(nlohmann::json& landData) {
-    constexpr int LANDDATA_NEW_POS_KEY_VERSION = 15; // 在此版本后，LandAABB 使用了新的键名
-
-    if (landData["version"].get<int>() < LANDDATA_NEW_POS_KEY_VERSION) {
-        constexpr auto LEGACY_MAX_KEY = "mMax_B";
-        constexpr auto LEGACY_MIN_KEY = "mMin_A";
-        constexpr auto NEW_MAX_KEY    = "max";
-        constexpr auto NEW_MIN_KEY    = "min";
-
-        auto& pos = landData["mPos"];
-        if (pos.contains(LEGACY_MAX_KEY)) {
-            auto legacyMax = pos[LEGACY_MAX_KEY]; // copy
-            pos.erase(LEGACY_MAX_KEY);
-            pos[NEW_MAX_KEY] = std::move(legacyMax);
-        }
-        if (pos.contains(LEGACY_MIN_KEY)) {
-            auto legacyMin = pos[LEGACY_MIN_KEY]; // copy
-            pos.erase(LEGACY_MIN_KEY);
-            pos[NEW_MIN_KEY] = std::move(legacyMin);
-        }
-    }
-}
-
-bool LandRegistry::isLandData(std::string_view key) {
-    return key != DbVersionKey && key != DbOperatorDataKey && key != DbPlayerSettingDataKey && key != DbTemplatePermKey;
-}
-void LandRegistry::_loadLands() {
-    ll::coro::Generator<std::pair<std::string_view, std::string_view>> iter = mDB->iter();
-
-    LandID safeId{0};
-    for (auto [key, value] : iter) {
-        if (!isLandData(key)) continue;
-
-        auto json = nlohmann::json::parse(value);
-        _migrateLegacyKeysIfNeeded(json);
-
-        auto land = Land::make();
-        land->load(json);
-
-        // 保证landID唯一
-        if (safeId <= land->getId()) {
-            safeId = land->getId() + 1;
         }
 
-        mLandCache.emplace(land->getId(), std::move(land));
-    }
-
-    mLandIdAllocator = std::make_unique<LandIdAllocator>(safeId); // 初始化ID分配器
-}
-void LandRegistry::_loadLandTemplatePermTable() {
-    if (!mDB->has(DbTemplatePermKey)) {
-        auto t = LandPermTable{};
-        mDB->set(DbTemplatePermKey, json_util::struct2json(t).dump());
-    }
-
-    auto rawJson = mDB->get(DbTemplatePermKey);
-    try {
-        auto json = nlohmann::json::parse(*rawJson);
-        if (!json.is_object()) {
-            throw std::runtime_error("Template perm table is not an object");
+        if (!mDB->has(DbVersionKey)) {
+            if (isNewCreatedDB) {
+                mDB->set(DbVersionKey, std::to_string(LandContextVersion)); // 设置初始版本号
+            } else {
+                mDB->set(DbVersionKey, "-1"); // 数据库存在，但没有版本号，表示是旧版数据库(0.8.1之前)
+            }
         }
 
-        auto t = LandPermTable{};
-        json_util::json2structWithDiffPatch(json, t); // 反射并补丁
+        auto version = std::stoi(*mDB->get(DbVersionKey));
+        if (version != LandContextVersion) {
+            if (version > LandContextVersion) {
+                logger.fatal(
+                    "The database version is too high, current version: {}, expected version: {}. In order to "
+                    "keep the data safe, the plugin refuses to load!",
+                    version,
+                    LandContextVersion
+                );
+                throw std::runtime_error("The database versions do not match");
 
-        mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(t);
-    } catch (...) {
-        mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(LandPermTable{});
-        PLand::getInstance().getSelf().getLogger().error(
-            "Failed to load template perm table, using default perm table instead"
-        );
+            } else if (version < LandContextVersion) {
+                logger.warn(
+                    "The database version is too low, the current version: {}, the expected version: {}, the "
+                    "plugin will try to back up and upgrade the database...",
+                    version,
+                    LandContextVersion
+                );
+                mDB.reset();
+                backup();
+                mDB = std::make_unique<ll::data::KeyValueDB>(dbDir);
+                mDB->set(DbVersionKey, std::to_string(LandContextVersion)); // 更新版本号
+                // 这里只需要修改版本号以及备份，其它兼容转换操作将在 _checkVersionAndTryAdaptBreakingChanges 中进行
+            }
+        }
     }
-}
+    void _migrateLegacyKeysIfNeeded(nlohmann::json& landData) {
+        constexpr int LANDDATA_NEW_POS_KEY_VERSION = 15; // 在此版本后，LandAABB 使用了新的键名
 
-void LandRegistry::_buildDimensionChunkMap() {
-    for (auto& [id, land] : mLandCache) {
+        if (landData["version"].get<int>() < LANDDATA_NEW_POS_KEY_VERSION) {
+            constexpr auto LEGACY_MAX_KEY = "mMax_B";
+            constexpr auto LEGACY_MIN_KEY = "mMin_A";
+            constexpr auto NEW_MAX_KEY    = "max";
+            constexpr auto NEW_MIN_KEY    = "min";
+
+            auto& pos = landData["mPos"];
+            if (pos.contains(LEGACY_MAX_KEY)) {
+                auto legacyMax = pos[LEGACY_MAX_KEY]; // copy
+                pos.erase(LEGACY_MAX_KEY);
+                pos[NEW_MAX_KEY] = std::move(legacyMax);
+            }
+            if (pos.contains(LEGACY_MIN_KEY)) {
+                auto legacyMin = pos[LEGACY_MIN_KEY]; // copy
+                pos.erase(LEGACY_MIN_KEY);
+                pos[NEW_MIN_KEY] = std::move(legacyMin);
+            }
+        }
+    }
+    void _buildDimensionChunkMap() {
+        for (auto& [id, land] : mLandCache) {
+            mDimensionChunkMap.addLand(land);
+        }
+    }
+
+    ll::Expected<> _addLand(SharedLand land, bool allocateId = true) {
+        if (!land || (allocateId && land->getId() != INVALID_LAND_ID)) {
+            return StorageError::make(StorageError::ErrorCode::InvalidLand, "The land is invalid or land ID is not -1");
+        }
+        if (allocateId) {
+            land->_setLandId(mLandIdAllocator->nextId());
+            land->markDirty();
+        }
+        std::unique_lock lock(mMutex);
+
+        auto result = mLandCache.emplace(land->getId(), land);
+        if (!result.second) {
+            return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to insert land into cache map");
+        }
+
         mDimensionChunkMap.addLand(land);
+        return {};
     }
-}
-
-LandID LandRegistry::getNextLandID() const { return mLandIdAllocator->nextId(); }
-
-ll::Expected<> LandRegistry::_removeLand(SharedLand const& ptr) {
-    mDimensionChunkMap.removeLand(ptr);
-    if (!mLandCache.erase(ptr->getId())) {
-        mDimensionChunkMap.addLand(ptr);
-        return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to erase land from cache");
-    }
-
-    if (!this->mDB->del(std::to_string(ptr->getId()))) {
-        mLandCache.emplace(ptr->getId(), ptr); // rollback
-        mDimensionChunkMap.addLand(ptr);
-        return StorageError::make(StorageError::ErrorCode::DatabaseError, "Failed to delete land from database");
-    }
-    return {};
-}
-
-} // namespace land
-
-
-namespace land {
-
-void LandRegistry::save() {
-    std::shared_lock<std::shared_mutex> lock(mMutex); // 获取锁
-    mDB->set(DbOperatorDataKey, json_util::struct2json(mLandOperators).dump());
-
-    mDB->set(DbPlayerSettingDataKey, json_util::struct2json(mPlayerSettings).dump());
-
-    if (mLandTemplatePermTable->isDirty()) {
-        if (mDB->set(DbTemplatePermKey, json_util::struct2json(mLandTemplatePermTable->get()).dump())) {
-            mLandTemplatePermTable->resetDirty();
+    ll::Expected<> _removeLand(SharedLand const& ptr) {
+        mDimensionChunkMap.removeLand(ptr);
+        if (!mLandCache.erase(ptr->getId())) {
+            mDimensionChunkMap.addLand(ptr);
+            return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to erase land from cache");
         }
+
+        if (!this->mDB->del(std::to_string(ptr->getId()))) {
+            mLandCache.emplace(ptr->getId(), ptr); // rollback
+            mDimensionChunkMap.addLand(ptr);
+            return StorageError::make(StorageError::ErrorCode::DatabaseError, "Failed to delete land from database");
+        }
+        return {};
     }
 
-    for (auto const& land : mLandCache | std::views::values) {
-        land->save();
+    bool _save(SharedLand const& land, bool force = false) const {
+        if (!land->isDirty() || !force) {
+            return true; // 没有变化，无需保存
+        }
+        if (mDB->set(std::to_string(land->getId()), land->toJson().dump())) {
+            land->getDirtyCounter().reset();
+            return true;
+        }
+        return false;
     }
-}
+};
 
-bool LandRegistry::save(Land const& land) const { return mDB->set(std::to_string(land.getId()), land.dump().dump()); }
+LandID LandRegistry::_allocateNextId() { return impl->mLandIdAllocator->nextId(); }
 
-LandRegistry::LandRegistry() {
+LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
     auto& logger = land::PLand::getInstance().getSelf().getLogger();
 
     logger.trace("打开数据库...");
-    _openDatabaseAndEnsureVersion();
+    impl->_openDatabaseAndEnsureVersion();
 
-    auto lock = std::unique_lock<std::shared_mutex>(mMutex);
+    auto lock = std::unique_lock<std::shared_mutex>(impl->mMutex);
     logger.trace("加载操作员...");
-    _loadOperators();
-    logger.info("已加载 {} 位操作员", mLandOperators.size());
+    impl->_loadOperators();
+    logger.info("已加载 {} 位操作员", impl->mLandOperators.size());
 
     logger.trace("加载玩家设置...");
-    _loadPlayerSettings();
-    logger.info("已加载 {} 位玩家的设置", mPlayerSettings.size());
+    impl->_loadPlayerSettings();
+    logger.info("已加载 {} 位玩家的设置", impl->mPlayerSettings.size());
 
     logger.trace("加载领地数据...");
-    _loadLands();
-    logger.info("已加载 {} 块领地数据", mLandCache.size());
+    impl->_loadLands();
+    logger.info("已加载 {} 块领地数据", impl->mLandCache.size());
 
     logger.trace("加载模板权限表...");
-    _loadLandTemplatePermTable();
+    impl->_loadLandTemplatePermTable();
     logger.info("已加载模板权限表");
 
     logger.trace("构建维度区块映射...");
-    _buildDimensionChunkMap();
+    impl->_buildDimensionChunkMap();
     logger.info("初始化维度区块映射完成");
 
     lock.unlock();
-    mThread = std::thread([this]() {
-        while (!mThreadQuit) {
-            std::unique_lock<std::mutex> lk(mThreadMutex);
-            if (mThreadCV.wait_for(lk, std::chrono::minutes(2), [this] { return mThreadQuit.load(); })) {
+    impl->mThread = std::thread([this]() {
+        while (!impl->mThreadQuit) {
+            std::unique_lock<std::mutex> lk(impl->mThreadMutex);
+            if (impl->mThreadCV.wait_for(lk, std::chrono::minutes(2), [this] { return impl->mThreadQuit.load(); })) {
                 break; // 被 stop 唤醒
             }
             lk.unlock();
@@ -301,85 +306,95 @@ LandRegistry::LandRegistry() {
 }
 
 LandRegistry::~LandRegistry() {
-    mThreadQuit = true;
-    mThreadCV.notify_all(); // 唤醒线程
-    if (mThread.joinable()) mThread.join();
+    impl->mThreadQuit = true;
+    impl->mThreadCV.notify_all(); // 唤醒线程
+    if (impl->mThread.joinable()) impl->mThread.join();
 }
 
+
+bool LandRegistry::isLandData(std::string_view key) {
+    return key != DbVersionKey && key != DbOperatorDataKey && key != DbPlayerSettingDataKey && key != DbTemplatePermKey;
+}
+
+void LandRegistry::save() {
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex); // 获取锁
+    impl->mDB->set(DbOperatorDataKey, json_util::struct2json(impl->mLandOperators).dump());
+
+    impl->mDB->set(DbPlayerSettingDataKey, json_util::struct2json(impl->mPlayerSettings).dump());
+
+    if (impl->mLandTemplatePermTable->isDirty()) {
+        if (impl->mDB->set(DbTemplatePermKey, json_util::struct2json(impl->mLandTemplatePermTable->get()).dump())) {
+            impl->mLandTemplatePermTable->resetDirty();
+        }
+    }
+
+    for (auto const& land : impl->mLandCache | std::views::values) {
+        (void)impl->_save(land, false);
+    }
+}
+
+bool LandRegistry::save(std::shared_ptr<Land> const& land, bool force) const {
+    std::unique_lock lock(impl->mMutex); // 获取锁
+    return impl->_save(land, force);
+}
+
+
 bool LandRegistry::isOperator(mce::UUID const& uuid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
-    return std::find(mLandOperators.begin(), mLandOperators.end(), uuid) != mLandOperators.end();
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
+    return std::find(impl->mLandOperators.begin(), impl->mLandOperators.end(), uuid) != impl->mLandOperators.end();
 }
 bool LandRegistry::addOperator(mce::UUID const& uuid) {
     if (isOperator(uuid)) {
         return false;
     }
-    std::unique_lock<std::shared_mutex> lock(mMutex); // 获取锁
-    mLandOperators.push_back(uuid);
+    std::unique_lock<std::shared_mutex> lock(impl->mMutex); // 获取锁
+    impl->mLandOperators.push_back(uuid);
     return true;
 }
 bool LandRegistry::removeOperator(mce::UUID const& uuid) {
-    std::unique_lock<std::shared_mutex> lock(mMutex); // 获取锁
+    std::unique_lock<std::shared_mutex> lock(impl->mMutex); // 获取锁
 
-    auto iter = std::find(mLandOperators.begin(), mLandOperators.end(), uuid);
-    if (iter == mLandOperators.end()) {
+    auto iter = std::find(impl->mLandOperators.begin(), impl->mLandOperators.end(), uuid);
+    if (iter == impl->mLandOperators.end()) {
         return false;
     }
-    mLandOperators.erase(iter);
+    impl->mLandOperators.erase(iter);
     return true;
 }
 std::vector<mce::UUID> const& LandRegistry::getOperators() const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
-    return mLandOperators;
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
+    return impl->mLandOperators;
 }
 
 
 PlayerSettings* LandRegistry::getPlayerSettings(mce::UUID const& uuid) {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
-    auto                                iter = mPlayerSettings.find(uuid);
-    if (iter == mPlayerSettings.end()) {
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
+    auto                                iter = impl->mPlayerSettings.find(uuid);
+    if (iter == impl->mPlayerSettings.end()) {
         return nullptr;
     }
     return &iter->second;
 }
 bool LandRegistry::setPlayerSettings(mce::UUID const& uuid, PlayerSettings settings) {
-    std::unique_lock<std::shared_mutex> lock(mMutex);
-    mPlayerSettings[uuid] = std::move(settings);
+    std::unique_lock<std::shared_mutex> lock(impl->mMutex);
+    impl->mPlayerSettings[uuid] = std::move(settings);
     return true;
 }
 bool LandRegistry::hasPlayerSettings(mce::UUID const& uuid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
-    return mPlayerSettings.find(uuid) != mPlayerSettings.end();
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
+    return impl->mPlayerSettings.find(uuid) != impl->mPlayerSettings.end();
 }
 
-LandTemplatePermTable& LandRegistry::getLandTemplatePermTable() const { return *mLandTemplatePermTable; }
+LandTemplatePermTable& LandRegistry::getLandTemplatePermTable() const { return *impl->mLandTemplatePermTable; }
 
 bool LandRegistry::hasLand(LandID id) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
-    return mLandCache.find(id) != mLandCache.end();
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
+    return impl->mLandCache.find(id) != impl->mLandCache.end();
 }
-ll::Expected<> LandRegistry::_addLand(SharedLand land) {
-    if (!land || land->getId() != static_cast<LandID>(-1)) {
-        return StorageError::make(StorageError::ErrorCode::InvalidLand, "The land is invalid or land ID is not -1");
-    }
 
-    land->mContext.mLandID = getNextLandID();
-    land->mDirtyCounter.increment();
-
-    std::unique_lock lock(mMutex);
-
-    auto result = mLandCache.emplace(land->getId(), land);
-    if (!result.second) {
-        return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to insert land into cache map");
-    }
-
-    mDimensionChunkMap.addLand(land);
-
-    return {};
-}
 void LandRegistry::refreshLandRange(SharedLand const& ptr) {
-    std::unique_lock<std::shared_mutex> lock(mMutex);
-    mDimensionChunkMap.refreshRange(ptr);
+    std::unique_lock<std::shared_mutex> lock(impl->mMutex);
+    impl->mDimensionChunkMap.refreshRange(ptr);
 }
 
 ll::Expected<> LandRegistry::addOrdinaryLand(SharedLand const& land) {
@@ -391,46 +406,10 @@ ll::Expected<> LandRegistry::addOrdinaryLand(SharedLand const& land) {
     }
     if (!LandCreateValidator::isLandRangeLegal(land->getAABB(), land->getDimensionId(), land->is3D())
         || !LandCreateValidator::isLandInForbiddenRange(land->getAABB(), land->getDimensionId())
-        || !LandCreateValidator::isLandRangeConflict(*this, land)) {
+        || !LandCreateValidator::isOrdinaryLandRangeConflict(*this, land)) {
         return StorageError::make(StorageError::ErrorCode::LandRangeIllegal, "The land range is illegal");
     }
-    return _addLand(land);
-}
-
-ll::Expected<> LandRegistry::addSubLand(SharedLand const& parent, SharedLand const& sub) {
-    if (!LandCreateValidator::isLandRangeLegal(sub->getAABB(), parent->getDimensionId(), true)
-        || !LandCreateValidator::isSubLandPositionLegal(parent, sub->getAABB())
-        || parent->getDimensionId() != sub->getDimensionId()) {
-        return StorageError::make(StorageError::ErrorCode::LandRangeIllegal, "The land range is illegal");
-    }
-    auto res = _addLand(sub);
-    if (!res) {
-        return res;
-    }
-    std::unique_lock<std::shared_mutex> lock(mMutex);
-    parent->mContext.mSubLandIDs.push_back(sub->getId());
-    sub->mContext.mParentLandID = parent->getId();
-    parent->mDirtyCounter.increment();
-    sub->mDirtyCounter.increment();
-    return {};
-}
-
-
-// 加锁方法
-bool LandRegistry::removeLand(LandID landId) {
-    std::unique_lock<std::shared_mutex> lock(mMutex); // 获取锁
-
-    auto landIter = mLandCache.find(landId);
-    if (landIter == mLandCache.end()) {
-        return false;
-    }
-    lock.unlock();
-
-    auto result = removeOrdinaryLand(landIter->second);
-    if (!result.has_value()) {
-        return false; // 移除失败
-    }
-    return true;
+    return impl->_addLand(land);
 }
 ll::Expected<> LandRegistry::removeOrdinaryLand(SharedLand const& ptr) {
     if (!ptr->isOrdinaryLand()) {
@@ -440,208 +419,111 @@ ll::Expected<> LandRegistry::removeOrdinaryLand(SharedLand const& ptr) {
         );
     }
 
-    std::unique_lock<std::shared_mutex> lock(mMutex); // 获取锁
-    return _removeLand(ptr);
+    std::unique_lock lock(impl->mMutex); // 获取锁
+    return impl->_removeLand(ptr);
 }
-ll::Expected<> LandRegistry::removeSubLand(SharedLand const& ptr) {
-    if (!ptr->isSubLand()) {
-        return StorageError::make(
-            StorageError::ErrorCode::LandTypeMismatch,
-            "The land type does not match the required type"
-        );
+
+ll::Expected<> LandRegistry::executeTransaction(
+    std::unordered_set<std::shared_ptr<Land>> const& participants,
+    TransactionCallback const&                       executor
+) {
+    std::unique_lock lock{impl->mMutex};
+
+    struct Snapshot {
+        LandContext context;
+        int         dirtyCount;
+    };
+    std::unordered_map<Land*, Snapshot> snapshots;
+    snapshots.reserve(participants.size());
+    for (auto& land : participants) {
+        snapshots[land.get()] = {land->_getContext(), land->getDirtyCounter().getCounter()};
     }
 
-    auto parent = ptr->getParentLand();
-    if (!parent) {
-        return StorageError::make(StorageError::ErrorCode::DataConsistencyError, "The parent land is null");
+    TransactionContext ctx(*this);
+    bool               success = false;
+    try {
+        success = executor(ctx);
+    } catch (...) {
+        success = false;
     }
 
-    std::unique_lock<std::shared_mutex> lock(mMutex); // 获取锁
-
-    // 移除父领地中的记录
-    std::erase_if(parent->mContext.mSubLandIDs, [&](LandID const& id) { return id == ptr->getId(); });
-    parent->mDirtyCounter.increment();
-
-    auto result = _removeLand(ptr);
-    if (!result.has_value()) {
-        parent->mContext.mSubLandIDs.push_back(ptr->getId()); // 恢复父领地的子领地列表
-        parent->mDirtyCounter.decrement();
-    }
-
-    return result;
-}
-ll::Expected<> LandRegistry::removeLandAndSubLands(SharedLand const& ptr) {
-    if (!ptr->isParentLand() && !ptr->isMixLand()) {
-        return StorageError::make(
-            StorageError::ErrorCode::LandTypeMismatch,
-            "The land type does not match the required type"
-        );
-    }
-
-    auto currentId = ptr->getId();
-    auto parent    = ptr->getParentLand();
-    if (parent) {
-        std::erase_if(parent->mContext.mSubLandIDs, [&](LandID const& id) { return id == currentId; });
-        parent->mDirtyCounter.increment();
-    }
-
-    std::unique_lock<std::shared_mutex> lock(mMutex);
-    std::stack<SharedLand>              stack;        // 栈
-    std::vector<SharedLand>             removedLands; // 已移除的领地
-
-    stack.push(ptr);
-
-    while (!stack.empty()) {
-        auto current = stack.top();
-        stack.pop();
-
-        if (current->hasSubLand()) {
-            lock.unlock();
-            auto subLands = current->getSubLands();
-            lock.lock();
-            for (auto& subLand : subLands) {
-                stack.push(subLand);
-            }
+    if (!success) {
+        // === 回滚 (Rollback) ===
+        for (auto& land : participants) {
+            auto snapshot = snapshots[land.get()];
+            land->_reinit(std::move(snapshot.context), snapshot.dirtyCount);
         }
 
-        auto result = _removeLand(current);
-        if (result.has_value()) {
-            removedLands.push_back(current);
-        } else {
-            // rollback
-            for (auto land : removedLands) {
-                mLandCache.emplace(land->getId(), land);
-                mDimensionChunkMap.addLand(land);
+        // 回滚 ID 分配器
+        for (size_t i = 0; i < ctx.mAllocatedIds.size(); ++i) {
+            impl->mLandIdAllocator->revertId();
+        }
+        return StorageError::make(StorageError::ErrorCode::TransactionError, "Transaction aborted.");
+    }
+
+    // === 提交 (Commit) ===
+    for (auto& land : participants) {
+        if (ctx.mLandsToRemove.contains(land->getId())) {
+            if (auto res = impl->_removeLand(land); !res) {
+                PLand::getInstance().getSelf().getLogger().error("Failed to remove land during commit!");
             }
-            if (parent) {
-                parent->mContext.mSubLandIDs.push_back(currentId); // 恢复父领地的子领地列表
-                parent->mDirtyCounter.decrement();
+            continue;
+        }
+
+        // 处理新增 (有 ID 但不在 Cache 里)
+        // 如果是新建的 SubLand，它现在有了 ID，但还没进 mLandCache。
+
+        bool justAllocated =
+            std::find(ctx.mAllocatedIds.begin(), ctx.mAllocatedIds.end(), land->getId()) != ctx.mAllocatedIds.end();
+
+        if (justAllocated) {
+            // 新领地，直接入库
+            // 注意：_addLand 内部不要再分配 ID 了，因为已经分过了
+            if (auto res = impl->_addLand(land, false /* don't allocate id */); !res) {
+                return res;
             }
-            // return std::unexpected("remove land or sub land failed!");
-            return result;
+        } else if (land->isDirty()) {
+            (void)impl->_save(land, false);
         }
     }
     return {};
 }
-ll::Expected<> LandRegistry::removeLandAndPromoteSubLands(SharedLand const& ptr) {
-    if (!ptr->isParentLand()) {
-        return StorageError::make(
-            StorageError::ErrorCode::LandTypeMismatch,
-            "The land type does not match the required type"
-        );
-    }
 
-
-    auto subLands = ptr->getSubLands();
-
-    std::unique_lock<std::shared_mutex> lock(mMutex);
-    for (auto& subLand : subLands) {
-        static const auto invalidID     = LandID(-1); // 无效ID
-        subLand->mContext.mParentLandID = invalidID;
-        subLand->mDirtyCounter.increment();
-    }
-
-    auto result = _removeLand(ptr);
-    if (!result.has_value()) {
-        // rollback
-        auto currentId = ptr->getId();
-        for (auto& subLand : subLands) {
-            subLand->mContext.mParentLandID = currentId;
-            subLand->mDirtyCounter.decrement();
-        }
-    }
-    return result;
-}
-ll::Expected<> LandRegistry::removeLandAndTransferSubLands(SharedLand const& ptr) {
-    if (!ptr->isMixLand()) {
-        return StorageError::make(
-            StorageError::ErrorCode::LandTypeMismatch,
-            "The land type does not match the required type"
-        );
-    }
-
-    auto parent = ptr->getParentLand();
-    if (!parent) {
-        return StorageError::make(StorageError::ErrorCode::DataConsistencyError, "The parent land is null");
-    }
-    auto parentID = parent->getId();
-    auto subLands = ptr->getSubLands();
-
-    std::unique_lock<std::shared_mutex> lock(mMutex);
-
-    for (auto& subLand : subLands) {
-        subLand->mContext.mParentLandID = parentID;               // 当前领地的子领地移交给父领地
-        parent->mContext.mSubLandIDs.push_back(subLand->getId()); // 父领地记录中添加当前领地的子领地
-        subLand->mDirtyCounter.increment();
-        parent->mDirtyCounter.increment();
-    }
-
-    // 父领地记录中擦粗当前领地
-    std::erase_if(parent->mContext.mSubLandIDs, [&](LandID const& id) { return id == ptr->getId(); });
-    parent->mDirtyCounter.increment();
-
-    auto result = _removeLand(ptr);
-    if (!result.has_value()) {
-        // rollback
-        auto currentId = ptr->getId();
-        for (auto& subLand : subLands) {
-            subLand->mContext.mParentLandID = currentId;
-            std::erase_if(parent->mContext.mSubLandIDs, [&](LandID const& id) { return id == subLand->getId(); });
-            subLand->mDirtyCounter.decrement();
-            parent->mDirtyCounter.decrement();
-        }
-        parent->mContext.mSubLandIDs.push_back(currentId); // 恢复父领地的子领地列表
-        parent->mDirtyCounter.decrement();
-    }
-
-    return result;
-}
-
-
-WeakLand LandRegistry::getLandWeakPtr(LandID id) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
-
-    auto landIt = mLandCache.find(id);
-    if (landIt != mLandCache.end()) {
-        return {landIt->second};
-    }
-    return {}; // 返回一个空的weak_ptr
-}
 SharedLand LandRegistry::getLand(LandID id) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
-    auto landIt = mLandCache.find(id);
-    if (landIt != mLandCache.end()) {
+    auto landIt = impl->mLandCache.find(id);
+    if (landIt != impl->mLandCache.end()) {
         return landIt->second;
     }
     return nullptr;
 }
 std::vector<SharedLand> LandRegistry::getLands() const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     std::vector<SharedLand> lands;
-    lands.reserve(mLandCache.size());
-    for (auto& land : mLandCache) {
+    lands.reserve(impl->mLandCache.size());
+    for (auto& land : impl->mLandCache) {
         lands.push_back(land.second);
     }
     return lands;
 }
 std::vector<SharedLand> LandRegistry::getLands(std::vector<LandID> const& ids) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     std::vector<SharedLand> lands;
     for (auto id : ids) {
-        if (auto iter = mLandCache.find(id); iter != mLandCache.end()) {
+        if (auto iter = impl->mLandCache.find(id); iter != impl->mLandCache.end()) {
             lands.push_back(iter->second);
         }
     }
     return lands;
 }
 std::vector<SharedLand> LandRegistry::getLands(LandDimid dimid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     std::vector<SharedLand> lands;
-    for (auto& land : mLandCache) {
+    for (auto& land : impl->mLandCache) {
         if (land.second->getDimensionId() == dimid) {
             lands.push_back(land.second);
         }
@@ -649,10 +531,10 @@ std::vector<SharedLand> LandRegistry::getLands(LandDimid dimid) const {
     return lands;
 }
 std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, bool includeShared) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     std::vector<SharedLand> lands;
-    for (auto& land : mLandCache) {
+    for (auto& land : impl->mLandCache) {
         if (land.second->isOwner(uuid) || (includeShared && land.second->isMember(uuid))) {
             lands.push_back(land.second);
         }
@@ -660,10 +542,10 @@ std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, bool inclu
     return lands;
 }
 std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, LandDimid dimid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     std::vector<SharedLand> lands;
-    for (auto& land : mLandCache) {
+    for (auto& land : impl->mLandCache) {
         if (land.second->getDimensionId() == dimid && land.second->isOwner(uuid)) {
             lands.push_back(land.second);
         }
@@ -671,20 +553,20 @@ std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, LandDimid 
     return lands;
 }
 std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> LandRegistry::getLandsByOwner() const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> lands;
-    for (const auto& ptr : mLandCache | std::views::values) {
+    for (const auto& ptr : impl->mLandCache | std::views::values) {
         auto& owner = ptr->getOwner();
         lands[owner].insert(ptr);
     }
     return lands;
 }
 std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> LandRegistry::getLandsByOwner(LandDimid dimid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> res;
-    for (const auto& ptr : mLandCache | std::views::values) {
+    for (const auto& ptr : impl->mLandCache | std::views::values) {
         if (ptr->getDimensionId() != dimid) {
             continue;
         }
@@ -696,7 +578,7 @@ std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> LandRegistry::getL
 
 
 LandPermType LandRegistry::getPermType(mce::UUID const& uuid, LandID id, bool includeOperator) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock lock(impl->mMutex);
 
     if (includeOperator && isOperator(uuid)) return LandPermType::Operator;
 
@@ -709,16 +591,16 @@ LandPermType LandRegistry::getPermType(mce::UUID const& uuid, LandID id, bool in
 
 
 SharedLand LandRegistry::getLandAt(BlockPos const& pos, LandDimid dimid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
     std::unordered_set<SharedLand>      result;
 
-    auto landsIds = mDimensionChunkMap.queryLand(dimid, EncodeChunkID(pos.x >> 4, pos.z >> 4));
+    auto landsIds = impl->mDimensionChunkMap.queryLand(dimid, EncodeChunkID(pos.x >> 4, pos.z >> 4));
     if (!landsIds) {
         return nullptr;
     }
 
     for (auto const& id : *landsIds) {
-        if (auto iter = mLandCache.find(id); iter != mLandCache.end()) {
+        if (auto iter = impl->mLandCache.find(id); iter != impl->mLandCache.end()) {
             if (auto const& land = iter->second; land->getAABB().hasPos(pos, land->is3D())) {
                 result.insert(land);
             }
@@ -746,9 +628,9 @@ SharedLand LandRegistry::getLandAt(BlockPos const& pos, LandDimid dimid) const {
     return nullptr;
 }
 std::unordered_set<SharedLand> LandRegistry::getLandAt(BlockPos const& center, int radius, LandDimid dimid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
 
-    if (!mDimensionChunkMap.hasDimension(dimid)) {
+    if (!impl->mDimensionChunkMap.hasDimension(dimid)) {
         return {};
     }
 
@@ -768,13 +650,13 @@ std::unordered_set<SharedLand> LandRegistry::getLandAt(BlockPos const& center, i
             }
             visitedChunks.insert(chunkId);
 
-            auto landsIds = mDimensionChunkMap.queryLand(dimid, chunkId);
+            auto landsIds = impl->mDimensionChunkMap.queryLand(dimid, chunkId);
             if (!landsIds) {
                 continue;
             }
 
             for (auto const& id : *landsIds) {
-                if (auto iter = mLandCache.find(id); iter != mLandCache.end()) {
+                if (auto iter = impl->mLandCache.find(id); iter != impl->mLandCache.end()) {
                     if (auto const& land = iter->second; land->isCollision(center, radius)) {
                         lands.insert(land);
                     }
@@ -786,9 +668,9 @@ std::unordered_set<SharedLand> LandRegistry::getLandAt(BlockPos const& center, i
 }
 std::unordered_set<SharedLand>
 LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid dimid) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
 
-    if (!mDimensionChunkMap.hasDimension(dimid)) {
+    if (!impl->mDimensionChunkMap.hasDimension(dimid)) {
         return {};
     }
 
@@ -808,13 +690,13 @@ LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid di
             }
             visitedChunks.insert(chunkId);
 
-            auto landsIds = mDimensionChunkMap.queryLand(dimid, chunkId);
+            auto landsIds = impl->mDimensionChunkMap.queryLand(dimid, chunkId);
             if (!landsIds) {
                 continue;
             }
 
             for (auto const& id : *landsIds) {
-                if (auto iter = mLandCache.find(id); iter != mLandCache.end()) {
+                if (auto iter = impl->mLandCache.find(id); iter != impl->mLandCache.end()) {
                     if (auto const& land = iter->second; land->isCollision(pos1, pos2)) {
                         lands.insert(land);
                     }
@@ -825,25 +707,12 @@ LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid di
     return lands;
 }
 
-
-std::vector<SharedLand> LandRegistry::getLandsWhere(FilterCallback const& callback) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
-
-    std::vector<SharedLand> result;
-    for (auto const& [id, land] : mLandCache) {
-        if (callback(land)) {
-            result.push_back(land);
-        }
-    }
-    return result;
-}
-
 std::vector<SharedLand> LandRegistry::getLandsWhereRaw(ContextFilter const& filter) const {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
+    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
 
     std::vector<SharedLand> result;
-    for (auto const& [id, land] : mLandCache) {
-        if (filter(land->mContext)) {
+    for (auto const& [id, land] : impl->mLandCache) {
+        if (filter(land->_getContext())) {
             result.push_back(land);
         }
     }

@@ -1,17 +1,10 @@
 #pragma once
-#include "LandDimensionChunkMap.h"
-#include "LandIdAllocator.h"
 #include "pland/Global.h"
 #include "pland/land/Land.h"
 
-#include "ll/api/data/KeyValueDB.h"
-
-#include <atomic>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -23,48 +16,23 @@ class BlockPos;
 namespace land {
 
 struct PlayerSettings {
-    bool        showEnterLandTitle{true};     // 是否显示进入领地提示
-    bool        showBottomContinuedTip{true}; // 是否持续显示底部提示
-    std::string localeCode{"server"};         // 语言 system / server / xxx
+    bool        showEnterLandTitle{true};       // 是否显示进入领地提示
+    bool        showBottomContinuedTip{true};   // 是否持续显示底部提示
+    std::string localeCode{SERVER_LOCALE_CODE}; // 语言 system / server / xxx
 
-    LDNDAPI static std::string SYSTEM_LOCALE_CODE();
-    LDNDAPI static std::string SERVER_LOCALE_CODE();
+    inline static constexpr std::string_view SYSTEM_LOCALE_CODE = "system";
+    inline static constexpr std::string_view SERVER_LOCALE_CODE = "server";
 };
 
 class LandTemplatePermTable;
 
 class LandRegistry final {
-    std::unique_ptr<ll::data::KeyValueDB>         mDB;                             // 领地数据库
-    std::vector<mce::UUID>                        mLandOperators;                  // 领地操作员
-    std::unordered_map<mce::UUID, PlayerSettings> mPlayerSettings;                 // 玩家设置
-    std::unordered_map<LandID, SharedLand>        mLandCache;                      // 领地缓存
-    mutable std::shared_mutex                     mMutex;                          // 读写锁
-    std::unique_ptr<LandIdAllocator>              mLandIdAllocator{nullptr};       // 领地ID分配器
-    LandDimensionChunkMap                         mDimensionChunkMap;              // 维度区块映射
-    std::unique_ptr<LandTemplatePermTable>        mLandTemplatePermTable{nullptr}; // 领地模板权限表
-    std::thread                                   mThread;                         // 线程
-    std::atomic<bool>                             mThreadQuit{false};              // 线程退出标志
-    mutable std::mutex                            mThreadMutex;                    // 线程互斥锁(仅 mThreadCV 使用)
-    std::condition_variable                       mThreadCV;                       // 线程条件变量
+    struct Impl;
+    std::unique_ptr<Impl> impl;
 
-    friend class DataConverter;
+    friend class TransactionContext;
 
-private: //! private 方法非线程安全
-    void _loadOperators();
-    void _loadPlayerSettings();
-    void _loadLands();
-    void _loadLandTemplatePermTable();
-
-    void _openDatabaseAndEnsureVersion();
-    void _migrateLegacyKeysIfNeeded(nlohmann::json& landData);
-
-    void _buildDimensionChunkMap();
-
-    LandID getNextLandID() const;
-
-    ll::Expected<> _removeLand(SharedLand const& ptr);
-
-    ll::Expected<> _addLand(SharedLand land);
+    LandID _allocateNextId();
 
 public:
     LD_DISABLE_COPY_AND_MOVE(LandRegistry);
@@ -72,7 +40,8 @@ public:
     ~LandRegistry();
 
     LDAPI void save();
-    LDAPI bool save(Land const& land) const;
+
+    LDAPI bool save(std::shared_ptr<Land> const& land, bool force = false) const;
 
 public:
     LDNDAPI bool isOperator(mce::UUID const& uuid) const;
@@ -97,42 +66,21 @@ public:
 
     LDNDAPI ll::Expected<> addOrdinaryLand(SharedLand const& land);
 
-    LDNDAPI ll::Expected<> addSubLand(SharedLand const& parent, SharedLand const& sub);
-
-    /**
-     * @brief 移除领地
-     * @deprecated 此接口已废弃，此接口实际调用 removeOrdinaryLand()，请使用 removeOrdinaryLand() 代替
-     */
-    [[deprecated("Please use removeOrdinaryLand() instead")]] LDAPI bool removeLand(LandID id);
-
-    /**
-     * @brief 移除普通领地
-     */
     LDNDAPI ll::Expected<> removeOrdinaryLand(SharedLand const& ptr);
 
-    /**
-     * @brief 移除子领地
-     */
-    LDNDAPI ll::Expected<> removeSubLand(SharedLand const& ptr);
 
     /**
-     * @brief 移除领地和其子领地
+     * 子领地事务执行器
+     * @note 在执行前，Registry 会对当前领地数据进行快照，如果任务返回 false，则回滚数据到快照
+     * @note 在回调内，禁止再次访问 Registry，这会造成死锁
      */
-    LDNDAPI ll::Expected<> removeLandAndSubLands(SharedLand const& ptr);
+    using TransactionCallback = std::function<bool(TransactionContext& ctx)>;
 
-    /**
-     * @brief 移除当前领地并提升子领地为普通领地
-     */
-    LDNDAPI ll::Expected<> removeLandAndPromoteSubLands(SharedLand const& ptr);
-
-    /**
-     * @brief 移除当前领地并移交子领地给当前领地的父领地
-     */
-    LDNDAPI ll::Expected<> removeLandAndTransferSubLands(SharedLand const& ptr);
+    LDNDAPI ll::Expected<>
+    executeTransaction(std::unordered_set<std::shared_ptr<Land>> const& participants, TransactionCallback const& executor);
 
 
 public: // 领地查询API
-    LDNDAPI WeakLand   getLandWeakPtr(LandID id) const;
     LDNDAPI SharedLand getLand(LandID id) const;
     LDNDAPI std::vector<SharedLand> getLands() const;
     LDNDAPI std::vector<SharedLand> getLands(std::vector<LandID> const& ids) const;
@@ -149,9 +97,6 @@ public: // 领地查询API
     LDNDAPI std::unordered_set<SharedLand> getLandAt(BlockPos const& center, int radius, LandDimid dimid) const;
 
     LDNDAPI std::unordered_set<SharedLand> getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid dimid) const;
-
-    using FilterCallback = std::function<bool(SharedLand const&)>;
-    LDNDAPI std::vector<SharedLand> getLandsWhere(FilterCallback const& callback) const;
 
     using ContextFilter = std::function<bool(LandContext const&)>;
     LDNDAPI std::vector<SharedLand> getLandsWhereRaw(ContextFilter const& filter) const;

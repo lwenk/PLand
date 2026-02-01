@@ -72,6 +72,11 @@
     - `current_land` 绘制当前所在的领地范围
     - `near_land` 绘制附近领地范围（范围由 `Config.json` 中的 `drawRange` 设置）
 
+## 已移除功能
+
+### 数据转换
+
+> 此命令已在 v0.17.0+(不含) 版本移除，如有转换需求，请使用 v0.17.0 的PLand执行转换后更新到最小版本
 - `/pland import <clearDb: Boolean> <relationship_file: string> <data_file: string>`
   - 导入 iland 领地数据(控制台)
     - `clearDb` 是否清空数据库
@@ -80,7 +85,7 @@
 
 > 例如：/pland import true "C:/Users/xxx/Desktop/relationship.json" "C:/Users/xxx/Desktop/data.json"
 
-!> 注意：
+!> 注意：  
 此转换为动态转换，由于iLand使用XUID作为玩家唯一标识符，而本插件使用UUID。  
 因此，插件转换会后Owner数据依然为XUID，待玩家进服后，插件会自动转换为UUID。  
 所以：请不要关闭xbox验证，否则无法转换成功。  

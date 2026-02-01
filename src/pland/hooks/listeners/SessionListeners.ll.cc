@@ -40,7 +40,7 @@ void EventListener::registerLLSessionListeners() {
             logger->info("Update land owner data from xuid to uuid for player {}", ev.self().getRealName());
             auto& uuid = ev.self().getUuid();
             for (auto& land : lands) {
-                land->updateXUIDToUUID(uuid);
+                land->migrateOwner(uuid);
             }
         }
     }));

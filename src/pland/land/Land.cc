@@ -1,292 +1,182 @@
 #include "pland/land/Land.h"
 #include "LandCreateValidator.h"
-#include "LandTemplatePermTable.h"
+
 #include "mc/platform/UUID.h"
+
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/infra/Config.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/LandContext.h"
 #include "pland/utils/JsonUtil.h"
-#include <stack>
+
 #include <unordered_set>
 #include <vector>
 
 
 namespace land {
 
+struct Land::Impl {
+    LandContext  mContext;
+    DirtyCounter mDirtyCounter;
 
-Land::Land() = default;
-Land::Land(LandContext ctx) : mContext(std::move(ctx)) {}
-Land::Land(LandAABB const& pos, LandDimid dimid, bool is3D, mce::UUID const& owner) {
-    mContext.mPos           = pos;
-    mContext.mLandDimid     = dimid;
-    mContext.mIs3DLand      = is3D;
-    mContext.mLandOwner     = owner.asString();
-    mContext.mLandPermTable = PLand::getInstance().getLandRegistry().getLandTemplatePermTable().get();
+    // cache
+    mutable std::optional<mce::UUID>      mCacheOwner;
+    mutable std::unordered_set<mce::UUID> mCacheMembers;
+    mutable std::optional<int>            mCacheNestedLevel;
 
-    _initCache();
+    void initCache() {
+        mCacheOwner = std::nullopt;
+        mCacheMembers.clear();
+
+        if (!mContext.mOwnerDataIsXUID) {
+            mCacheOwner = mce::UUID::fromString(mContext.mLandOwner);
+        }
+        mCacheMembers.reserve(mContext.mLandMembers.size());
+        for (auto const& member : mContext.mLandMembers) {
+            mCacheMembers.emplace(mce::UUID::fromString(member));
+        }
+    }
+};
+
+Land::Land() : impl(std::make_unique<Impl>()) {}
+Land::Land(LandContext ctx) : Land{} { impl->mContext = std::move(ctx); }
+Land::Land(LandAABB const& pos, LandDimid dimid, bool is3D, mce::UUID const& owner, LandPermTable ptable) : Land{} {
+    impl->mContext.mPos           = pos;
+    impl->mContext.mLandDimid     = dimid;
+    impl->mContext.mIs3DLand      = is3D;
+    impl->mContext.mLandOwner     = owner.asString();
+    impl->mContext.mLandPermTable = ptable;
+
+    impl->initCache();
 }
+Land::~Land() = default;
 
-void Land::_initCache() {
-    mCacheOwner = std::nullopt;
-    mCacheMembers.clear();
+LandAABB const& Land::getAABB() const { return impl->mContext.mPos; }
 
-    if (!mContext.mOwnerDataIsXUID) {
-        mCacheOwner = mce::UUID{mContext.mLandOwner};
-    }
-
-    mCacheMembers.reserve(mContext.mLandMembers.size());
-    for (auto const& member : mContext.mLandMembers) {
-        mCacheMembers.emplace(mce::UUID{member});
-    }
-}
-
-SharedLand Land::getSelfFromRegistry() const {
-    return PLand::getInstance().getLandRegistry().getLand(mContext.mLandID);
-}
-
-LandAABB const& Land::getAABB() const { return mContext.mPos; }
-bool            Land::setAABB(LandAABB const& newRange) {
-    if (!isOrdinaryLand()) {
-        return false;
-    }
-    if (!LandCreateValidator::isLandRangeLegal(newRange, getDimensionId(), is3D())) {
-        return false; // 领地范围不合法
-    }
-    if (!LandCreateValidator::isLandInForbiddenRange(newRange, getDimensionId())) {
-        return false; // 领地范围在禁止领地范围内
-    }
-    if (!LandCreateValidator::isLandRangeConflict(getSelfFromRegistry(), newRange)) {
-        return false; // 领地范围与其他领地重叠
-    }
-    mContext.mPos = newRange;
-    mDirtyCounter.increment();
-    return true;
-}
-
-LandPos const& Land::getTeleportPos() const { return mContext.mTeleportPos; }
+LandPos const& Land::getTeleportPos() const { return impl->mContext.mTeleportPos; }
 void           Land::setTeleportPos(LandPos const& pos) {
-    mContext.mTeleportPos = pos;
-    mDirtyCounter.increment();
+    impl->mContext.mTeleportPos = pos;
+    impl->mDirtyCounter.increment();
 }
 
-LandID    Land::getId() const { return mContext.mLandID; }
-LandDimid Land::getDimensionId() const { return mContext.mLandDimid; }
+LandID    Land::getId() const { return impl->mContext.mLandID; }
+LandDimid Land::getDimensionId() const { return impl->mContext.mLandDimid; }
 
-LandPermTable const& Land::getPermTable() const { return mContext.mLandPermTable; }
+LandPermTable const& Land::getPermTable() const { return impl->mContext.mLandPermTable; }
 void                 Land::setPermTable(LandPermTable permTable) {
-    mContext.mLandPermTable = std::move(permTable);
-    mDirtyCounter.increment();
+    impl->mContext.mLandPermTable = permTable;
+    impl->mDirtyCounter.increment();
 }
 
 mce::UUID const& Land::getOwner() const {
-    if (!mCacheOwner) {
-        if (mContext.mOwnerDataIsXUID) {
+    if (!impl->mCacheOwner) {
+        if (impl->mContext.mOwnerDataIsXUID) {
             return mce::UUID::EMPTY();
         }
-        mCacheOwner = mce::UUID(mContext.mLandOwner);
+        impl->mCacheOwner = mce::UUID(impl->mContext.mLandOwner);
     }
-    return *mCacheOwner;
+    return *impl->mCacheOwner;
 }
 void Land::setOwner(mce::UUID const& uuid) {
-    mCacheOwner         = uuid;
-    mContext.mLandOwner = uuid.asString();
-    mDirtyCounter.increment();
+    impl->mCacheOwner         = uuid;
+    impl->mContext.mLandOwner = uuid.asString();
+    impl->mDirtyCounter.increment();
 }
-std::string const& Land::getRawOwner() const { return mContext.mLandOwner; }
+std::string const& Land::getRawOwner() const { return impl->mContext.mLandOwner; }
 
-std::unordered_set<mce::UUID> const& Land::getMembers() const { return mCacheMembers; }
+std::unordered_set<mce::UUID> const& Land::getMembers() const { return impl->mCacheMembers; }
 void                                 Land::addLandMember(mce::UUID const& uuid) {
-    mCacheMembers.insert(uuid);
-    mContext.mLandMembers.emplace_back(uuid.asString());
-    mDirtyCounter.increment();
+    impl->mCacheMembers.insert(uuid);
+    impl->mContext.mLandMembers.emplace_back(uuid.asString());
+    impl->mDirtyCounter.increment();
 }
 void Land::removeLandMember(mce::UUID const& uuid) {
-    mCacheMembers.erase(uuid);
-    std::erase_if(mContext.mLandMembers, [uuid = uuid.asString()](auto const& u) { return u == uuid; });
-    mDirtyCounter.increment();
+    impl->mCacheMembers.erase(uuid);
+    std::erase_if(impl->mContext.mLandMembers, [uuid = uuid.asString()](auto const& u) { return u == uuid; });
+    impl->mDirtyCounter.increment();
 }
 
-std::string const& Land::getName() const { return mContext.mLandName; }
+std::string const& Land::getName() const { return impl->mContext.mLandName; }
 void               Land::setName(std::string const& name) {
-    mContext.mLandName = name;
-    mDirtyCounter.increment();
+    impl->mContext.mLandName = name;
+    impl->mDirtyCounter.increment();
 }
 
-std::string const& Land::getDescribe() const { return mContext.mLandDescribe; }
+std::string const& Land::getDescribe() const { return impl->mContext.mLandDescribe; }
 void               Land::setDescribe(std::string const& describe) {
-    mContext.mLandDescribe = std::string(describe);
-    mDirtyCounter.increment();
+    impl->mContext.mLandDescribe = std::string(describe);
+    impl->mDirtyCounter.increment();
 }
 
-int  Land::getOriginalBuyPrice() const { return mContext.mOriginalBuyPrice; }
+int  Land::getOriginalBuyPrice() const { return impl->mContext.mOriginalBuyPrice; }
 void Land::setOriginalBuyPrice(int price) {
-    mContext.mOriginalBuyPrice = price;
-    mDirtyCounter.increment();
+    impl->mContext.mOriginalBuyPrice = price;
+    impl->mDirtyCounter.increment();
 }
 
-bool                Land::is3D() const { return mContext.mIs3DLand; }
-bool                Land::isOwner(mce::UUID const& uuid) const { return mCacheOwner == uuid; }
-bool                Land::isMember(mce::UUID const& uuid) const { return mCacheMembers.contains(uuid); }
-bool                Land::isConvertedLand() const { return mContext.mIsConvertedLand; }
-bool                Land::isOwnerDataIsXUID() const { return mContext.mOwnerDataIsXUID; }
-bool                Land::isDirty() const { return mDirtyCounter.isDirty(); }
-void                Land::markDirty() { mDirtyCounter.increment(); }
-void                Land::rollbackDirty() { mDirtyCounter.decrement(); }
-DirtyCounter&       Land::getDirtyCounter() { return mDirtyCounter; }
-DirtyCounter const& Land::getDirtyCounter() const { return mDirtyCounter; }
+bool                Land::is3D() const { return impl->mContext.mIs3DLand; }
+bool                Land::isOwner(mce::UUID const& uuid) const { return impl->mCacheOwner == uuid; }
+bool                Land::isMember(mce::UUID const& uuid) const { return impl->mCacheMembers.contains(uuid); }
+bool                Land::isConvertedLand() const { return impl->mContext.mIsConvertedLand; }
+bool                Land::isOwnerDataIsXUID() const { return impl->mContext.mOwnerDataIsXUID; }
+bool                Land::isDirty() const { return impl->mDirtyCounter.isDirty(); }
+void                Land::markDirty() { impl->mDirtyCounter.increment(); }
+void                Land::rollbackDirty() { impl->mDirtyCounter.decrement(); }
+DirtyCounter&       Land::getDirtyCounter() { return impl->mDirtyCounter; }
+DirtyCounter const& Land::getDirtyCounter() const { return impl->mDirtyCounter; }
 
-Land::Type Land::getType() const {
+LandType Land::getType() const {
     if (isOrdinaryLand()) [[likely]] {
-        return Type::Ordinary;
-    } else if (isParentLand()) {
-        return Type::Parent;
-    } else if (isMixLand()) {
-        return Type::Mix;
-    } else if (isSubLand()) {
-        return Type::Sub;
+        return LandType::Ordinary;
     }
-    throw std::runtime_error("Unknown land type");
-    [[unlikely]];
+    if (isParentLand()) {
+        return LandType::Parent;
+    }
+    if (isMixLand()) {
+        return LandType::Mix;
+    }
+    if (isSubLand()) {
+        return LandType::Sub;
+    }
+    [[unlikely]] throw std::runtime_error("Unknown land type");
 }
-bool Land::hasParentLand() const { return this->mContext.mParentLandID != static_cast<LandID>(-1); }
-bool Land::hasSubLand() const { return !this->mContext.mSubLandIDs.empty(); }
-bool Land::isSubLand() const {
-    return this->mContext.mParentLandID != static_cast<LandID>(-1) && this->mContext.mSubLandIDs.empty();
-}
-bool Land::isParentLand() const {
-    return this->mContext.mParentLandID == static_cast<LandID>(-1) && !this->mContext.mSubLandIDs.empty();
-}
-bool Land::isMixLand() const {
-    return this->mContext.mParentLandID != static_cast<LandID>(-1) && !this->mContext.mSubLandIDs.empty();
-}
-bool Land::isOrdinaryLand() const {
-    return this->mContext.mParentLandID == static_cast<LandID>(-1) && this->mContext.mSubLandIDs.empty();
-}
+bool Land::hasParentLand() const { return impl->mContext.mParentLandID != INVALID_LAND_ID; }
+bool Land::hasSubLand() const { return !impl->mContext.mSubLandIDs.empty(); }
+
+bool Land::isOrdinaryLand() const { return !hasParentLand() && !hasSubLand(); } // 无父 & 无子
+bool Land::isParentLand() const { return !hasParentLand() && hasSubLand(); }    // 无父 & 有子
+bool Land::isMixLand() const { return hasParentLand() && hasSubLand(); }        // 有父 & 有子
+bool Land::isSubLand() const { return hasParentLand() && !hasSubLand(); }       // 有父 & 无子
+
 bool Land::canCreateSubLand() const {
     auto nestedLevel = getNestedLevel();
     return nestedLevel < Config::cfg.land.subLand.maxNested && nestedLevel < GlobalSubLandMaxNestedLevel
-        && static_cast<int>(this->mContext.mSubLandIDs.size()) < Config::cfg.land.subLand.maxSubLand;
+        && static_cast<int>(impl->mContext.mSubLandIDs.size()) < Config::cfg.land.subLand.maxSubLand;
 }
 
-SharedLand Land::getParentLand() const {
-    if (isParentLand() || !hasParentLand()) {
-        return nullptr;
-    }
-    return PLand::getInstance().getLandRegistry().getLand(this->mContext.mParentLandID);
-}
+LandID              Land::getParentLandID() const { return impl->mContext.mParentLandID; }
+std::vector<LandID> Land::getSubLandIDs() const { return impl->mContext.mSubLandIDs; }
 
-std::vector<SharedLand> Land::getSubLands() const {
-    if (!hasSubLand()) {
-        return {};
-    }
-    return PLand::getInstance().getLandRegistry().getLands(this->mContext.mSubLandIDs);
-}
-int Land::getNestedLevel() const {
-    if (!hasParentLand()) {
-        return 0;
-    }
-
-    std::stack<SharedLand> stack;
-    stack.push(getParentLand());
-    int level = 0;
-    while (!stack.empty()) {
-        auto land = stack.top();
-        stack.pop();
-        level++;
-        if (land->hasParentLand()) {
-            stack.push(land->getParentLand());
-        }
-    }
-    return level;
-}
-SharedLand Land::getRootLand() const {
-    if (!hasParentLand()) {
-        return getSelfFromRegistry(); // 如果是父领地，直接返回自己
-    }
-
-    SharedLand root = getParentLand();
-    while (root->hasParentLand()) {
-        root = root->getParentLand();
-    }
-
-    return root;
-}
-
-std::unordered_set<SharedLand> Land::getFamilyTree() const {
-    std::unordered_set<SharedLand> descendants;
-
-    auto root = getRootLand();
-
-    std::stack<SharedLand> stack;
-    stack.push(root);
-
-    while (!stack.empty()) {
-        auto current = stack.top();
-        stack.pop();
-
-        descendants.insert(current);
-        for (auto& lan : current->getSubLands()) {
-            stack.push(lan);
-        }
-    }
-    return descendants;
-}
-
-std::unordered_set<SharedLand> Land::getSelfAndAncestors() const {
-    std::unordered_set<SharedLand> parentLands;
-
-    auto self = getSelfFromRegistry();
-    if (!self) {
-        return parentLands;
-    }
-
-    std::stack<SharedLand> stack;
-    stack.push(self);
-
-    while (!stack.empty()) {
-        auto cur = stack.top();
-        stack.pop();
-
-        parentLands.insert(cur);
-        if (cur->hasParentLand()) {
-            stack.push(cur->getParentLand());
-        }
-    }
-
-    return parentLands;
-}
-std::unordered_set<SharedLand> Land::getSelfAndDescendants() const {
-    std::unordered_set<SharedLand> descendants;
-
-    std::stack<SharedLand> stack;
-    stack.push(getSelfFromRegistry());
-
-    while (!stack.empty()) {
-        auto current = stack.top();
-        stack.pop();
-
-        descendants.insert(current);
-
-        if (current->hasSubLand()) {
-            for (auto& land : current->getSubLands()) {
-                stack.push(land);
-            }
-        }
-    }
-    return descendants;
-}
+int Land::getNestedLevel() const { return impl->mCacheNestedLevel.value_or(0); }
 
 
 bool Land::isCollision(BlockPos const& pos, int radius) const {
-    BlockPos minPos(pos.x - radius, mContext.mIs3DLand ? pos.y - radius : mContext.mPos.min.y, pos.z - radius);
-    BlockPos maxPos(pos.x + radius, mContext.mIs3DLand ? pos.y + radius : mContext.mPos.max.y, pos.z + radius);
+    BlockPos minPos(
+        pos.x - radius,
+        impl->mContext.mIs3DLand ? pos.y - radius : impl->mContext.mPos.min.y,
+        pos.z - radius
+    );
+    BlockPos maxPos(
+        pos.x + radius,
+        impl->mContext.mIs3DLand ? pos.y + radius : impl->mContext.mPos.max.y,
+        pos.z + radius
+    );
     return isCollision(minPos, maxPos);
 }
 
 bool Land::isCollision(BlockPos const& pos1, BlockPos const& pos2) const {
     return LandAABB::isCollision(
-        mContext.mPos,
+        impl->mContext.mPos,
         LandAABB{
             LandPos{pos1.x, pos1.y, pos1.z},
             LandPos{pos2.x, pos2.y, pos2.z}
@@ -301,57 +191,39 @@ LandPermType Land::getPermType(mce::UUID const& uuid) const {
     return LandPermType::Guest;
 }
 
-void Land::updateXUIDToUUID(mce::UUID const& ownerUUID) {
+void Land::migrateOwner(mce::UUID const& ownerUUID) {
     if (isConvertedLand() && isOwnerDataIsXUID()) {
         setOwner(ownerUUID);
-        mContext.mOwnerDataIsXUID = false;
-        mDirtyCounter.increment();
+        impl->mContext.mOwnerDataIsXUID = false;
+        impl->mDirtyCounter.increment();
     }
 }
 
 void Land::load(nlohmann::json& json) {
-    json_util::json2structWithVersionPatch(json, mContext);
-    _initCache();
+    json_util::json2structWithVersionPatch(json, impl->mContext);
+    impl->initCache();
 }
-nlohmann::json Land::dump() const { return json_util::struct2json(mContext); }
-void           Land::save(bool force) {
-    if (isDirty() || force) {
-        if (PLand::getInstance().getLandRegistry().save(*this)) {
-            mDirtyCounter.reset();
-        }
+nlohmann::json Land::toJson() const { return json_util::struct2json(impl->mContext); }
+
+bool Land::operator==(SharedLand const& other) const { return impl->mContext.mLandID == other->impl->mContext.mLandID; }
+
+
+// friend LandHierarchyService API
+LandContext& Land::_getContext() const { return impl->mContext; }
+void         Land::_setCachedNestedLevel(int level) { impl->mCacheNestedLevel = level; }
+void         Land::_setLandId(LandID id) { impl->mContext.mLandID = id; }
+void         Land::_reinit(LandContext context, unsigned int dirtyDiff) {
+    impl->mContext = std::move(context);
+    impl->mDirtyCounter.reset(dirtyDiff);
+    impl->initCache();
+}
+bool Land::_setAABB(LandAABB const& newRange) {
+    if (!isOrdinaryLand()) {
+        return false;
     }
+    impl->mContext.mPos = newRange;
+    markDirty();
+    return true;
 }
-
-
-bool Land::operator==(SharedLand const& other) const { return mContext.mLandID == other->mContext.mLandID; }
-
-
-// static
-llong Land::calculatePriceRecursively(SharedLand const& land, RecursionCalculationPriceHandle const& handle) {
-    std::stack<SharedLand> stack;
-    stack.push(land);
-
-    llong price = 0;
-
-    while (!stack.empty()) {
-        SharedLand current = stack.top();
-        stack.pop();
-
-        if (handle) {
-            if (!handle(current, price)) break; // if handle return false, break
-        } else {
-            price += current->mContext.mOriginalBuyPrice;
-        }
-
-        if (current->hasSubLand()) {
-            for (auto& subLand : current->getSubLands()) {
-                stack.push(subLand);
-            }
-        }
-    }
-
-    return price;
-}
-
 
 } // namespace land

@@ -1,7 +1,7 @@
-#include "ChangeLandRangeSelector.h"
-#include "pland/drawer/DrawHandleManager.h"
+#include "LandResizeSelector.h"
 #include "mc/deps/core/math/Color.h"
 #include "pland/PLand.h"
+#include "pland/drawer/DrawHandleManager.h"
 #include "pland/land/Land.h"
 #include "pland/selector/ISelector.h"
 
@@ -9,7 +9,7 @@
 namespace land {
 
 
-ChangeLandRangeSelector::ChangeLandRangeSelector(Player& player, SharedLand land)
+LandResizeSelector::LandResizeSelector(Player& player, SharedLand land)
 : ISelector(player, land->getDimensionId(), land->is3D()),
   mLand(land) {
     mOldRangeDrawId = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(player)->draw(
@@ -19,7 +19,7 @@ ChangeLandRangeSelector::ChangeLandRangeSelector(Player& player, SharedLand land
     );
 }
 
-ChangeLandRangeSelector::~ChangeLandRangeSelector() {
+LandResizeSelector::~LandResizeSelector() {
     auto player = getPlayer();
     if (!player) {
         return;
@@ -30,7 +30,7 @@ ChangeLandRangeSelector::~ChangeLandRangeSelector() {
     }
 }
 
-SharedLand ChangeLandRangeSelector::getLand() const { return mLand.lock(); }
+SharedLand LandResizeSelector::getLand() const { return mLand.lock(); }
 
 
 } // namespace land

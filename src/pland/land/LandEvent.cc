@@ -8,13 +8,6 @@
 namespace land {
 
 
-Player&    PlayerBuyLandBeforeEvent::getPlayer() const { return mPlayer; }
-ISelector* PlayerBuyLandBeforeEvent::getSelector() const { return mSelector; }
-int&       PlayerBuyLandBeforeEvent::getPrice() const { return mPrice; }
-Player&    PlayerBuyLandAfterEvent::getPlayer() const { return mPlayer; }
-SharedLand PlayerBuyLandAfterEvent::getLand() const { return mLand; }
-
-
 Player& PlayerEnterLandEvent::getPlayer() const { return mPlayer; }
 LandID  PlayerEnterLandEvent::getLandID() const { return mLandID; }
 Player& PlayerLeaveLandEvent::getPlayer() const { return mPlayer; }
@@ -46,18 +39,6 @@ mce::UUID const& LandOwnerChangeAfterEvent::getNewOwner() const { return mNewOwn
 LandID           LandOwnerChangeAfterEvent::getLandID() const { return mLandID; }
 
 
-Player&           LandRangeChangeBeforeEvent::getPlayer() const { return mPlayer; }
-SharedLand const& LandRangeChangeBeforeEvent::getLand() const { return mLand; }
-LandAABB const&   LandRangeChangeBeforeEvent::getNewRange() const { return mNewRange; }
-int const&        LandRangeChangeBeforeEvent::getNeedPay() const { return mNeedPay; }
-int const&        LandRangeChangeBeforeEvent::getRefundPrice() const { return mRefundPrice; }
-Player&           LandRangeChangeAfterEvent::getPlayer() const { return mPlayer; }
-SharedLand const& LandRangeChangeAfterEvent::getLand() const { return mLand; }
-LandAABB const&   LandRangeChangeAfterEvent::getNewRange() const { return mNewRange; }
-int const&        LandRangeChangeAfterEvent::getNeedPay() const { return mNeedPay; }
-int const&        LandRangeChangeAfterEvent::getRefundPrice() const { return mRefundPrice; }
-
-
 // EventEmitter
 #define IMPLEMENT_EVENT_EMITTER(EventName)                                                                             \
     static std::unique_ptr<ll::event::EmitterBase> emitterFactory##EventName();                                        \
@@ -66,8 +47,6 @@ int const&        LandRangeChangeAfterEvent::getRefundPrice() const { return mRe
         return std::make_unique<EventName##Emitter>();                                                                 \
     }
 
-IMPLEMENT_EVENT_EMITTER(PlayerBuyLandBeforeEvent)
-IMPLEMENT_EVENT_EMITTER(PlayerBuyLandAfterEvent)
 IMPLEMENT_EVENT_EMITTER(PlayerEnterLandEvent)
 IMPLEMENT_EVENT_EMITTER(PlayerLeaveLandEvent)
 IMPLEMENT_EVENT_EMITTER(PlayerDeleteLandBeforeEvent)
@@ -76,7 +55,5 @@ IMPLEMENT_EVENT_EMITTER(LandMemberChangeBeforeEvent)
 IMPLEMENT_EVENT_EMITTER(LandMemberChangeAfterEvent)
 IMPLEMENT_EVENT_EMITTER(LandOwnerChangeBeforeEvent)
 IMPLEMENT_EVENT_EMITTER(LandOwnerChangeAfterEvent)
-IMPLEMENT_EVENT_EMITTER(LandRangeChangeBeforeEvent)
-IMPLEMENT_EVENT_EMITTER(LandRangeChangeAfterEvent)
 
 } // namespace land

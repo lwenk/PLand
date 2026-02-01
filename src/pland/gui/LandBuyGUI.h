@@ -1,7 +1,7 @@
 #pragma once
 #include "pland/Global.h"
-#include "pland/selector/ChangeLandRangeSelector.h"
 #include "pland/selector/DefaultSelector.h"
+#include "pland/selector/LandResizeSelector.h"
 #include "pland/selector/SubLandSelector.h"
 
 
@@ -22,12 +22,12 @@ public:
     /**
      * @brief 购买新的领地范围
      */
-    LDAPI static void impl(Player& player, ChangeLandRangeSelector* reSelector);
+    LDAPI static void impl(Player& player, LandResizeSelector* selector);
 
     /**
      * @brief 购买子领地
      */
-    LDAPI static void impl(Player& player, SubLandSelector* subSelector);
+    LDAPI static void impl(Player& player, SubLandSelector* selector);
 };
 
 } // namespace land
