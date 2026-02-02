@@ -1,7 +1,7 @@
 #pragma once
 #include "ll-bstats/Telemetry.h"
 
-namespace land {
+namespace land::internal {
 namespace adapter {
 
 class Telemetry : public ll_bstats::Telemetry {

@@ -10,7 +10,7 @@
 #include <magic_enum.hpp>
 
 
-namespace land {
+namespace land::internal {
 namespace adapter {
 
 Telemetry::Telemetry() : ll_bstats::Telemetry(27389, BuildInfo::Tag.data()) {}
@@ -57,4 +57,4 @@ void Telemetry::collect() {
 
 
 } // namespace adapter
-} // namespace land
+} // namespace land::internal

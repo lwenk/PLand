@@ -17,11 +17,11 @@
 #include "events/domain/ConfigReloadEvent.h"
 #include "land/internal/LandScheduler.h"
 #include "land/internal/SafeTeleport.h"
-#include "pland/adapter/telemetry/Telemetry.h"
-#include "pland/command/Command.h"
 #include "pland/economy/EconomySystem.h"
 #include "pland/hooks/EventListener.h"
 #include "pland/infra/Config.h"
+#include "pland/internal/adapter/telemetry/Telemetry.h"
+#include "pland/internal/command/Command.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/ServiceLocator.h"
@@ -43,7 +43,7 @@ struct PLand::Impl {
     std::unique_ptr<internal::SafeTeleport>         mSafeTeleport{nullptr};
     std::unique_ptr<SelectorManager>                mSelectorManager{nullptr};
     std::unique_ptr<DrawHandleManager>              mDrawHandleManager{nullptr};
-    std::unique_ptr<adapter::Telemetry>             mTelemetry{nullptr};
+    std::unique_ptr<internal::adapter::Telemetry>   mTelemetry{nullptr};
 
     ll::event::ListenerPtr mConfigReloadListener{nullptr};
 
@@ -85,13 +85,13 @@ bool PLand::load() {
 }
 
 bool PLand::enable() {
-    LandCommand::setup();
+    internal::LandCommand::setup();
     mImpl->mLandScheduler     = std::make_unique<internal::LandScheduler>();
     mImpl->mEventListener     = std::make_unique<EventListener>();
     mImpl->mSafeTeleport      = std::make_unique<internal::SafeTeleport>();
     mImpl->mSelectorManager   = std::make_unique<SelectorManager>();
     mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
-    mImpl->mTelemetry         = std::make_unique<adapter::Telemetry>();
+    mImpl->mTelemetry         = std::make_unique<internal::adapter::Telemetry>();
     if (Config::cfg.internal.telemetry) {
         mImpl->mTelemetry->launch(*getThreadPool());
     }

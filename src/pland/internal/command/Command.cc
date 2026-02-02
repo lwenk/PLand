@@ -1,8 +1,8 @@
 #include "magic_enum.hpp"
 
+#include "Command.h"
 #include "pland/Global.h"
 #include "pland/PLand.h"
-#include "pland/command/Command.h"
 #include "pland/drawer/DrawHandleManager.h"
 #include "pland/events/domain/ConfigReloadEvent.h"
 #include "pland/gui/LandBuyGUI.h"
@@ -56,7 +56,7 @@
 #endif
 
 
-namespace land {
+namespace land::internal {
 
 #define CHECK_TYPE(ori, out, type)                                                                                     \
     if (ori.getOriginType() != type) {                                                                                 \
@@ -431,4 +431,4 @@ bool LandCommand::setup() {
 }
 
 
-} // namespace land
+} // namespace land::internal
