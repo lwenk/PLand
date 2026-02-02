@@ -43,7 +43,6 @@ public: /* public */
     LDAPI static PLand& getInstance();
 
     LDNDAPI class SafeTeleport*      getSafeTeleport() const;
-    LDNDAPI class LandScheduler*     getLandScheduler() const;
     LDNDAPI class SelectorManager*   getSelectorManager() const;
     LDNDAPI class LandRegistry&      getLandRegistry() const;
     LDNDAPI class DrawHandleManager* getDrawHandleManager() const;

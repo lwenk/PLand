@@ -15,13 +15,13 @@
 
 #include "drawer/DrawHandleManager.h"
 #include "events/domain/ConfigReloadEvent.h"
+#include "land/internal/LandScheduler.h"
 #include "pland/adapter/telemetry/Telemetry.h"
 #include "pland/command/Command.h"
 #include "pland/economy/EconomySystem.h"
 #include "pland/hooks/EventListener.h"
 #include "pland/infra/Config.h"
 #include "pland/infra/SafeTeleport.h"
-#include "pland/land/LandScheduler.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/ServiceLocator.h"
@@ -166,7 +166,6 @@ PLand::PLand() : mImpl(std::make_unique<Impl>()) {}
 
 ll::mod::NativeMod& PLand::getSelf() const { return mImpl->mSelf; }
 SafeTeleport*       PLand::getSafeTeleport() const { return mImpl->mSafeTeleport.get(); }
-LandScheduler*      PLand::getLandScheduler() const { return mImpl->mLandScheduler.get(); }
 SelectorManager*    PLand::getSelectorManager() const { return mImpl->mSelectorManager.get(); }
 LandRegistry&       PLand::getLandRegistry() const { return *mImpl->mLandRegistry; }
 DrawHandleManager*  PLand::getDrawHandleManager() const { return mImpl->mDrawHandleManager.get(); }
