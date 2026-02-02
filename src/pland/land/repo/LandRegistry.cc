@@ -274,6 +274,8 @@ LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
     impl->_buildDimensionChunkMap();
     logger.info("初始化维度区块映射完成");
 
+    // TODO: 构建领地层级缓存
+
     lock.unlock();
     impl->mThread = std::thread([this]() {
         while (!impl->mThreadQuit) {
