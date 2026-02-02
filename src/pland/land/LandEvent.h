@@ -37,40 +37,6 @@ public:
 };
 
 
-// 玩家删除领地 (DeleteLandGui)
-class [[deprecated("Waiting for reconstruction")]] PlayerDeleteLandBeforeEvent final
-: public ll::event::Cancellable<ll::event::Event> {
-protected:
-    Player&    mPlayer;
-    LandID     mLandID;
-    int const& mRefundPrice; // 删除后返还的金额
-
-public:
-    LDAPI constexpr explicit PlayerDeleteLandBeforeEvent(Player& player, LandID landID, int const& refundPrice)
-    : Cancellable(),
-      mPlayer(player),
-      mLandID(landID),
-      mRefundPrice(refundPrice) {}
-
-    LDNDAPI Player&    getPlayer() const;
-    LDNDAPI LandID     getLandID() const;
-    LDNDAPI int const& getRefundPrice() const;
-};
-class [[deprecated("Waiting for reconstruction")]] PlayerDeleteLandAfterEvent final : public ll::event::Event {
-protected:
-    Player& mPlayer;
-    LandID  mLandID;
-
-public:
-    LDAPI constexpr explicit PlayerDeleteLandAfterEvent(Player& player, LandID landID)
-    : mPlayer(player),
-      mLandID(landID) {}
-
-    LDNDAPI Player& getPlayer() const;
-    LDNDAPI LandID  getLandID() const;
-};
-
-
 // 领地成员变动(EditLandMemberGui)
 class [[deprecated("Waiting for reconstruction")]] LandMemberChangeBeforeEvent final
 : public ll::event::Cancellable<ll::event::Event> {

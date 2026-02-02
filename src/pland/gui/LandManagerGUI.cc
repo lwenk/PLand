@@ -182,10 +182,10 @@ void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) 
             }
 
             auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
-            if (auto res = service.deleteOrdinaryOrSubLand(pl, ptr)) {
+            if (auto expected = service.deleteLand(pl, ptr, service::DeletePolicy::CurrentOnly)) {
                 feedback_utils::notifySuccess(pl, "删除成功"_trf(pl));
             } else {
-                feedback_utils::sendError(pl, res.error());
+                feedback_utils::sendError(pl, expected.error());
             }
         });
 }
@@ -198,130 +198,66 @@ void LandManagerGUI::confirmParentDelete(Player& player, SharedLand const& ptr) 
     );
 
     fm.appendButton("删除当前领地和子领地"_trf(player), [ptr](Player& pl) {
-        auto& priceService = PLand::getInstance().getServiceLocator().getLandPriceService();
-        auto price = priceService.calculatePriceRecursively(ptr, [](std::shared_ptr<Land> const& land, int64_t& price) {
-            price += PriceCalculate::calculateRefundsPrice(land->getOriginalBuyPrice(), Config::cfg.land.refundRate);
-            return true;
-        });
-
-        auto mainLandId = ptr->getId();
-
-        PlayerDeleteLandBeforeEvent ev(pl, mainLandId, price);
-        ll::event::EventBus::getInstance().publish(ev);
-        if (ev.isCancelled()) {
-            return;
+        auto expected = PLand::getInstance().getServiceLocator().getLandManagementService().deleteLand(
+            pl,
+            ptr,
+            service::DeletePolicy::Recursive
+        );
+        if (expected) {
+            feedback_utils::notifySuccess(pl, "删除成功"_trf(pl));
+        } else {
+            feedback_utils::sendError(pl, expected.error());
         }
-
-        auto& economy = EconomySystem::getInstance();
-        if (!economy->add(pl, price)) {
-            return;
-        }
-
-        auto subLands = ptr->getSelfAndDescendants();
-        auto handle   = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(pl);
-        for (const auto& ld : subLands) {
-            handle->remove(ld);
-        }
-
-        auto result = PLand::getInstance().getLandRegistry().removeLandAndSubLands(ptr);
-        if (!result) {
-            economy->reduce(pl, price);
-            return;
-        }
-
-        ll::event::EventBus::getInstance().publish(PlayerDeleteLandAfterEvent{pl, mainLandId});
     });
     fm.appendButton("删除当前领地并提升子领地为父领地"_trf(player), [ptr](Player& pl) {
-        int refundPrice =
-            PriceCalculate::calculateRefundsPrice(ptr->getOriginalBuyPrice(), Config::cfg.land.refundRate);
-
-        PlayerDeleteLandBeforeEvent ev(pl, ptr->getId(), refundPrice);
-        ll::event::EventBus::getInstance().publish(ev);
-        if (ev.isCancelled()) {
-            return;
+        auto expected = PLand::getInstance().getServiceLocator().getLandManagementService().deleteLand(
+            pl,
+            ptr,
+            service::DeletePolicy::PromoteChildren
+        );
+        if (expected) {
+            feedback_utils::notifySuccess(pl, "删除成功"_trf(pl));
+        } else {
+            feedback_utils::sendError(pl, expected.error());
         }
-
-        auto& economy = EconomySystem::getInstance();
-        if (!economy->add(pl, refundPrice)) {
-            return;
-        }
-
-        auto result = PLand::getInstance().getLandRegistry().removeLandAndPromoteSubLands(ptr);
-        if (!result) {
-            economy->reduce(pl, refundPrice);
-            return;
-        }
-
-
-        PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(pl)->remove(ptr);
-        ll::event::EventBus::getInstance().publish(PlayerDeleteLandAfterEvent{pl, ptr->getId()});
     });
 
     fm.sendTo(player);
 }
+
 void LandManagerGUI::confirmMixDelete(Player& player, SharedLand const& ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
     fm.setTitle(PLUGIN_NAME + "| 删除领地 & 混合领地"_trf(player));
     fm.setContent(
-        "您当前操作的的是混合领地\n当前领地下有 {} 个子领地\n您确定要删除领地吗?"_trf(player, ptr->getSubLands().size())
+        "您当前操作的的是混合领地\n当前领地下有 {} 个子领地\n您确定要删除领地吗?"_trf(
+            player,
+            ptr->getSubLandIDs().size()
+        )
     );
 
     fm.appendButton("删除当前领地和子领地"_trf(player), [ptr](Player& pl) {
-        int price = static_cast<int>(Land::calculatePriceRecursively(ptr, [](SharedLand const& land, llong& price) {
-            price += PriceCalculate::calculateRefundsPrice(land->getOriginalBuyPrice(), Config::cfg.land.refundRate);
-            return true;
-        }));
-
-        auto mainLandId = ptr->getId();
-
-        PlayerDeleteLandBeforeEvent ev(pl, mainLandId, price);
-        ll::event::EventBus::getInstance().publish(ev);
-        if (ev.isCancelled()) {
-            return;
+        auto expected = PLand::getInstance().getServiceLocator().getLandManagementService().deleteLand(
+            pl,
+            ptr,
+            service::DeletePolicy::Recursive
+        );
+        if (expected) {
+            feedback_utils::notifySuccess(pl, "删除成功"_trf(pl));
+        } else {
+            feedback_utils::sendError(pl, expected.error());
         }
-
-        auto& economy = EconomySystem::getInstance();
-        if (!economy->add(pl, price)) {
-            return;
-        }
-
-        auto subLands = ptr->getSelfAndDescendants();
-        auto handle   = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(pl);
-        for (const auto& ld : subLands) {
-            handle->remove(ld);
-        }
-
-        auto result = PLand::getInstance().getLandRegistry().removeLandAndSubLands(ptr);
-        if (!result) {
-            economy->reduce(pl, price);
-            return;
-        }
-
-        ll::event::EventBus::getInstance().publish(PlayerDeleteLandAfterEvent{pl, mainLandId});
     });
     fm.appendButton("删除当前领地并移交子领地给父领地"_trf(player), [ptr](Player& pl) {
-        int refundPrice =
-            PriceCalculate::calculateRefundsPrice(ptr->getOriginalBuyPrice(), Config::cfg.land.refundRate);
-
-        PlayerDeleteLandBeforeEvent ev(pl, ptr->getId(), refundPrice);
-        ll::event::EventBus::getInstance().publish(ev);
-        if (ev.isCancelled()) {
-            return;
+        auto expected = PLand::getInstance().getServiceLocator().getLandManagementService().deleteLand(
+            pl,
+            ptr,
+            service::DeletePolicy::TransferChildren
+        );
+        if (expected) {
+            feedback_utils::notifySuccess(pl, "删除成功"_trf(pl));
+        } else {
+            feedback_utils::sendError(pl, expected.error());
         }
-
-        auto& economy = EconomySystem::getInstance();
-        if (!economy->add(pl, refundPrice)) {
-            return;
-        }
-
-        auto result = PLand::getInstance().getLandRegistry().removeLandAndTransferSubLands(ptr);
-        if (!result) {
-            economy->reduce(pl, refundPrice);
-            return;
-        }
-
-        PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(pl)->remove(ptr);
-        ll::event::EventBus::getInstance().publish(PlayerDeleteLandAfterEvent{pl, ptr->getId()});
     });
 
     fm.sendTo(player);
@@ -366,12 +302,16 @@ void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) 
                     return;
                 }
 
-                if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(TODO, target.getUuid()); !res) {
-                    if (res.error().isA<LandCreateValidator::ValidateError>()) {
-                        auto& error = res.error().as<LandCreateValidator::ValidateError>();
+                auto expected =
+                    PLand::getInstance().getServiceLocator().getLandManagementService().ensurePlayerLandCountLimit(
+                        target.getUuid()
+                    );
+                if (!expected) {
+                    if (expected.error().isA<LandCreateValidator::ValidateError>()) {
+                        auto& error = expected.error().as<LandCreateValidator::ValidateError>();
                         error.sendTo(self);
                     } else {
-                        feedback_utils::sendErrorText(self, "插件异常，无法处理此请求"_trf(self));
+                        feedback_utils::sendError(self, expected.error());
                     }
                     return;
                 }
@@ -463,12 +403,14 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedL
             return;
         }
 
-        if (auto res = LandCreateValidator::isPlayerLandCountLimitExceeded(TODO, targetUuid); !res) {
-            if (res.error().isA<LandCreateValidator::ValidateError>()) {
-                auto& error = res.error().as<LandCreateValidator::ValidateError>();
+        auto expected =
+            PLand::getInstance().getServiceLocator().getLandManagementService().ensurePlayerLandCountLimit(targetUuid);
+        if (!expected) {
+            if (expected.error().isA<LandCreateValidator::ValidateError>()) {
+                auto& error = expected.error().as<LandCreateValidator::ValidateError>();
                 error.sendTo(self);
             } else {
-                feedback_utils::sendErrorText(self, "插件异常，无法处理此请求"_trf(self));
+                feedback_utils::sendError(self, expected.error());
             }
             return;
         }

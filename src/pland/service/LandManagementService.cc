@@ -3,6 +3,7 @@
 #include "LandHierarchyService.h"
 #include "LandPriceService.h"
 #include "pland/events/domain/LandResizedEvent.h"
+#include "pland/events/economy/LandRefundFailedEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
 #include "pland/events/player/PlayerChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
@@ -175,31 +176,23 @@ LandManagementService::setLandTeleportPos(Player& player, std::shared_ptr<Land> 
     }
     return {};
 }
-ll::Expected<> LandManagementService::deleteOrdinaryOrSubLand(Player& player, std::shared_ptr<Land> ptr) {
+ll::Expected<> LandManagementService::deleteLand(Player& player, std::shared_ptr<Land> ptr, DeletePolicy policy) {
+    if (auto res = _ensureLandWithDeletePolicy(player, ptr, policy); !res) {
+        return res;
+    }
+
     auto event = event::PlayerDeleteLandBeforeEvent{player, ptr};
     ll::event::EventBus::getInstance().publish(event);
     if (event.isCancelled()) {
         return ll::makeStringError("操作失败，请求被取消"_trf(player));
     }
 
-    ll::Expected<> expected;
-    switch (ptr->getType()) {
-    case LandType::Ordinary: {
-        expected = impl->mRegistry.removeOrdinaryLand(ptr);
-    } break;
-    case LandType::Sub:
-        expected = impl->mHierarchyService.deleteSubLand(ptr);
-        break;
-    default:
-        return ll::makeStringError("操作失败，无法删除该类型领地"_trf(player));
-    }
-
+    auto expected = _processDeleteLand(player, ptr, policy);
     if (!expected) return expected;
-    if (auto refund = _processLandRefund(player, ptr, true); !refund) {
+
+    if (auto refund = _processLandRefund(player, ptr, policy != DeletePolicy::Recursive); !refund) {
         return refund;
     }
-
-    ll::event::EventBus::getInstance().publish(event::PlayerDeleteLandAfterEvent{player, ptr});
     return {};
 }
 
@@ -296,6 +289,67 @@ ll::Expected<> LandManagementService::_processResizeSettlement(Player& player, L
     }
     return {};
 }
+ll::Expected<> LandManagementService::_ensureLandWithDeletePolicy(
+    Player&                      player,
+    std::shared_ptr<Land> const& land,
+    DeletePolicy                 policy
+) {
+    switch (policy) {
+    case DeletePolicy::CurrentOnly:
+        if (land->isOrdinaryLand() || land->isSubLand()) {
+            return {};
+        }
+        break;
+    case DeletePolicy::Recursive:
+        if (land->isParentLand() || land->isMixLand()) {
+            return {};
+        }
+        break;
+    case DeletePolicy::PromoteChildren:
+        if (land->isParentLand()) {
+            return {};
+        }
+        break;
+    case DeletePolicy::TransferChildren:
+        if (land->isMixLand()) {
+            return {};
+        }
+        break;
+    }
+    return ll::makeStringError("该领地无法删除, 指定的删除策略不合法"_trf(player));
+}
+
+ll::Expected<>
+LandManagementService::_processDeleteLand(Player& player, std::shared_ptr<Land> const& land, DeletePolicy policy) {
+    std::unordered_set<std::shared_ptr<Land>> influence;
+
+    ll::Expected<> expected;
+    switch (policy) {
+    case DeletePolicy::CurrentOnly:
+        influence.insert(land);
+        expected = land->isOrdinaryLand() ? impl->mRegistry.removeOrdinaryLand(land)
+                                          : impl->mHierarchyService.deleteSubLand(land);
+        break;
+    case DeletePolicy::Recursive:
+        influence = impl->mHierarchyService.getSelfAndDescendants(land);
+        expected  = impl->mHierarchyService.deleteLandRecursive(land);
+        break;
+    case DeletePolicy::PromoteChildren:
+        influence.insert(land);
+        expected = impl->mHierarchyService.deleteParentLandAndPromoteChildren(land);
+        break;
+    case DeletePolicy::TransferChildren:
+        influence.insert(land);
+        expected = impl->mHierarchyService.deleteMixLandAndTransferChildren(land);
+        break;
+    }
+    if (expected) {
+        for (const auto& ld : influence) {
+            ll::event::EventBus::getInstance().publish(event::PlayerDeleteLandAfterEvent(player, ld));
+        }
+    }
+    return expected;
+}
 
 ll::Expected<>
 LandManagementService::_processLandRefund(Player& player, std::shared_ptr<Land> const& land, bool isSingle) {
@@ -303,6 +357,7 @@ LandManagementService::_processLandRefund(Player& player, std::shared_ptr<Land> 
         isSingle ? impl->mPriceService.getRefundAmount(land) : impl->mPriceService.getRefundAmountRecursively(land);
     auto& economy = EconomySystem::getInstance();
     if (!economy->add(player, price)) {
+        ll::event::EventBus::getInstance().publish(event::LandRefundFailedEvent{land, player.getUuid(), price});
         return ll::makeStringError("经济系统异常,退还差价失败"_trf(player));
     }
     return {};

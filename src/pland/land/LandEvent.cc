@@ -14,13 +14,6 @@ Player& PlayerLeaveLandEvent::getPlayer() const { return mPlayer; }
 LandID  PlayerLeaveLandEvent::getLandID() const { return mLandID; }
 
 
-Player&    PlayerDeleteLandBeforeEvent::getPlayer() const { return mPlayer; }
-LandID     PlayerDeleteLandBeforeEvent::getLandID() const { return mLandID; }
-int const& PlayerDeleteLandBeforeEvent::getRefundPrice() const { return mRefundPrice; }
-Player&    PlayerDeleteLandAfterEvent::getPlayer() const { return mPlayer; }
-LandID     PlayerDeleteLandAfterEvent::getLandID() const { return mLandID; }
-
-
 Player&          LandMemberChangeBeforeEvent::getPlayer() const { return mPlayer; }
 mce::UUID const& LandMemberChangeBeforeEvent::getTargetPlayer() const { return mTargetPlayer; }
 LandID           LandMemberChangeBeforeEvent::getLandID() const { return mLandID; }
@@ -49,8 +42,6 @@ LandID           LandOwnerChangeAfterEvent::getLandID() const { return mLandID; 
 
 IMPLEMENT_EVENT_EMITTER(PlayerEnterLandEvent)
 IMPLEMENT_EVENT_EMITTER(PlayerLeaveLandEvent)
-IMPLEMENT_EVENT_EMITTER(PlayerDeleteLandBeforeEvent)
-IMPLEMENT_EVENT_EMITTER(PlayerDeleteLandAfterEvent)
 IMPLEMENT_EVENT_EMITTER(LandMemberChangeBeforeEvent)
 IMPLEMENT_EVENT_EMITTER(LandMemberChangeAfterEvent)
 IMPLEMENT_EVENT_EMITTER(LandOwnerChangeBeforeEvent)

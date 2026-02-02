@@ -21,6 +21,13 @@ class LandPriceService;
 namespace land {
 namespace service {
 
+enum class DeletePolicy : uint8_t {
+    CurrentOnly,      // 只删当前（普通 or 子）
+    Recursive,        // 递归删除子领地
+    PromoteChildren,  // 删除当前，子领地提升
+    TransferChildren, // 删除当前，子领地转移
+};
+
 class LandManagementService {
     struct Impl;
     std::unique_ptr<Impl> impl;
@@ -80,7 +87,7 @@ public:
 
     ll::Expected<> setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point);
 
-    ll::Expected<> deleteOrdinaryOrSubLand(Player& player, std::shared_ptr<Land> ptr);
+    ll::Expected<> deleteLand(Player& player, std::shared_ptr<Land> ptr, DeletePolicy policy);
 
 private:
     ll::Expected<std::shared_ptr<Land>>
@@ -94,6 +101,10 @@ private:
     ll::Expected<> _ensureAndAttachSubLand(Player& player, std::shared_ptr<Land> parent, std::shared_ptr<Land> sub);
 
     ll::Expected<> _processResizeSettlement(Player& player, LandResizeSettlement const& settlement);
+
+    ll::Expected<> _ensureLandWithDeletePolicy(Player& player, std::shared_ptr<Land> const& land, DeletePolicy policy);
+
+    ll::Expected<> _processDeleteLand(Player& player, std::shared_ptr<Land> const& land, DeletePolicy policy);
 
     ll::Expected<> _processLandRefund(Player& player, std::shared_ptr<Land> const& land, bool isSingle);
 };
