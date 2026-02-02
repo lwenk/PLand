@@ -23,6 +23,7 @@
 #include "nlohmann/json_fwd.hpp"
 
 #include "fmt/core.h"
+#include "internal/LandMigrator.h"
 
 #include <algorithm>
 #include <chrono>
@@ -85,12 +86,16 @@ struct LandRegistry::Impl {
     void _loadLands() {
         ll::coro::Generator<std::pair<std::string_view, std::string_view>> iter = mDB->iter();
 
+        auto& landMigrator = internal::LandMigrator::getInstance();
+
         LandID safeId{0};
         for (auto [key, value] : iter) {
             if (!isLandData(key)) continue;
 
             auto json = nlohmann::json::parse(value);
-            _migrateLegacyKeysIfNeeded(json);
+            if (auto expected = landMigrator.migrate(json, LandSchemaVersion); !expected) {
+                throw std::runtime_error{expected.error().message()};
+            }
 
             auto land = Land::make();
             land->load(json);
@@ -156,60 +161,39 @@ struct LandRegistry::Impl {
 
         if (!mDB->has(DbVersionKey)) {
             if (isNewCreatedDB) {
-                mDB->set(DbVersionKey, std::to_string(LandContextVersion)); // 设置初始版本号
+                mDB->set(DbVersionKey, std::to_string(LandSchemaVersion)); // 设置初始版本号
             } else {
                 mDB->set(DbVersionKey, "-1"); // 数据库存在，但没有版本号，表示是旧版数据库(0.8.1之前)
             }
         }
 
         auto version = std::stoi(*mDB->get(DbVersionKey));
-        if (version != LandContextVersion) {
-            if (version > LandContextVersion) {
+        if (version != LandSchemaVersion) {
+            if (version > LandSchemaVersion) {
                 logger.fatal(
                     "The database version is too high, current version: {}, expected version: {}. In order to "
                     "keep the data safe, the plugin refuses to load!",
                     version,
-                    LandContextVersion
+                    LandSchemaVersion
                 );
                 throw std::runtime_error("The database versions do not match");
 
-            } else if (version < LandContextVersion) {
+            } else if (version < LandSchemaVersion) {
                 logger.warn(
                     "The database version is too low, the current version: {}, the expected version: {}, the "
                     "plugin will try to back up and upgrade the database...",
                     version,
-                    LandContextVersion
+                    LandSchemaVersion
                 );
                 mDB.reset();
                 backup();
                 mDB = std::make_unique<ll::data::KeyValueDB>(dbDir);
-                mDB->set(DbVersionKey, std::to_string(LandContextVersion)); // 更新版本号
+                mDB->set(DbVersionKey, std::to_string(LandSchemaVersion)); // 更新版本号
                 // 这里只需要修改版本号以及备份，其它兼容转换操作将在 _checkVersionAndTryAdaptBreakingChanges 中进行
             }
         }
     }
-    void _migrateLegacyKeysIfNeeded(nlohmann::json& landData) {
-        constexpr int LANDDATA_NEW_POS_KEY_VERSION = 15; // 在此版本后，LandAABB 使用了新的键名
 
-        if (landData["version"].get<int>() < LANDDATA_NEW_POS_KEY_VERSION) {
-            constexpr auto LEGACY_MAX_KEY = "mMax_B";
-            constexpr auto LEGACY_MIN_KEY = "mMin_A";
-            constexpr auto NEW_MAX_KEY    = "max";
-            constexpr auto NEW_MIN_KEY    = "min";
-
-            auto& pos = landData["mPos"];
-            if (pos.contains(LEGACY_MAX_KEY)) {
-                auto legacyMax = pos[LEGACY_MAX_KEY]; // copy
-                pos.erase(LEGACY_MAX_KEY);
-                pos[NEW_MAX_KEY] = std::move(legacyMax);
-            }
-            if (pos.contains(LEGACY_MIN_KEY)) {
-                auto legacyMin = pos[LEGACY_MIN_KEY]; // copy
-                pos.erase(LEGACY_MIN_KEY);
-                pos[NEW_MIN_KEY] = std::move(legacyMin);
-            }
-        }
-    }
     void _buildDimensionChunkMap() {
         for (auto& [id, land] : mLandCache) {
             mDimensionChunkMap.addLand(land);
