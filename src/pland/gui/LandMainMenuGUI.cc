@@ -19,7 +19,7 @@ namespace land {
 
 void LandMainMenuGUI::sendTo(Player& player) {
     auto fm = BackSimpleForm<>::make();
-    fm.setTitle(PLUGIN_NAME + ("| 领地菜单"_trf(player)));
+    fm.setTitle("[PLand] | 领地菜单"_trf(player));
     fm.setContent("欢迎使用 Pland 领地管理插件\n\n请选择一个功能"_trf(player));
 
     fm.appendButton("新建领地"_trf(player), "textures/ui/anvil_icon", "path", [](Player& pl) {

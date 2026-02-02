@@ -305,7 +305,7 @@ static auto const SetLanguage = [](CommandOrigin const& ori, CommandOutput& out)
             }
         }
     }
-    CustomForm fm(PLUGIN_NAME + ("| 选择语言"_trf(player)));
+    CustomForm fm(("[PLand] | 选择语言"_trf(player)));
     fm.appendLabel("system: 为使用当前客户端语言\nserver: 为使用服务端语言"_trf(player));
     fm.appendLabel("当前使用语言包: {}"_trf(player, GetPlayerLocaleCodeFromSettings(player)));
     fm.appendDropdown("lang", "选择语言"_trf(player), langs);

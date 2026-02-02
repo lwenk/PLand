@@ -93,7 +93,7 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
     }
 
     auto fm = BackSimpleForm<>::make();
-    fm.setTitle(PLUGIN_NAME + ("| 购买领地"_trf(player)));
+    fm.setTitle("[PLand] | 购买领地"_trf(player));
     fm.setContent(content);
     fm.appendButton(
         "确认购买"_trf(player),
@@ -158,7 +158,7 @@ void LandBuyGUI::impl(Player& player, LandResizeSelector* selector) {
     }
 
     auto fm = BackSimpleForm<>::make();
-    fm.setTitle(PLUGIN_NAME + ("| 购买领地 & 重新选区"_trf(player)));
+    fm.setTitle("[PLand] | 购买领地 & 重新选区"_trf(player));
     fm.setContent(content);
     fm.appendButton(
         "确认购买"_trf(player),
@@ -235,7 +235,7 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* selector) {
     }
 
     auto fm = BackSimpleForm<>::make();
-    fm.setTitle(PLUGIN_NAME + ("| 购买领地 & 子领地"_trf(player)));
+    fm.setTitle("[PLand] | 购买领地 & 子领地"_trf(player));
     fm.setContent(content);
     fm.appendButton(
         "确认购买"_trf(player),

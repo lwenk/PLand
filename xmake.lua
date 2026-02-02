@@ -72,8 +72,6 @@ target("PLand")
     add_configfiles("src/BuildInfo.h.in")
     set_configdir("src/pland")
 
-    add_defines("PLUGIN_NAME=\"[PLand] \"")
-
     if is_mode("debug") then
         add_defines("DEBUG")
         -- add_defines("PLAND_I18N_COLLECT_STRINGS", "LL_I18N_COLLECT_STRINGS", "LL_I18N_COLLECT_STRINGS_CUSTOM")

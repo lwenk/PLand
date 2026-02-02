@@ -7,7 +7,7 @@ namespace land {
 
 
 void EditLandPermTableUtilGUI::sendTo(Player& player, const LandPermTable& table, Callback callback) {
-    ll::form::CustomForm fm(PLUGIN_NAME + " | 编辑权限"_trf(player));
+    ll::form::CustomForm fm("[PLand] | 编辑权限"_trf(player));
 
     auto& i18n       = ll::i18n::getInstance();
     auto  localeCode = GetPlayerLocaleCodeFromSettings(player);

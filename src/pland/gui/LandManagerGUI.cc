@@ -36,7 +36,6 @@
 #include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
 
-
 #include <cstdint>
 #include <stack>
 #include <string>
@@ -50,7 +49,7 @@ namespace land {
 
 void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
     auto fm = SimpleForm{};
-    fm.setTitle(PLUGIN_NAME + ("| 领地管理 [{}]"_trf(player, land->getId())));
+    fm.setTitle(("[PLand] | 领地管理 [{}]"_trf(player, land->getId())));
 
     auto& service = PLand::getInstance().getServiceLocator().getLandHierarchyService();
 
@@ -164,7 +163,7 @@ void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) 
         return;
     }
     ModalForm(
-        PLUGIN_NAME + " | 确认删除?"_trf(player),
+        "[PLand] | 确认删除?"_trf(player),
         "您确定要删除领地 '{}' 吗?\n删除领地后，您将获得 {} 金币的退款。\n此操作不可逆,请谨慎操作!"_trf(
             player,
             ptr->getName(),
@@ -193,7 +192,7 @@ void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) 
 
 void LandManagerGUI::confirmParentDelete(Player& player, SharedLand const& ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
-    fm.setTitle(PLUGIN_NAME + "| 删除领地 & 父领地"_trf(player));
+    fm.setTitle("[PLand] | 删除领地 & 父领地"_trf(player));
     fm.setContent(
         "您当前操作的的是父领地\n当前领地下有 {} 个子领地\n您确定要删除领地吗?"_trf(player, ptr->getSubLandIDs().size())
     );
@@ -228,7 +227,7 @@ void LandManagerGUI::confirmParentDelete(Player& player, SharedLand const& ptr) 
 
 void LandManagerGUI::confirmMixDelete(Player& player, SharedLand const& ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
-    fm.setTitle(PLUGIN_NAME + "| 删除领地 & 混合领地"_trf(player));
+    fm.setTitle("[PLand] | 删除领地 & 混合领地"_trf(player));
     fm.setContent(
         "您当前操作的的是混合领地\n当前领地下有 {} 个子领地\n您确定要删除领地吗?"_trf(
             player,
@@ -290,7 +289,7 @@ void LandManagerGUI::sendEditLandDescGUI(Player& player, SharedLand const& ptr) 
 }
 void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
-    fm.setTitle(PLUGIN_NAME + "| 转让领地"_trf(player));
+    fm.setTitle("[PLand] | 转让领地"_trf(player));
 
     fm.appendButton(
         "转让给在线玩家"_trf(player),
@@ -324,7 +323,7 @@ void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) 
                 }
 
                 ModalForm fm(
-                    PLUGIN_NAME + " | 确认转让?"_trf(self),
+                    "[PLand]  | 确认转让?"_trf(self),
                     "您确定要将领地转让给 {} 吗?\n转让后，您将失去此领地的权限。\n此操作不可逆,请谨慎操作!"_trf(
                         self,
                         target.getRealName()
@@ -376,7 +375,7 @@ void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) 
 }
 
 void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedLand const& ptr) {
-    CustomForm fm(PLUGIN_NAME + " | 转让给离线玩家"_trf(player));
+    CustomForm fm("[PLand]  | 转让给离线玩家"_trf(player));
     fm.appendInput("playerName", "请输入离线玩家名称"_trf(player), "玩家名称");
     fm.sendTo(player, [ptr](Player& self, CustomFormResult const& res, FormCancelReason) {
         if (!res) {
@@ -423,7 +422,7 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedL
         }
 
         ModalForm confirmFm(
-            PLUGIN_NAME + " | 确认转让"_trf(self),
+            "[PLand]  | 确认转让"_trf(self),
             "您确定要将领地转让给 {} 吗?\n转让后，您将失去此领地的权限。\n此操作不可逆,请谨慎操作!"_trf(
                 self,
                 playerName
@@ -460,7 +459,7 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedL
 
 void LandManagerGUI::sendChangLandRangeGUI(Player& player, SharedLand const& ptr) {
     ModalForm fm(
-        PLUGIN_NAME + " | 重新选区"_trf(player),
+        "[PLand]  | 重新选区"_trf(player),
         "重新选区为完全重新选择领地的范围，非直接扩充/缩小现有领地范围。\n重新选择的价格计算方式为\"新范围价格 — 旧范围价值\"，是否继续？"_trf(
             player
         ),
@@ -526,7 +525,7 @@ void LandManagerGUI::_sendAddMemberGUI(Player& player, SharedLand ptr) {
             }
 
             ModalForm fm(
-                PLUGIN_NAME + " | 添加成员"_trf(self),
+                "[PLand]  | 添加成员"_trf(self),
                 "您确定要添加 {} 为领地成员吗?"_trf(self, target.getRealName()),
                 "确认"_trf(self),
                 "返回"_trf(self)
@@ -566,7 +565,7 @@ void LandManagerGUI::_sendAddMemberGUI(Player& player, SharedLand ptr) {
 }
 
 void LandManagerGUI::_sendAddOfflineMemberGUI(Player& player, SharedLand ptr) {
-    CustomForm fm(PLUGIN_NAME + " | 添加离线成员"_trf(player));
+    CustomForm fm("[PLand]  | 添加离线成员"_trf(player));
     fm.appendInput("playerName", "请输入离线玩家名称"_trf(player), "玩家名称");
     fm.sendTo(player, [ptr](Player& self, CustomFormResult const& res, FormCancelReason) {
         if (!res) {
@@ -601,7 +600,7 @@ void LandManagerGUI::_sendAddOfflineMemberGUI(Player& player, SharedLand ptr) {
         }
 
         ModalForm confirmFm(
-            PLUGIN_NAME + " | 添加离线成员"_trf(self),
+            "[PLand]  | 添加离线成员"_trf(self),
             "您确定要添加 {} 为领地成员吗?"_trf(self, playerName),
             "确认"_trf(self),
             "返回"_trf(self)
@@ -642,7 +641,7 @@ void LandManagerGUI::_sendRemoveMemberGUI(Player& player, SharedLand ptr, mce::U
     auto info = ll::service::PlayerInfo::getInstance().fromUuid(member);
 
     ModalForm fm(
-        PLUGIN_NAME + " | 移除成员"_trf(player),
+        "[PLand]  | 移除成员"_trf(player),
         "您确定要移除成员 \"{}\" 吗?"_trf(player, info.has_value() ? info->name : member.asString()),
         "确认"_trf(player),
         "返回"_trf(player)

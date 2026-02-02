@@ -26,7 +26,7 @@ void LandOperatorManagerGUI::sendMainMenu(Player& player) {
 
     auto fm = BackSimpleForm<>::make();
 
-    fm.setTitle(PLUGIN_NAME + " | 领地管理"_trf(player));
+    fm.setTitle("[PLand] | 领地管理"_trf(player));
     fm.setContent("请选择您要进行的操作"_trf(player));
 
     fm.appendButton("管理脚下领地"_trf(player), "textures/ui/free_download", "path", [](Player& self) {
@@ -61,7 +61,7 @@ void LandOperatorManagerGUI::sendMainMenu(Player& player) {
 
 void LandOperatorManagerGUI::sendChoosePlayerFromDb(Player& player, ChoosePlayerCallback callback) {
     auto fm = BackSimpleForm<>::make<LandOperatorManagerGUI::sendMainMenu>();
-    fm.setTitle(PLUGIN_NAME + " | 玩家列表"_trf(player));
+    fm.setTitle("[PLand] | 玩家列表"_trf(player));
     fm.setContent("请选择您要管理的玩家"_trf(player));
 
     auto const& infos = ll::service::PlayerInfo::getInstance();

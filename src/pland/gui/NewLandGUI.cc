@@ -32,7 +32,7 @@ namespace land {
 
 void NewLandGUI::sendChooseLandDim(Player& player) {
     ModalForm(
-        PLUGIN_NAME + ("| 选择领地维度"_trf(player)),
+        ("[PLand] | 选择领地维度"_trf(player)),
         "请选择领地维度\n\n2D: 领地拥有整个Y轴\n3D: 自行选择Y轴范围"_trf(player),
         "2D", // true
         "3D"  // false
@@ -65,7 +65,7 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
     if (!selector) {
         return;
     }
-    CustomForm fm(PLUGIN_NAME + ("| 确认Y轴范围"_trf(player)));
+    CustomForm fm(("[PLand] | 确认Y轴范围"_trf(player)));
 
     fm.appendLabel("确认选区的Y轴范围\n您可以在此调节Y轴范围，如果不需要修改，请直接点击提交"_trf(player));
 

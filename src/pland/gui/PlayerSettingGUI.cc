@@ -7,7 +7,6 @@
 #include "pland/utils/McUtils.h"
 
 
-
 namespace land {
 
 
@@ -16,7 +15,7 @@ void PlayerSettingGUI::sendTo(Player& player) {
 
     auto setting = PLand::getInstance().getLandRegistry().getPlayerSettings(player.getUuid());
 
-    CustomForm fm(PLUGIN_NAME + ("| 玩家设置"_trf(player)));
+    CustomForm fm(("[PLand] | 玩家设置"_trf(player)));
 
     fm.appendToggle("showEnterLandTitle", "是否显示进入领地提示"_trf(player), setting->showEnterLandTitle);
     fm.appendToggle("showBottomContinuedTip", "是否持续显示底部提示"_trf(player), setting->showBottomContinuedTip);

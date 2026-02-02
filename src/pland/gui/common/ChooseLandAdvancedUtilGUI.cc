@@ -198,7 +198,7 @@ public:
 
     void sendFuzzySearch(Player& player) {
         CustomForm fm;
-        fm.setTitle(PLUGIN_NAME + " | 模糊搜索领地"_trf(player));
+        fm.setTitle("[PLand] | 模糊搜索领地"_trf(player));
         fm.appendInput("name", "请输入领地名称"_trf(player), "string", mFuzzyKeyword.value_or(""));
         fm.sendTo(player, [thiz = getThis()](Player& self, CustomFormResult const& res, auto) {
             if (!thiz) return;

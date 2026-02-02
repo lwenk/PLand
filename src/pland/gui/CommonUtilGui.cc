@@ -13,7 +13,6 @@
 #include <string>
 
 
-
 namespace land {
 using namespace ll::form;
 
@@ -24,7 +23,7 @@ void ChooseOnlinePlayerUtilGUI::sendTo(
     BackSimpleForm<>::ButtonCallback back
 ) {
     auto fm = BackSimpleForm<>{std::move(back)};
-    fm.setTitle(PLUGIN_NAME + ("| 选择玩家"_trf(player)));
+    fm.setTitle("[PLand] | 选择玩家"_trf(player));
 
     ll::service::getLevel()->forEachPlayer([callback, &fm](Player& target) {
         if (target.isSimulatedPlayer()) {
@@ -50,7 +49,7 @@ void EditStringUtilGUI::sendTo(
     std::string const& defaultValue, // 默认值
     EditStringResult   callback      // 回调
 ) {
-    CustomForm fm(PLUGIN_NAME + title);
+    CustomForm fm(title);
     fm.appendInput("str", text, "string", defaultValue);
     fm.sendTo(player, [cb = std::move(callback)](Player& pl, CustomFormResult res, FormCancelReason) {
         if (!res.has_value()) {
