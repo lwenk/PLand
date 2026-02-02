@@ -14,6 +14,7 @@ add_requires("ilistenattentively 0.11.0")
 
 -- IceBlockMC
 add_requires("ll-bstats 0.2.0")
+add_requires("economy_bridge 0.2.0")
 
 -- xmake
 add_requires("exprtk 0.0.3")
@@ -66,7 +67,8 @@ target("PLand")
         "levilamina",
         "exprtk",
         "ilistenattentively",
-        "ll-bstats"
+        "ll-bstats",
+        "economy_bridge"
     )
 
     add_configfiles("src/BuildInfo.h.in")

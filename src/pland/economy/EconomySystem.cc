@@ -1,67 +1,87 @@
 #include "pland/economy/EconomySystem.h"
 #include "pland/PLand.h"
-#include "pland/economy/impl/EmtpyEconomy.h"
-#include "pland/economy/impl/LegacyMoneyEconomy.h"
-#include "pland/economy/impl/ScoreBoardEconomy.h"
 #include "pland/infra/Config.h"
+
 #include <memory>
 #include <stdexcept>
 
+#include "econbridge/detail/LegacyMoneyEconomy.h"
+#include "econbridge/detail/NullEconomy.h"
+#include "econbridge/detail/ScoreboardEconomy.h"
+
+#include <mc/world/actor/player/Player.h>
 
 namespace land {
 
 
-std::shared_ptr<economy::IEconomy> EconomySystem::createEconomySystem() const {
-    auto& cfg = getConfig();
-    if (!cfg.enabled) {
-        PLand::getInstance().getSelf().getLogger().debug("using internals::EmptyEconomy");
-        return std::make_shared<economy::detail::EmtpyEconomy>();
+struct EconomySystem::Impl {
+    std::shared_ptr<econbridge::IEconomy> mEconomyImpl;
+    mutable std::mutex                    mInstanceMutex;
+
+    std::shared_ptr<econbridge::IEconomy> create() const {
+        auto& cfg = Config::cfg.economy;
+        if (!cfg.enabled) {
+            PLand::getInstance().getSelf().getLogger().debug("using internals::EmptyEconomy");
+            return std::make_shared<econbridge::detail::NullEconomy>();
+        }
+
+        switch (cfg.kit) {
+        case EconomyKit::LegacyMoney: {
+            PLand::getInstance().getSelf().getLogger().debug("using internals::LegacyMoneyEconomy");
+            return std::make_shared<econbridge::detail::LegacyMoneyEconomy>();
+        }
+        case EconomyKit::ScoreBoard: {
+            PLand::getInstance().getSelf().getLogger().debug("using internals::ScoreBoardEconomy");
+            return std::make_shared<econbridge::detail::ScoreboardEconomy>(cfg.scoreboardName);
+        }
+        }
+
+        throw std::runtime_error("Unknown econbridge kit, please check config!");
     }
 
-    switch (cfg.kit) {
-    case EconomyKit::LegacyMoney: {
-        PLand::getInstance().getSelf().getLogger().debug("using internals::LegacyMoneyEconomy");
-        return std::make_shared<economy::detail::LegacyMoneyEconomy>();
-    }
-    case EconomyKit::ScoreBoard: {
-        PLand::getInstance().getSelf().getLogger().debug("using internals::ScoreBoardEconomy");
-        return std::make_shared<economy::detail::ScoreBoardEconomy>();
-    }
+    void initialize() {
+        std::lock_guard lock(mInstanceMutex);
+        mEconomyImpl = create();
     }
 
-    throw std::runtime_error("Unknown economy kit, please check config!");
-}
+    void reload() {
+        std::lock_guard lock(mInstanceMutex);
+        mEconomyImpl.reset();
+        mEconomyImpl = create();
+    }
+};
+
+EconomySystem::EconomySystem() : impl(std::make_unique<Impl>()) {}
 
 EconomySystem& EconomySystem::getInstance() {
     static EconomySystem instance;
     return instance;
 }
 
-std::shared_ptr<economy::IEconomy> EconomySystem::getEconomyInterface() const {
-    std::lock_guard lock(mInstanceMutex);
-    if (!mEconomySystem) {
-        throw std::runtime_error("internals::IEconomyInterface not initialized.");
+void EconomySystem::initialize() { impl->initialize(); }
+void EconomySystem::reload() { impl->reload(); }
+
+
+std::shared_ptr<econbridge::IEconomy> EconomySystem::get() const { return impl->mEconomyImpl; }
+
+std::string EconomySystem::getCostMessage(Player& player, llong amount) const {
+    auto& config = Config::cfg.economy;
+    if (!config.enabled) {
+        return "\n[Tip] 经济系统未启用，本次操作不消耗 {}"_trf(player, config.economyName);
     }
-    return mEconomySystem;
+
+    llong currentMoney = get()->get(player.getUuid());
+    bool  isEnough     = currentMoney >= amount;
+
+    return "\n[Tip] 本次操作需要: {0} {1} | 当前余额: {2} | 剩余余额: {3} | {4}"_trf(
+        player,
+        amount,
+        config.economyName,
+        currentMoney,
+        currentMoney - amount,
+        isEnough ? "余额充足"_trf(player) : "余额不足"_trf(player)
+    );
 }
-
-EconomyConfig& EconomySystem::getConfig() const { return Config::cfg.economy; }
-
-void EconomySystem::initEconomySystem() {
-    std::lock_guard lock(mInstanceMutex);
-    if (!mEconomySystem) {
-        mEconomySystem = createEconomySystem();
-    }
-}
-void EconomySystem::reloadEconomySystem() {
-    std::lock_guard lock(mInstanceMutex);
-    mEconomySystem = createEconomySystem();
-}
-
-
-EconomySystem::EconomySystem() = default;
-
-std::shared_ptr<economy::IEconomy> EconomySystem::operator->() const { return mEconomySystem; }
 
 
 } // namespace land

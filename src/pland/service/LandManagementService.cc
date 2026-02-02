@@ -201,7 +201,7 @@ ll::Expected<std::shared_ptr<Land>>
 LandManagementService::_payMoneyAndCreateOrdinaryLand(Player& player, DefaultSelector* selector, int64_t money) {
     assert(selector != nullptr);
     auto& economy = EconomySystem::getInstance();
-    if (!economy->reduce(player, money)) {
+    if (!economy->reduce(player.getUuid(), money)) {
         return ll::makeStringError("您的余额不足，无法购买"_trf(player));
     }
     auto land = selector->newLand();
@@ -209,7 +209,7 @@ LandManagementService::_payMoneyAndCreateOrdinaryLand(Player& player, DefaultSel
 
     auto exp = _addOrdinaryLand(player, land);
     if (!exp) {
-        (void)economy->add(player, money);
+        (void)economy->add(player.getUuid(), money);
         return ll::makeStringError(exp.error().message());
     }
     return land;
@@ -231,7 +231,7 @@ ll::Expected<std::shared_ptr<Land>>
 LandManagementService::_payMoneyAndCreateSubLand(Player& player, SubLandSelector* selector, int64_t money) {
     assert(selector != nullptr);
     auto& economy = EconomySystem::getInstance();
-    if (!economy->reduce(player, money)) {
+    if (!economy->reduce(player.getUuid(), money)) {
         return ll::makeStringError("您的余额不足，无法购买"_trf(player));
     }
     auto parent = selector->getParentLand();
@@ -242,7 +242,7 @@ LandManagementService::_payMoneyAndCreateSubLand(Player& player, SubLandSelector
 
     auto exp = _ensureAndAttachSubLand(player, parent, sub);
     if (!exp) {
-        (void)economy->add(player, money);
+        (void)economy->add(player.getUuid(), money);
         return ll::makeStringError(exp.error().message());
     }
     return sub;
@@ -277,12 +277,12 @@ ll::Expected<> LandManagementService::_processResizeSettlement(Player& player, L
     auto& economy = EconomySystem::getInstance();
     switch (settlement.type) {
     case LandResizeSettlement::Type::Pay:
-        if (!economy->reduce(player, settlement.amount)) {
+        if (!economy->reduce(player.getUuid(), settlement.amount)) {
             return ll::makeStringError("您的余额不足，无法购买"_trf(player));
         }
         break;
     case LandResizeSettlement::Type::Refund:
-        if (!economy->add(player, settlement.amount)) {
+        if (!economy->add(player.getUuid(), settlement.amount)) {
             return ll::makeStringError("经济系统异常,退还差价失败"_trf(player));
         }
         break;
@@ -357,7 +357,7 @@ LandManagementService::_processLandRefund(Player& player, std::shared_ptr<Land> 
     auto price =
         isSingle ? impl->mPriceService.getRefundAmount(land) : impl->mPriceService.getRefundAmountRecursively(land);
     auto& economy = EconomySystem::getInstance();
-    if (!economy->add(player, price)) {
+    if (!economy->add(player.getUuid(), price)) {
         ll::event::EventBus::getInstance().publish(event::LandRefundFailedEvent{land, player.getUuid(), price});
         return ll::makeStringError("经济系统异常,退还差价失败"_trf(player));
     }

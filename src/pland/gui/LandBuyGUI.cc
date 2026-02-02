@@ -87,7 +87,7 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
                 player,
                 result->mOriginalPrice,
                 result->mDiscountedPrice,
-                EconomySystem::getInstance()->getCostMessage(player, result->mDiscountedPrice)
+                EconomySystem::getInstance().getCostMessage(player, result->mDiscountedPrice)
             );
         }
     }
@@ -152,7 +152,7 @@ void LandBuyGUI::impl(Player& player, LandResizeSelector* selector) {
                 player,
                 needPay.value_or(0) < 0 ? 0 : needPay,
                 refund.value_or(0) < 0 ? 0 : refund,
-                needPay.value_or(0) > 0 ? EconomySystem::getInstance()->getCostMessage(player, needPay.value()) : ""
+                needPay.value_or(0) > 0 ? EconomySystem::getInstance().getCostMessage(player, needPay.value()) : ""
             );
         }
     }
@@ -229,7 +229,7 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* selector) {
                 // 价格
                 result->mOriginalPrice,
                 result->mDiscountedPrice,
-                EconomySystem::getInstance()->getCostMessage(player, result->mDiscountedPrice)
+                EconomySystem::getInstance().getCostMessage(player, result->mDiscountedPrice)
             );
         }
     }

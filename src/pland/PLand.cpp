@@ -74,7 +74,7 @@ bool PLand::load() {
     mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("PLand-ThreadPool", 2);
 
     mImpl->mLandRegistry = std::make_unique<land::LandRegistry>();
-    EconomySystem::getInstance().initEconomySystem();
+    EconomySystem::getInstance().initialize();
 
 #ifdef DEBUG
     logger.warn("Debug Mode");
@@ -103,7 +103,7 @@ bool PLand::enable() {
             mImpl->mEventListener.reset();
             mImpl->mEventListener = std::make_unique<EventListener>();
 
-            EconomySystem::getInstance().reloadEconomySystem();
+            EconomySystem::getInstance().reload();
 
             if (ev.getConfig().internal.telemetry) {
                 mImpl->mTelemetry->launch(*getThreadPool());
