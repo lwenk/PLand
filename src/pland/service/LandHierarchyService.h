@@ -8,7 +8,7 @@
 namespace land {
 class LandRegistry;
 class Land;
-}
+} // namespace land
 
 namespace land {
 namespace service {
@@ -46,6 +46,7 @@ public:
 
     /**
      * 删除当前领地,并递归删除此领地下的所有子领地
+     * @note 仅接受 isParentLand() || isMixLand() == true 的领地
      */
     LDNDAPI ll::Expected<> deleteLandRecursive(std::shared_ptr<Land> const& land);
 
@@ -57,6 +58,7 @@ public:
 
     /**
      * 删除一个混合领地（有父有子），并将其子领地移交给爷爷领地
+     * @note 仅接受 isMixLand() == true 的领地
      */
     LDNDAPI ll::Expected<> deleteMixLandAndTransferChildren(std::shared_ptr<Land> const& mixLand);
 
