@@ -78,20 +78,8 @@ ll::Expected<> JsonMigrator::migrate(nlohmann::json& data, Version targetVersion
         it = mMigrators_.upper_bound(currentVersion);
     }
 
-    if (currentVersion < targetVersion) {
-        if (allowVersionGap) {
-            // 允许断层：如果所有迁移器都执行完了还没到 targetVersion
-            // 说明中间没有任何结构变化，直接将版本号标记为目标版本
-            data[VersionKey] = targetVersion;
-        } else {
-            return ll::makeStringError(
-                fmt::format(
-                    "Migration ended at v{}, but failed to reach target v{}. No more migrators registered.",
-                    currentVersion,
-                    targetVersion
-                )
-            );
-        }
+    if (!allowVersionGap && currentVersion < targetVersion) {
+        return ll::makeStringError(fmt::format("Migration failed to reach target v{}", targetVersion));
     }
 
     return {};
