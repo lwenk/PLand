@@ -34,11 +34,7 @@ void LandAABB::fix() {
     if (min.y > max.y) std::swap(min.y, max.y);
     if (min.z > max.z) std::swap(min.z, max.z);
 }
-LandAABB LandAABB::make(BlockPos const& min, BlockPos const& max) {
-    LandAABB inst(LandPos::make(min), LandPos::make(max));
-    inst.fix();
-    return inst;
-}
+
 std::string LandAABB::toString() const { return fmt::format("{} => {}", min.toString(), max.toString()); }
 std::unordered_set<ChunkPos> LandAABB::getChunks() const {
     std::unordered_set<ChunkPos> chunks;

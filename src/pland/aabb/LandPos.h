@@ -21,7 +21,11 @@ class LandPos {
 public:
     int x{0}, y{0}, z{0};
 
-    LDNDAPI static LandPos make(int x, int y, int z);
+    template <typename... Args>
+        requires std::constructible_from<LandPos, Args...>
+    static LandPos make(Args&&... args) {
+        return LandPos{std::forward<Args>(args)...};
+    }
 
     template <typename T>
         requires HasXYZ<T>
@@ -52,6 +56,11 @@ public:
         y = t.y;
         z = t.z;
         return *this;
+    }
+
+    template <HasXYZ T>
+    operator T() {
+        return {x, y, z};
     }
 };
 

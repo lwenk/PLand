@@ -1,5 +1,6 @@
 #pragma once
 #include "mc/world/level/BlockPos.h"
+
 #include "pland/Global.h"
 #include "pland/aabb/LandPos.h"
 
@@ -13,7 +14,13 @@ class LandAABB {
 public:
     LandPos min{}, max{};
 
-    LDNDAPI static LandAABB make(BlockPos const& min, BlockPos const& max);
+    template <typename... Args>
+        requires std::constructible_from<LandAABB, Args...>
+    static LandAABB make(Args&&... args) {
+        auto aabb = LandAABB(std::forward<Args>(args)...);
+        aabb.fix();
+        return aabb;
+    }
 
     LDAPI void fix(); // fix min/max
 
