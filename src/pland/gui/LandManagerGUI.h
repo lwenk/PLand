@@ -15,10 +15,10 @@ public:
     LDAPI static void sendEditLandPermGUI(Player& player, SharedLand const& ptr); // 编辑领地权限
 
     // 删除领地
-    LDAPI static void sendRemoveConfirmGUI(Player& player, SharedLand const& ptr);                // 删除领地确认
-    LDAPI static void _implRemoveWithOrdinaryOrSubLandGUI(Player& player, SharedLand const& ptr); // 删除普通或子领地
-    LDAPI static void _implRemoveParentLandGUI(Player& player, SharedLand const& ptr);            // 删除父领地
-    LDAPI static void _implRemoveMixLandGUI(Player& player, SharedLand const& ptr);               // 删除混合领地
+    LDAPI static void showRemoveConfirm(Player& player, SharedLand const& ptr);                // 删除领地确认
+    LDAPI static void confirmSimpleDelete(Player& player, SharedLand const& ptr); // 删除普通或子领地
+    LDAPI static void confirmParentDelete(Player& player, SharedLand const& ptr);            // 删除父领地
+    LDAPI static void confirmMixDelete(Player& player, SharedLand const& ptr);               // 删除混合领地
 
     LDAPI static void sendEditLandNameGUI(Player& player, SharedLand const& ptr);                 // 编辑领地名称
     LDAPI static void sendEditLandDescGUI(Player& player, SharedLand const& ptr);                 // 编辑领地描述

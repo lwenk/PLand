@@ -4,20 +4,20 @@
 #include "pland/PLand.h"
 #include "pland/command/Command.h"
 #include "pland/drawer/DrawHandleManager.h"
-#include "pland/events/ConfigReloadEvent.h"
+#include "pland/events/domain/ConfigReloadEvent.h"
 #include "pland/gui/LandBuyGUI.h"
 #include "pland/gui/LandMainMenuGUI.h"
 #include "pland/gui/LandManagerGUI.h"
 #include "pland/gui/LandOperatorManagerGUI.h"
 #include "pland/gui/NewLandGUI.h"
 #include "pland/infra/Config.h"
-#include "pland/infra/DataConverter.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/LandManagementService.h"
 #include "pland/service/ServiceLocator.h"
 #include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
+
 
 #include "ll/api/command/Command.h"
 #include "ll/api/command/CommandHandle.h"
@@ -263,52 +263,25 @@ static auto const Draw = [](CommandOrigin const& ori, CommandOutput& out, DrawPa
     }
 };
 
-
-struct ImportParam {
-    bool        clearDb;
-    std::string relationship_file;
-    std::string data_file;
-};
-static auto const Import = [](CommandOrigin const& ori, CommandOutput& out, ImportParam const& param) {
-    CHECK_TYPE(ori, out, CommandOriginType::DedicatedServer);
-
-    if (!std::filesystem::exists(param.relationship_file)) {
-        out.error("未找到 relationship.json 文件"_tr());
-        return;
-    }
-    if (!std::filesystem::exists(param.data_file)) {
-        out.error("未找到 data.json 文件"_tr());
-        return;
-    }
-    if (std::filesystem::path(param.relationship_file).filename() != "relationship.json") {
-        out.error("relationship.json 文件名错误"_tr());
-        return;
-    }
-
-    if (iLandConverter(param.relationship_file, param.data_file, param.clearDb).execute()) {
-        out.success("导入成功"_tr());
-    } else {
-        out.error("导入失败"_tr());
-    }
-};
-
 static auto const SetLandTeleportPos = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
 
-    auto& db   = PLand::getInstance().getLandRegistry();
-    auto  land = db.getLandAt(player.getPosition(), player.getDimensionId().id);
+    auto& mod      = PLand::getInstance();
+    auto& registry = mod.getLandRegistry();
+    auto  point    = player.getPosition();
+    auto  land     = registry.getLandAt(point, player.getDimensionId().id);
     if (!land) {
         feedback_utils::sendErrorText(out, "您当前不在领地内"_trf(player));
         return;
     }
 
-    auto& uuid = player.getUuid();
-    if (!land->isOwner(uuid) && !db.isOperator(uuid)) {
-        feedback_utils::sendErrorText(out, "您不是领地主人，无法设置传送点"_trf(player));
-        return;
+    auto& service = mod.getServiceLocator().getLandManagementService();
+    if (auto res = service.setLandTeleportPos(player, land, point)) {
+        feedback_utils::notifySuccess(player, "传送点已更新为: {}"_trf(player, point.toString()));
+    } else {
+        feedback_utils::sendError(player, res.error());
     }
-    land->setTeleportPos(LandPos::make(player.getPosition()));
 };
 
 
@@ -321,8 +294,8 @@ static auto const SetLanguage = [](CommandOrigin const& ori, CommandOutput& out)
     using ll::form::FormCancelReason;
 
     static std::vector<std::string> langs = {
-        PlayerSettings::SERVER_LOCALE_CODE(),
-        PlayerSettings::SYSTEM_LOCALE_CODE()
+        PlayerSettings::SERVER_LOCALE_CODE.data(),
+        PlayerSettings::SYSTEM_LOCALE_CODE.data()
     };
     if (langs.size() == 2) {
         std::filesystem::path const& langDir = land::PLand::getInstance().getSelf().getLangDir();
@@ -380,7 +353,8 @@ static auto const This = [](CommandOrigin const& ori, CommandOutput& out) {
 
 
 bool LandCommand::setup() {
-    auto& cmd = ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
+    auto& cmd =
+        ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand("pland", "LandRegistry 领地系统"_tr());
 
     // pland reload
     cmd.overload().text("reload").execute(Lambda::Reload);
@@ -419,14 +393,6 @@ bool LandCommand::setup() {
     if (Config::cfg.land.setupDrawCommand) {
         cmd.overload<Lambda::DrawParam>().text("draw").required("type").execute(Lambda::Draw);
     }
-
-    // pland import <land_type> <clear_db> <Args...>
-    cmd.overload<Lambda::ImportParam>()
-        .text("import")
-        .required("clearDb")
-        .required("relationship_file")
-        .required("data_file")
-        .execute(Lambda::Import);
 
     // pland set teleport_pos 设置传送点
     cmd.overload().text("set").text("teleport_pos").execute(Lambda::SetLandTeleportPos);

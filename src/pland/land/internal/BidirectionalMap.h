@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace land {
+namespace land::internal {
 
 /**
  * @brief 双向映射表
@@ -74,4 +74,4 @@ public:
 };
 
 
-} // namespace land
+} // namespace land::internal

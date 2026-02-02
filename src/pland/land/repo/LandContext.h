@@ -98,13 +98,14 @@ struct LandPermTable {
 };
 
 
-// ! 注意：如果 LandContext 有更改，则必须递增 LandContextVersion，否则导致加载异常
-constexpr int LandContextVersion = 25;
+// ! 注意：如果 LandContext 有更改，则必须递增 LandSchemaVersion，否则导致加载异常
+// 对于字段变动、重命名，请注册对应的 migrator 转换数据
+constexpr int LandSchemaVersion = 25;
 struct LandContext {
-    int                      version{LandContextVersion};           // 版本号
+    int                      version{LandSchemaVersion};            // 版本号
     LandAABB                 mPos{};                                // 领地对角坐标
     LandPos                  mTeleportPos{};                        // 领地传送坐标
-    LandID                   mLandID{LandID(-1)};                   // 领地唯一ID  (由 LandRegistry::addLand() 时分配)
+    LandID                   mLandID{INVALID_LAND_ID};              // 领地唯一ID  (由 LandRegistry::addLand() 时分配)
     LandDimid                mLandDimid{};                          // 领地所在维度
     bool                     mIs3DLand{};                           // 是否为3D领地
     LandPermTable            mLandPermTable{};                      // 领地权限
@@ -114,9 +115,9 @@ struct LandContext {
     std::string              mLandDescribe{"No description"_tr()};  // 领地描述
     int                      mOriginalBuyPrice{0};                  // 原始购买价格
     bool                     mIsConvertedLand{false};               // 是否为转换后的领地(其它插件创建的领地)
-    bool                     mOwnerDataIsXUID{false};   // 领地主人数据是否为XUID (如果为true，则主人上线自动转换为UUID)
-    LandID                   mParentLandID{LandID(-1)}; // 父领地ID
-    std::vector<LandID>      mSubLandIDs{};             // 子领地ID
+    bool                     mOwnerDataIsXUID{false}; // 领地主人数据是否为XUID (如果为true，则主人上线自动转换为UUID)
+    LandID                   mParentLandID{INVALID_LAND_ID}; // 父领地ID
+    std::vector<LandID>      mSubLandIDs{};                  // 子领地ID
 };
 
 STATIC_ASSERT_AGGREGATE(LandPermTable);

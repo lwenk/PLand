@@ -6,7 +6,8 @@
 
 #include "pland/PLand.h"
 #include "pland/land/Land.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
+
 
 #define CANCEL_AND_RETURN_IF(COND, ...)                                                                                \
     if (COND) {                                                                                                        \

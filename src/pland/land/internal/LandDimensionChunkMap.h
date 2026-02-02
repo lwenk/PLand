@@ -1,12 +1,14 @@
 #pragma once
-#include "Land.h"
+#include "BidirectionalMap.h"
 #include "pland/Global.h"
-#include "pland/infra/BidirectionalMap.h"
-#include <concepts>
-#include <cstdint>
+
 #include <unordered_map>
 
 namespace land {
+class Land;
+}
+
+namespace land::internal {
 
 
 /**
@@ -20,41 +22,41 @@ public:
     using Map = std::unordered_map<LandDimid, BidirectionalMap<ChunkID, LandID>>;
 
 public:
-    LDAPI LandDimensionChunkMap();
+    LandDimensionChunkMap();
 
     /**
      * @brief 查询维度是否存在
      */
-    LDNDAPI bool hasDimension(LandDimid dimId) const;
+    [[nodiscard]] bool hasDimension(LandDimid dimId) const;
 
     /**
      * @brief 查询区块是否存在
      */
-    LDNDAPI bool hasChunk(LandDimid dimId, ChunkID chunkId) const;
+    [[nodiscard]] bool hasChunk(LandDimid dimId, ChunkID chunkId) const;
 
     /**
      * @brief 查询领地是否存在
      */
-    LDNDAPI bool hasLand(LandDimid dimId, LandID landId) const;
+    [[nodiscard]] bool hasLand(LandDimid dimId, LandID landId) const;
 
     /**
      * @brief 查询某个区块下所有的领地
      */
-    LDNDAPI std::unordered_set<LandID> const* queryLand(LandDimid dimId, ChunkID chunkId) const;
+    [[nodiscard]] std::unordered_set<LandID> const* queryLand(LandDimid dimId, ChunkID chunkId) const;
 
     /**
      * @brief 查询某个领地下所有的区块
      */
-    LDNDAPI std::unordered_set<ChunkID> const* queryChunk(LandDimid dimId, LandID landId) const;
+    [[nodiscard]] std::unordered_set<ChunkID> const* queryChunk(LandDimid dimId, LandID landId) const;
 
-    LDAPI void addLand(SharedLand const& land);
+    void addLand(std::shared_ptr<Land> const& land);
 
-    LDAPI void removeLand(SharedLand const& land);
+    void removeLand(std::shared_ptr<Land> const& land);
 
-    LDAPI void refreshRange(SharedLand const& land);
+    void refreshRange(std::shared_ptr<Land> const& land);
 
 private:
     Map mMap;
 };
 
-} // namespace land
+} // namespace land::internal

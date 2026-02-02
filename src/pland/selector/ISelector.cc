@@ -98,7 +98,7 @@ void ISelector::sendTitle() const {
 
 std::optional<LandAABB> ISelector::newLandAABB() const {
     if (mPointA && mPointB) {
-        auto aabb = LandAABB::make(*mPointA, *mPointB);
+        auto aabb = LandAABB::make(LandPos::make(*mPointA), LandPos::make(*mPointB));
         aabb.fix();
         return aabb;
     }

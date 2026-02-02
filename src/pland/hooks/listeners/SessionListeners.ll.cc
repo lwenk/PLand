@@ -10,9 +10,8 @@
 #include "pland/PLand.h"
 #include "pland/drawer/DrawHandleManager.h"
 #include "pland/land/Land.h"
-#include "pland/land/LandContext.h"
-#include "pland/land/LandRegistry.h"
-#include "pland/land/LandScheduler.h"
+#include "pland/land/repo/LandContext.h"
+#include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 
 
@@ -40,7 +39,7 @@ void EventListener::registerLLSessionListeners() {
             logger->info("Update land owner data from xuid to uuid for player {}", ev.self().getRealName());
             auto& uuid = ev.self().getUuid();
             for (auto& land : lands) {
-                land->updateXUIDToUUID(uuid);
+                land->migrateOwner(uuid);
             }
         }
     }));

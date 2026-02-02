@@ -1,8 +1,9 @@
 #include "LandDimensionChunkMap.h"
-#include "LandRegistry.h"
-#include "pland/infra/BidirectionalMap.h"
+#include "BidirectionalMap.h"
+#include "pland/land/repo/LandRegistry.h"
 
-namespace land {
+
+namespace land ::internal {
 
 LandDimensionChunkMap::LandDimensionChunkMap() = default;
 
@@ -81,4 +82,4 @@ void LandDimensionChunkMap::refreshRange(SharedLand const& land) {
 }
 
 
-} // namespace land
+} // namespace land::internal

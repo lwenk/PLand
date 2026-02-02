@@ -1,7 +1,8 @@
 #include "LandCacheViewer.h"
 
 #include "pland/PLand.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
+
 
 #include "mc/platform/UUID.h"
 
@@ -54,7 +55,7 @@ void LandCacheViewerWindow::handleExportLand(land::SharedLand land) {
     }
     auto          file = dir / fmt::format("land_{}.json", land->getId());
     std::ofstream ofs(file);
-    ofs << land->dump().dump(2);
+    ofs << land->toJson().dump(2);
     ofs.close();
 }
 
@@ -201,7 +202,7 @@ void LandCacheViewerWindow::renderCacheLand() {
             }
             ImGui::SameLine();
             if (ImGui::Button(fmt::format("复制##{}", ld->getId()).c_str())) {
-                ImGui::SetClipboardText(ld->dump().dump().c_str());
+                ImGui::SetClipboardText(ld->toJson().dump().c_str());
             }
             ImGui::SameLine();
             if (ImGui::Button(fmt::format("导出##{}", ld->getId()).c_str())) {
@@ -236,7 +237,7 @@ void LandCacheViewerWindow::tick() {
 
 
 // LandEditor
-LandEditor::LandEditor(land::SharedLand land) : CodeEditor(land->dump().dump(4)), land_(land) {}
+LandEditor::LandEditor(land::SharedLand land) : CodeEditor(land->toJson().dump(4)), land_(land) {}
 
 void LandEditor::renderMenuElement() {
     CodeEditor::renderMenuElement();
@@ -246,11 +247,11 @@ void LandEditor::renderMenuElement() {
             if (!land) {
                 return;
             }
-            auto backup = land->dump();
+            auto backup = land->toJson();
             try {
                 auto json = nlohmann::json::parse(editor_.GetText());
                 land->load(json);
-                land->save(true); // 由于 load 方法不会标记数据已更改，主动强制保存
+                land->markDirty();
             } catch (...) {
                 land->load(backup);
                 land::PLand::getInstance().getSelf().getLogger().error("Failed to parse json");
@@ -265,7 +266,7 @@ void LandEditor::renderMenuElement() {
             if (!land) {
                 return;
             }
-            auto json = land->dump();
+            auto json = land->toJson();
             this->editor_.SetText(json.dump(4));
         }
         if (ImGui::IsItemHovered()) {

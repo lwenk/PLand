@@ -1,8 +1,8 @@
 #pragma once
-#include "pland/drawer/DrawerType.h"
 #include "ll/api/io/LogLevel.h"
 #include "pland/Global.h"
 #include "pland/aabb/LandAABB.h"
+#include "pland/drawer/DrawerType.h"
 #include "pland/economy/EconomySystem.h"
 #include <unordered_set>
 #include <vector>
@@ -69,8 +69,9 @@ struct Config {
                 int minHeight{1}; // 最小领地高度
             } squareRange;
 
-            std::vector<LandDimid>        allowDimensions{0, 1, 2};   // 允许的领地维度
-            std::vector<ForbiddenRange>   forbiddenRanges;            // 禁止创建领地的区域
+            std::vector<LandDimid>      allowDimensions{0, 1, 2}; // 允许的领地维度
+            std::vector<ForbiddenRange> forbiddenRanges;          // 禁止创建领地的区域
+            // TODO: 更改 Key 类型，string => int
             std::map<std::string, double> dimensionPriceCoefficients; // 维度价格系数，例如维度id的1 是1.2倍 2是1.5倍
         } bought;
     } land;
@@ -117,10 +118,10 @@ struct Config {
         bool PlayerUseItemEvent{true};                        // 玩家使用物品
     } listeners;
     struct {
-        bool registerMobHurtHook{true};        // 注册生物受伤Hook
-        bool registerFishingHookHitHook{true}; // 注册钓鱼竿Hook
-        bool registerLayEggGoalHook{true};     // 注册产卵AI目标Hook
-        bool registerFireBlockBurnHook{true};  // 注册火焰蔓延Hook
+        bool registerMobHurtHook{true};             // 注册生物受伤Hook
+        bool registerFishingHookHitHook{true};      // 注册钓鱼竿Hook
+        bool registerLayEggGoalHook{true};          // 注册产卵AI目标Hook
+        bool registerFireBlockBurnHook{true};       // 注册火焰蔓延Hook
         bool registerChestBlockActorOpenHook{true}; // 注册箱子打开Hook
     } hooks;
 
@@ -210,6 +211,18 @@ struct Config {
     LDAPI static Config cfg;
     LDAPI static bool   tryLoad();
     LDAPI static bool   trySave();
+
+    LDAPI static bool ensureDimensionAllowed(int dimensionId);
+    LDAPI static bool ensureSubLandFeatureEnabled();
+    LDAPI static bool ensureOrdinaryLandEnabled(bool is3D);
+
+    LDAPI static bool ensureEconomySystemEnabled();
+
+    LDAPI static std::optional<double> getLandDimensionMultipliers(LandDimid dimid);
+
+    LDAPI static std::string const& getLandPriceCalculateFormula(bool is3D); // 获取价格计算公式
+
+    LDAPI static std::string const& getSubLandPriceCalculateFormula(); // 获取子领地价格计算公式
 };
 
 

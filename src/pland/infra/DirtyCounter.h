@@ -19,7 +19,7 @@ public:
 
     LDAPI void decrement(); // 减少计数器
 
-    LDAPI void reset(); // 重置计数器
+    LDAPI void reset(unsigned int val = 0); // 重置计数器
 };
 
 } // namespace land

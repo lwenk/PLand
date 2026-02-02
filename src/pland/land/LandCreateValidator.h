@@ -101,18 +101,25 @@ public:
     }
 
 public:
-    LDNDAPI static ll::Expected<> validateCreateOrdinaryLand(Player& player, SharedLand land); // 普通领地
-
-    LDNDAPI static ll::Expected<> validateChangeLandRange(SharedLand land, LandAABB newRange); // 改变范围
+    LDNDAPI static ll::Expected<>
+    validateCreateOrdinaryLand(LandRegistry& registry, Player& player, SharedLand land); // 普通领地
 
     LDNDAPI static ll::Expected<>
-    validateCreateSubLand(Player& player, SharedLand land, LandAABB const& subRange); // 创建子领地
+    validateChangeLandRange(LandRegistry& registry, SharedLand land, LandAABB newRange); // 改变范围
+
+    LDNDAPI static ll::Expected<> validateCreateSubLand(
+        Player&                        player,
+        SharedLand                     land,
+        LandAABB const&                subRange,
+        LandRegistry&                  registry,
+        service::LandHierarchyService& service
+    ); // 创建子领地
 
 public:
     /**
      * @brief 玩家领地数量是否超过限制
      */
-    LDNDAPI static ll::Expected<> isPlayerLandCountLimitExceeded(mce::UUID const& uuids);
+    LDNDAPI static ll::Expected<> isPlayerLandCountLimitExceeded(LandRegistry& registry, mce::UUID const& uuids);
 
     /**
      * @brief 领地是否在禁止范围内
@@ -128,10 +135,7 @@ public:
      * @brief 领地范围与其他领地是否冲突
      * @param newRange 新范围，若为空则使用 land 的范围
      */
-    LDNDAPI static ll::Expected<>
-    isLandRangeConflict(SharedLand const& land, std::optional<LandAABB> newRange = std::nullopt);
-
-    LDNDAPI static ll::Expected<> isLandRangeConflict(
+    LDNDAPI static ll::Expected<> isOrdinaryLandRangeConflict(
         LandRegistry&           registry,
         SharedLand const&       land,
         std::optional<LandAABB> newRange = std::nullopt
@@ -139,6 +143,7 @@ public:
 
     /**
      * @brief 验证子领地位置是否合法(相对于父领地)
+     * @param hierarchyService 领地层级服务
      * @param land 父领地 (相对于 sub 的父领地)
      * @param subRange 子领地
      * @note 满足下列所有条件:
@@ -146,7 +151,11 @@ public:
      * @note 2. 子领地不能与父领地的其它子孙领地冲突（除直系父领地）。
      * @note 3. 子领地与其它家族成员的距离不能小于最小间距要求。
      */
-    LDNDAPI static ll::Expected<> isSubLandPositionLegal(SharedLand const& land, LandAABB const& subRange);
+    LDNDAPI static ll::Expected<> isSubLandPositionLegal(
+        service::LandHierarchyService& hierarchyService,
+        SharedLand const&              land,
+        LandAABB const&                subRange
+    );
 };
 
 

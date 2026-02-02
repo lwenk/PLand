@@ -1,5 +1,6 @@
 #pragma once
 #include "pland/Global.h"
+#include "pland/land/LandType.h"
 
 #include <ll/api/event/player/PlayerEvent.h>
 
@@ -8,14 +9,12 @@ namespace land::event {
 
 class PlayerRequestCreateLandEvent final : public ll::event::PlayerEvent {
 public:
-    enum class Type { Ordinary, Sub };
+    explicit PlayerRequestCreateLandEvent(Player& player, LandType type);
 
-    explicit PlayerRequestCreateLandEvent(Player& player, Type type);
-
-    LDAPI Type type() const;
+    LDAPI LandType type() const;
 
 private:
-    Type mType;
+    LandType mType;
 };
 
 

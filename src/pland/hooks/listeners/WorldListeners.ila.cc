@@ -22,7 +22,10 @@
 
 #include "pland/PLand.h"
 #include "pland/infra/Config.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
+#include "pland/service/LandHierarchyService.h"
+#include "pland/service/ServiceLocator.h"
+
 
 namespace land {
 
@@ -49,10 +52,11 @@ void EventListener::registerILAWorldListeners() {
                 }
 
                 // 规则二：如果中心领地允许爆炸，检查是否影响到其他禁止爆炸的、不相关的领地。
-                auto touchedLands = db->getLandAt(explosionPos, (int)(ev.explosion().mRadius + 1.0), dimid);
-                auto centerRoot   = centerLand->getRootLand();
+                auto  touchedLands = db->getLandAt(explosionPos, (int)(ev.explosion().mRadius + 1.0), dimid);
+                auto& service      = PLand::getInstance().getServiceLocator().getLandHierarchyService();
+                auto  centerRoot   = service.getRoot(centerLand);
                 for (auto const& touchedLand : touchedLands) {
-                    if (touchedLand->getRootLand() != centerRoot) {
+                    if (service.getRoot(touchedLand) != centerRoot) {
                         if (!touchedLand->getPermTable().allowExplode) {
                             EVENT_TRACE("ExplosionEvent", EVENT_TRACE_CANCEL, "touched land does not allow explode");
                             ev.cancel();
