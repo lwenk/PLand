@@ -15,16 +15,17 @@ struct ServiceLocator::Impl {
 
     void init(PLand& entry) {
         mLandHierarchyService  = std::make_unique<LandHierarchyService>(entry.getLandRegistry());
+        mLandPriceService      = std::make_unique<LandPriceService>(*mLandHierarchyService);
         mLandManagementService = std::make_unique<LandManagementService>(
             entry.getLandRegistry(),
             *entry.getSelectorManager(),
-            *mLandHierarchyService
+            *mLandHierarchyService,
+            *mLandPriceService
         );
-        mLandPriceService = std::make_unique<LandPriceService>(*mLandHierarchyService);
     }
     void destroy() {
-        mLandPriceService.reset();
         mLandManagementService.reset();
+        mLandPriceService.reset();
         mLandHierarchyService.reset();
     }
 };
