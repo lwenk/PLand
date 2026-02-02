@@ -3,7 +3,7 @@
 
 class Player;
 
-namespace land {
+namespace land::internal {
 
 
 /**
@@ -21,4 +21,4 @@ public:
 };
 
 
-} // namespace land
+} // namespace land::internal

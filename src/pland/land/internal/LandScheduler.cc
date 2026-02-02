@@ -15,7 +15,6 @@
 #include "mc/network/packet/SetTitlePacket.h"
 #include "mc/server/ServerPlayer.h"
 #include "mc/world/actor/player/Player.h"
-#include "mc/world/level/ChunkPos.h"
 #include "mc/world/level/Level.h"
 
 #include "pland/Global.h"
@@ -28,7 +27,7 @@
 #include <unordered_map>
 
 
-namespace land {
+namespace land::internal {
 
 struct LandScheduler::Impl {
     std::vector<Player*>                   mPlayers{};

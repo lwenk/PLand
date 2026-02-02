@@ -4,11 +4,10 @@
 #include "pland/gui/LandMainMenuGUI.h"
 #include "pland/gui/common/ChooseLandAdvancedUtilGUI.h"
 #include "pland/gui/form/BackSimpleForm.h"
-#include "pland/infra/SafeTeleport.h"
 #include "pland/land/Land.h"
+#include "pland/land/internal/SafeTeleport.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/utils/McUtils.h"
-
 
 
 namespace land {
@@ -30,9 +29,10 @@ void LandTeleportGUI::impl(Player& player, SharedLand land) {
         if (!tpPos.isZero()) {
             land->setTeleportPos(LandPos::make(0, 0, 0));
         }
-        PLand::getInstance().getSafeTeleport()->launchTask(
+        PLand::getInstance().getSafeTeleport().launchTask(
             player,
-            {land->getAABB().getMin().as(), land->getDimensionId()}
+            land->getAABB().getMin().as(),
+            land->getDimensionId()
         );
         return;
     }
