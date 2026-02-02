@@ -7,9 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🧩 逻辑优化
+
+- 优化子领地查询性能 @engsr6982
+
 ### 🧹 其他改动
 
+- 移除对 **iLand** 领地数据转换支持 @engsr6982
+- 重构部分代码，清理屎山 @engsr6982
 
+#### 🔔 事件更改
+
+- 新增 `LandResizedEvent` 事件 @engsr6982
+- 新增 `LandRefundFailedEvent` 事件 @engsr6982
+- 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
+- 移除 `PlayerAskCreateLandEvent` 事件 @engsr6982
 
 ## [0.17.1] - 2026-01-28
 
