@@ -274,9 +274,35 @@ LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
     impl->_buildDimensionChunkMap();
     logger.info("初始化维度区块映射完成");
 
-    // TODO: 构建领地层级缓存
-
     lock.unlock();
+    logger.info("构建领地层级缓存...");
+    {
+        std::unordered_set<std::shared_ptr<Land>> familyTreeRoot{};
+        for (auto& land : impl->mLandCache | std::views::values) {
+            if (land->isParentLand()) {
+                familyTreeRoot.insert(land);
+            }
+        }
+
+        std::stack<std::pair<std::shared_ptr<Land>, int>> stack{};
+        for (auto& root : familyTreeRoot) {
+            stack.emplace(root, 0);
+
+            while (!stack.empty()) {
+                auto [curr, level] = stack.top();
+                stack.pop();
+
+                curr->_setCachedNestedLevel(level);
+                if (curr->hasSubLand()) {
+                    for (auto& child : getLands(curr->getSubLandIDs())) {
+                        stack.emplace(child, level + 1);
+                    }
+                }
+            }
+        }
+        logger.info("构建完成，共处理 {} 个领地家族(树)", familyTreeRoot.size());
+    }
+
     impl->mThread = std::thread([this]() {
         while (!impl->mThreadQuit) {
             std::unique_lock<std::mutex> lk(impl->mThreadMutex);
