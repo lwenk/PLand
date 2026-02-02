@@ -15,6 +15,7 @@
 #include "mc/world/level/Level.h"
 #include "pland/Global.h"
 #include "pland/PLand.h"
+#include "pland/events/player/PlayerMoveEvent.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandEvent.h"
 #include "pland/land/repo/LandRegistry.h"
@@ -54,19 +55,19 @@ LandScheduler::LandScheduler() {
             std::erase_if(mPlayers, [&ptr](auto* p) { return p == ptr; });
         });
 
-    mPlayerEnterLandListener = bus.emplaceListener<PlayerEnterLandEvent>([](PlayerEnterLandEvent& ev) {
+    mPlayerEnterLandListener = bus.emplaceListener<event::PlayerEnterLandEvent>([](event::PlayerEnterLandEvent& ev) {
         if (!Config::cfg.land.tip.enterTip) {
             return;
         }
 
-        auto& player   = ev.getPlayer();
+        auto& player   = ev.self();
         auto& registry = PLand::getInstance().getLandRegistry();
 
         if (auto settings = registry.getPlayerSettings(player.getUuid()); settings && !settings->showEnterLandTitle) {
             return; // 如果玩家设置不显示进入领地提示,则不显示
         }
 
-        auto land = registry.getLand(ev.getLandID());
+        auto land = registry.getLand(ev.landId());
         if (!land) {
             return;
         }
@@ -176,7 +177,7 @@ void LandScheduler::tickEvent() {
             // 处理维度变化
             if (currentDimId != lastDimId) {
                 if (lastLandID != INVALID_LAND_ID) {
-                    bus.publish(PlayerLeaveLandEvent{*player, lastLandID}); // 离开上一个维度的领地
+                    bus.publish(event::PlayerLeaveLandEvent{*player, lastLandID}); // 离开上一个维度的领地
                 }
                 lastDimId = currentDimId;
             }
@@ -184,10 +185,10 @@ void LandScheduler::tickEvent() {
             // 处理领地变化
             if (currentLandId != lastLandID) {
                 if (lastLandID != INVALID_LAND_ID) {
-                    bus.publish(PlayerLeaveLandEvent{*player, lastLandID}); // 离开上一个领地
+                    bus.publish(event::PlayerLeaveLandEvent{*player, lastLandID}); // 离开上一个领地
                 }
                 if (currentLandId != INVALID_LAND_ID) {
-                    bus.publish(PlayerEnterLandEvent{*player, currentLandId}); // 进入新领地
+                    bus.publish(event::PlayerEnterLandEvent{*player, currentLandId}); // 进入新领地
                 }
                 lastLandID = currentLandId;
             }

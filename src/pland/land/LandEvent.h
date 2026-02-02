@@ -12,31 +12,6 @@
 namespace land {
 
 
-// 玩家 进入/离开 领地(LandScheduler)
-class [[deprecated("Waiting for reconstruction")]] PlayerEnterLandEvent final : public ll::event::Event {
-protected:
-    Player& mPlayer;
-    LandID  mLandID;
-
-public:
-    LDAPI constexpr explicit PlayerEnterLandEvent(Player& player, LandID landID) : mPlayer(player), mLandID(landID) {}
-
-    LDNDAPI Player& getPlayer() const;
-    LDNDAPI LandID  getLandID() const;
-};
-class [[deprecated("Waiting for reconstruction")]] PlayerLeaveLandEvent final : public ll::event::Event {
-protected:
-    Player& mPlayer;
-    LandID  mLandID;
-
-public:
-    LDAPI constexpr explicit PlayerLeaveLandEvent(Player& player, LandID landID) : mPlayer(player), mLandID(landID) {}
-
-    LDNDAPI Player& getPlayer() const;
-    LDNDAPI LandID  getLandID() const;
-};
-
-
 // 领地成员变动(EditLandMemberGui)
 class [[deprecated("Waiting for reconstruction")]] LandMemberChangeBeforeEvent final
 : public ll::event::Cancellable<ll::event::Event> {

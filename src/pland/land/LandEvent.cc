@@ -7,13 +7,6 @@
 
 namespace land {
 
-
-Player& PlayerEnterLandEvent::getPlayer() const { return mPlayer; }
-LandID  PlayerEnterLandEvent::getLandID() const { return mLandID; }
-Player& PlayerLeaveLandEvent::getPlayer() const { return mPlayer; }
-LandID  PlayerLeaveLandEvent::getLandID() const { return mLandID; }
-
-
 Player&          LandMemberChangeBeforeEvent::getPlayer() const { return mPlayer; }
 mce::UUID const& LandMemberChangeBeforeEvent::getTargetPlayer() const { return mTargetPlayer; }
 LandID           LandMemberChangeBeforeEvent::getLandID() const { return mLandID; }
@@ -40,8 +33,6 @@ LandID           LandOwnerChangeAfterEvent::getLandID() const { return mLandID; 
         return std::make_unique<EventName##Emitter>();                                                                 \
     }
 
-IMPLEMENT_EVENT_EMITTER(PlayerEnterLandEvent)
-IMPLEMENT_EVENT_EMITTER(PlayerLeaveLandEvent)
 IMPLEMENT_EVENT_EMITTER(LandMemberChangeBeforeEvent)
 IMPLEMENT_EVENT_EMITTER(LandMemberChangeAfterEvent)
 IMPLEMENT_EVENT_EMITTER(LandOwnerChangeBeforeEvent)
