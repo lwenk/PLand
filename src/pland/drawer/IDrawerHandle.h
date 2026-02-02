@@ -36,9 +36,9 @@ public:
     LDAPI explicit IDrawerHandle() = default;
     LDAPI virtual ~IDrawerHandle() = default;
 
-    void setTargetPlayer(Player& player);
+    LDAPI void setTargetPlayer(Player& player);
 
-    [[nodiscard]] optional_ref<Player> getTargetPlayer() const;
+    LDNDAPI optional_ref<Player> getTargetPlayer() const;
 
     virtual GeoId draw(LandAABB const& aabb, DimensionType dimId, mce::Color const& color) = 0;
 

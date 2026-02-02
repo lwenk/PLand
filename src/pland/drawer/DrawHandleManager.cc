@@ -1,8 +1,8 @@
 #include "DrawHandleManager.h"
 
 #include "DrawerType.h"
-#include "impl/DebugShapeHandle.h"
-#include "impl/DefaultParticleHandle.h"
+#include "detail/DebugShapeHandle.h"
+#include "detail/DefaultParticleHandle.h"
 #include "pland/PLand.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
 #include "pland/infra/Config.h"
