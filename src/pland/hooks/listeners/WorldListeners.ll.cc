@@ -7,7 +7,8 @@
 
 #include "pland/PLand.h"
 #include "pland/infra/Config.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
+
 
 namespace land {
 

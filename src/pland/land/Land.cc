@@ -6,8 +6,8 @@
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/infra/Config.h"
-#include "pland/land/LandContext.h"
 #include "pland/utils/JsonUtil.h"
+#include "repo/LandContext.h"
 
 #include <unordered_set>
 #include <vector>

@@ -10,7 +10,8 @@
 #include "pland/gui/common/ChooseLandAdvancedUtilGUI.h"
 #include "pland/gui/form/BackSimpleForm.h"
 #include "pland/infra/Config.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
+
 
 
 namespace land {

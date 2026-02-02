@@ -17,7 +17,7 @@
 #include "pland/PLand.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandEvent.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
 #include <cstdio>
 #include <stdexcept>
 #include <vector>

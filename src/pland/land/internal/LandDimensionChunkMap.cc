@@ -1,6 +1,7 @@
 #include "LandDimensionChunkMap.h"
 #include "BidirectionalMap.h"
-#include "pland/land/LandRegistry.h"
+#include "pland/land/repo/LandRegistry.h"
+
 
 namespace land ::internal {
 
