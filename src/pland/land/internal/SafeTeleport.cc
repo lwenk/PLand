@@ -28,6 +28,7 @@
 #include <mc/world/level/chunk/ChunkState.h>
 #include <mc/world/level/chunk/LevelChunk.h>
 #include <mc/world/level/dimension/Dimension.h>
+#include <mc/world/level/Level.h>
 
 #include <cstdint>
 
