@@ -1,5 +1,6 @@
 #include "LandCacheViewer.h"
 #include "LandEditor.h"
+#include "LandTreeViewer.h"
 
 #include "pland/PLand.h"
 #include "pland/land/repo/LandRegistry.h"
@@ -200,6 +201,16 @@ void LandCacheViewerWindow::renderCacheLand() {
             if (ImGui::Button(fmt::format("编辑数据##{}", ld->getId()).c_str())) {
                 handleButtonClicked(EditLand, ld);
             }
+            if (ld->isParentLand()) {
+                ImGui::SameLine();
+                if (ImGui::Button(fmt::format("查看领地树##{}", ld->getId()).c_str())) {
+                    auto iter = viewers_.find(ld->getId());
+                    if (iter == viewers_.end()) {
+                        iter = viewers_.emplace(ld->getId(), std::make_unique<LandTreeViewer>(ld->getId())).first;
+                    }
+                    iter->second->setVisible(true);
+                }
+            }
             ImGui::SameLine();
             if (ImGui::Button(fmt::format("复制##{}", ld->getId()).c_str())) {
                 ImGui::SetClipboardText(ld->toJson().dump().c_str());
@@ -231,6 +242,9 @@ void LandCacheViewerWindow::render() {
 void LandCacheViewerWindow::tick() {
     IWindow::tick();
     for (auto const& val : editors_ | std::views::values) {
+        val->tick();
+    }
+    for (auto const& val : viewers_ | std::views::values) {
         val->tick();
     }
 }
