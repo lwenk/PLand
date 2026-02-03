@@ -15,16 +15,8 @@ namespace ll {
 namespace thread {
 class ThreadPoolExecutor;
 }
-namespace data {
-struct Version;
-}
 } // namespace ll
 
-#ifdef LD_DEVTOOL
-namespace devtool {
-class DevToolApp;
-}
-#endif
 
 namespace land {
 
@@ -58,7 +50,7 @@ public: /* public */
     internal::SafeTeleport& getSafeTeleport() const;
 
 #ifdef LD_DEVTOOL
-    [[nodiscard]] devtool::DevToolApp* getDevToolApp() const;
+    void setDevToolVisible(bool visible);
 #endif
 
 private:

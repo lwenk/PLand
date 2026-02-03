@@ -25,6 +25,8 @@ public:
 
     void hide() const;
 
+    bool visible() const;
+
     void appendError(std::string msg);
 
     template <typename T, typename... Args>

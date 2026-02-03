@@ -266,6 +266,11 @@ struct DevToolApp::Impl {
         if (glfwWindow_) glfwHideWindow(glfwWindow_);
     }
 
+    bool visible() const {
+        if (glfwWindow_) return glfwGetWindowAttrib(glfwWindow_, GLFW_VISIBLE) != 0;
+        return false;
+    }
+
     void appendError(std::string msg) { this->errors_.emplace_back(std::move(msg)); }
 };
 
@@ -275,6 +280,7 @@ DevToolApp::DevToolApp() : impl(std::make_unique<Impl>()) { impl->initialize(); 
 DevToolApp::~DevToolApp() { impl->shutdown(); }
 void DevToolApp::show() const { impl->show(); }
 void DevToolApp::hide() const { impl->hide(); }
+bool DevToolApp::visible() const { return impl->visible(); }
 void DevToolApp::appendError(std::string msg) { impl->appendError(std::move(msg)); }
 
 void DevToolApp::registerMenu(std::unique_ptr<IMenu> menu) { impl->menus_.emplace_back(std::move(menu)); }

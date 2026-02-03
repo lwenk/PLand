@@ -174,7 +174,15 @@ ll::thread::ThreadPoolExecutor* PLand::getThreadPool() const { return mImpl->mTh
 service::ServiceLocator&        PLand::getServiceLocator() const { return *mImpl->mServiceLocator; }
 
 #ifdef LD_DEVTOOL
-devtool::DevToolApp* PLand::getDevToolApp() const { return mImpl->mDevToolApp.get(); }
+void PLand::setDevToolVisible(bool visible) {
+    if (Config::cfg.internal.devTools) {
+        if (visible) {
+            mImpl->mDevToolApp->show();
+        } else {
+            mImpl->mDevToolApp->hide();
+        }
+    }
+}
 #endif
 
 } // namespace land

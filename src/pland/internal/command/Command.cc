@@ -405,9 +405,8 @@ bool LandCommand::setup() {
     if (Config::cfg.internal.devTools) {
         cmd.overload().text("devtool").execute([](CommandOrigin const& ori, CommandOutput&) {
             if (ori.getOriginType() == CommandOriginType::DedicatedServer) {
-                if (auto tool = PLand::getInstance().getDevToolApp()) {
-                    tool->show();
-                }
+                auto& mod = PLand::getInstance();
+                mod.setDevToolVisible(true);
             }
         });
     }
