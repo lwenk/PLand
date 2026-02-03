@@ -149,8 +149,10 @@ ll::Expected<> LandCreateValidator::isOrdinaryLandRangeConflict(
 ) {
     auto&       aabb       = newRange ? *newRange : land->getAABB();
     auto const& minSpacing = Config::cfg.land.minSpacing;
-    auto        expanded   = aabb.expanded(minSpacing, Config::cfg.land.minSpacingIncludeY);
-    auto        lands      = registry.getLandAt(expanded.min.as(), expanded.max.as(), land->getDimensionId());
+    bool const  includeY   = Config::cfg.land.minSpacingIncludeY; // 获取配置
+
+    auto expanded = aabb.expanded(minSpacing, includeY);
+    auto lands    = registry.getLandAt(expanded.min.as(), expanded.max.as(), land->getDimensionId());
     if (lands.empty()) {
         return {};
     }
@@ -166,7 +168,8 @@ ll::Expected<> LandCreateValidator::isOrdinaryLandRangeConflict(
         }
         if (!LandAABB::isComplisWithMinSpacing(ld->getAABB(), aabb, minSpacing)) {
             // 领地范围与其他领地间距过小
-            return makeError<LandSpacingContext>(LandAABB::getMinSpacing(ld->getAABB(), aabb), minSpacing, ld);
+            int actualDist = LandAABB::getMinSpacing(ld->getAABB(), aabb, includeY);
+            return makeError<LandSpacingContext>(actualDist, minSpacing, ld);
         }
     }
     return {};
@@ -184,7 +187,6 @@ ll::Expected<> LandCreateValidator::isSubLandPositionLegal(
 
     auto const& minSpacing = Config::cfg.land.subLand.minSpacing;
     bool const  includeY   = Config::cfg.land.subLand.minSpacingIncludeY;
-    auto        expanded   = subRange.expanded(minSpacing, includeY);
 
     auto family  = hierarchyService.getFamilyTree(land);       // 整个领地家族
     auto parents = hierarchyService.getSelfAndAncestors(land); // 相对于 land 的所有父领地
@@ -204,9 +206,10 @@ ll::Expected<> LandCreateValidator::isSubLandPositionLegal(
             // 子领地与家族内其他领地冲突
             return makeError<LandRangeConflictContext>(subRange, member);
         }
-        if (!LandAABB::isComplisWithMinSpacing(memberAABB, expanded, minSpacing, includeY)) {
+        if (!LandAABB::isComplisWithMinSpacing(memberAABB, subRange, minSpacing, includeY)) {
             // 子领地与家族内其他领地间距过小
-            return makeError<LandSpacingContext>(LandAABB::getMinSpacing(memberAABB, expanded), minSpacing, member);
+            int actualDist = LandAABB::getMinSpacing(memberAABB, subRange, includeY);
+            return makeError<LandSpacingContext>(actualDist, minSpacing, member);
         }
     }
     return {};
