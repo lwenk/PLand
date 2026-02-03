@@ -208,8 +208,6 @@ struct LandRegistry::Impl {
             land->_setLandId(mLandIdAllocator->nextId());
             land->markDirty();
         }
-        std::unique_lock lock(mMutex);
-
         auto result = mLandCache.emplace(land->getId(), land);
         if (!result.second) {
             return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to insert land into cache map");
