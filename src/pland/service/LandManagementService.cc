@@ -257,24 +257,27 @@ ll::Expected<> LandManagementService::_ensureAndAttachSubLand(
     std::shared_ptr<Land> parent,
     std::shared_ptr<Land> sub
 ) {
-    assert(parent != nullptr);
-    assert(sub != nullptr);
-
-    auto res = LandCreateValidator::validateCreateSubLand(
+    auto expected = LandCreateValidator::validateCreateSubLand(
         player,
         parent,
         sub->getAABB(),
         impl->mRegistry,
         impl->mHierarchyService
     );
-    if (!res) {
-        if (res.error().isA<LandCreateValidator::ValidateError>()) {
-            auto& error = res.error().as<LandCreateValidator::ValidateError>();
+    if (expected) {
+        // 验证通过，进行附加操作
+        expected = impl->mHierarchyService.attachSubLand(parent, sub);
+    }
+
+    // 检查错误
+    if (!expected) {
+        if (expected.error().isA<LandCreateValidator::ValidateError>()) {
+            auto& error = expected.error().as<LandCreateValidator::ValidateError>();
             return ll::makeStringError(error.translateError(player.getLocaleCode()));
         }
-        return ll::makeStringError(res.error().message());
+        return ll::makeStringError(expected.error().message());
     }
-    return impl->mHierarchyService.attachSubLand(parent, sub);
+    return {};
 }
 
 ll::Expected<> LandManagementService::_processResizeSettlement(Player& player, LandResizeSettlement const& settlement) {

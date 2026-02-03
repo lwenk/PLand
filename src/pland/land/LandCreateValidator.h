@@ -5,6 +5,8 @@
 
 #include "ll/api/Expected.h"
 
+#include <concepts>
+#include <memory>
 #include <optional>
 
 
@@ -33,71 +35,84 @@ public:
         LandOutOfDimensionHeightRange, // 领地高度超出范围(维度高度)
     };
 
-    struct ValidateError : ll::ErrorInfoBase {
+    // 由于 LeviLamina 限制，Error::isA<T> 只能精确匹配匹配类型
+    // 所以这里使用自定义的异常上下文来承载错误信息
+    struct ErrorContext {
         ErrorCode code{ErrorCode::Undefined};
 
-        explicit ValidateError(ErrorCode code);
-        std::string message() const noexcept final;
+        explicit ErrorContext(ErrorCode code) : code(code) {}
+        LDAPI virtual ~ErrorContext() = default;
 
-        virtual void        sendTo(Player& player) const;
-        virtual std::string translateError(std::string const& localeCode) const;
+        virtual std::string translateError(std::string const& localeCode) const = 0;
     };
 
-    struct LandCountExceeded : ValidateError {
+    struct LandCountExceededContext : ErrorContext {
         int count;
         int maxCount;
-        LandCountExceeded(int count, int maxCount);
+        LandCountExceededContext(int count, int maxCount);
         std::string translateError(std::string const& localeCode) const override;
     };
 
-    struct LandInForbiddenRange : ValidateError {
+    struct LandInForbiddenRangeContext : ErrorContext {
         LandAABB range;
         LandAABB forbiddenRange;
-        LandInForbiddenRange(LandAABB const& range, LandAABB const& forbiddenRange);
+        LandInForbiddenRangeContext(LandAABB const& range, LandAABB const& forbiddenRange);
         std::string translateError(std::string const& localeCode) const override;
     };
 
-    struct LandRangeError : ValidateError {
+    struct LandRangeErrorContext : ErrorContext {
         int limitSize;
 
-        LandRangeError(ErrorCode code, int limit);
+        LandRangeErrorContext(ErrorCode code, int limit);
         std::string translateError(std::string const& localeCode) const override;
     };
 
-    struct LandHeightError : ValidateError {
+    struct LandHeightErrorContext : ErrorContext {
         int actualHeight; // 实际高度
         int limitHeight;  // 限制高度
 
-        LandHeightError(ErrorCode code, int actual, int limit);
+        LandHeightErrorContext(ErrorCode code, int actual, int limit);
         std::string translateError(std::string const& localeCode) const override;
     };
 
-    struct LandRangeConflict : ValidateError {
+    struct LandRangeConflictContext : ErrorContext {
         LandAABB              range;
         std::shared_ptr<Land> conflictLand;
-        LandRangeConflict(LandAABB const& range, std::shared_ptr<Land> conflictLand);
+        LandRangeConflictContext(LandAABB const& range, std::shared_ptr<Land> conflictLand);
         std::string translateError(std::string const& localeCode) const override;
     };
 
-    struct LandSpacingError : ValidateError {
+    struct LandSpacingContext : ErrorContext {
         int                   spacing;
         int                   minSpacing;
         std::shared_ptr<Land> conflictLand;
-        LandSpacingError(int spacing, int minSpacing, std::shared_ptr<Land> conflictLand);
+        LandSpacingContext(int spacing, int minSpacing, std::shared_ptr<Land> conflictLand);
         std::string translateError(std::string const& localeCode) const override;
     };
 
-    struct SubLandNotInParent : ValidateError {
+    struct SubLandNotInParentContext : ErrorContext {
         std::shared_ptr<Land> parent;
         LandAABB              subRange;
-        SubLandNotInParent(std::shared_ptr<Land> parent, LandAABB const& subRange);
+        SubLandNotInParentContext(std::shared_ptr<Land> parent, LandAABB const& subRange);
         std::string translateError(std::string const& localeCode) const override;
     };
 
-    template <std::derived_from<ValidateError> T, typename... Args>
+
+    struct ValidateError : ll::ErrorInfoBase {
+        std::unique_ptr<ErrorContext> mContext;
+
+        explicit ValidateError(std::unique_ptr<ErrorContext> context) : mContext(std::move(context)) {}
+
+        LDAPI std::string message() const noexcept final;
+
+        LDAPI void sendTo(Player& player) const;
+        LDAPI std::string translateError(std::string const& localeCode) const;
+    };
+
+    template <std::derived_from<ErrorContext> T, typename... Args>
         requires std::constructible_from<T, Args...>
     static inline auto makeError(Args&&... args) {
-        return ll::makeError<T>(std::forward<Args>(args)...);
+        return ll::makeError<ValidateError>(std::make_unique<T>(std::forward<Args>(args)...));
     }
 
 public:
