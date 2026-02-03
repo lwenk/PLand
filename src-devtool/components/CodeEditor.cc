@@ -76,7 +76,7 @@ void CodeEditor::renderMenuBar() {
 void CodeEditor::render() {
     if (!ImGui::Begin(
             fmt::format("[{}] CodeEditor", windowId_).data(),
-            this->getOpenFlag(),
+            this->getVisibleFlag(),
             (ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_MenuBar)
         )) {
         ImGui::End();

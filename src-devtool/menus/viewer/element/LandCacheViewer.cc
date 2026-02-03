@@ -14,20 +14,20 @@
 #include <string>
 
 
-namespace devtool::internals {
+namespace devtool::viewer {
 
 // LandCacheViewer
 LandCacheViewer::LandCacheViewer() : IMenuElement("领地缓存") { window_ = std::make_unique<LandCacheViewerWindow>(); }
 
-bool* LandCacheViewer::getSelectFlag() { return window_->getOpenFlag(); }
+bool* LandCacheViewer::getSelectFlag() { return window_->getVisibleFlag(); }
 
-bool LandCacheViewer::isSelected() const { return window_->isOpen(); }
+bool LandCacheViewer::isSelected() const { return window_->visible(); }
 
 void LandCacheViewer::tick() { window_->tick(); }
 
 
 // LandCacheViewerWindow
-LandCacheViewerWindow::LandCacheViewerWindow() { this->setOpenFlag(true); }
+LandCacheViewerWindow::LandCacheViewerWindow() { this->setVisible(true); }
 
 void LandCacheViewerWindow::handleButtonClicked(Buttons bt, land::SharedLand land) {
     switch (bt) {
@@ -45,7 +45,7 @@ void LandCacheViewerWindow::handleEditLand(land::SharedLand land) {
         editors_.emplace(id, std::make_unique<LandEditor>(land));
     }
     auto const& editor = editors_[id];
-    editor->setOpenFlag(!editor->isOpen());
+    editor->setVisible(!editor->visible());
 }
 void LandCacheViewerWindow::handleExportLand(land::SharedLand land) {
     namespace fs = std::filesystem;
@@ -215,7 +215,7 @@ void LandCacheViewerWindow::renderCacheLand() {
 }
 
 void LandCacheViewerWindow::render() {
-    if (!ImGui::Begin("领地缓存", getOpenFlag())) {
+    if (!ImGui::Begin("领地缓存", getVisibleFlag())) {
         ImGui::End();
         return;
     }
@@ -277,4 +277,4 @@ void LandEditor::renderMenuElement() {
 }
 
 
-} // namespace devtool::internals
+} // namespace devtool::viewer

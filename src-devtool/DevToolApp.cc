@@ -7,8 +7,8 @@
 #include <imgui_internal.h>
 #include <memory>
 
-#include "impl/helper/HelperMenu.h"
-#include "impl/viewer/DataMenu.h"
+#include "menus/helper/HelperMenu.h"
+#include "menus/viewer/ViewerMenu.h"
 
 namespace devtool {
 
@@ -287,8 +287,8 @@ void DevToolApp::registerMenu(std::unique_ptr<IMenu> menu) { impl->menus_.emplac
 
 std::unique_ptr<DevToolApp> DevToolApp::make() {
     auto app_ = std::make_unique<DevToolApp>();
-    app_->registerMenu<DataMenu>();
-    app_->registerMenu<HelperMenu>();
+    app_->registerMenu<viewer::ViewerMenu>();
+    app_->registerMenu<helper::HelperMenu>();
     return std::move(app_);
 }
 

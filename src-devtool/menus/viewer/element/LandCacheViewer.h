@@ -4,7 +4,7 @@
 #include "pland/Global.h"
 #include "pland/land/Land.h"
 
-namespace devtool::internals {
+namespace devtool::viewer {
 
 class LandEditor : public CodeEditor {
     land::WeakLand land_;
@@ -67,4 +67,4 @@ public:
 };
 
 
-} // namespace devtool::internals
+} // namespace devtool::viewer

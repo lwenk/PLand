@@ -52,14 +52,14 @@ void IMenu::tick() {
 }
 
 
-bool* IWindow::getOpenFlag() { return &open_; }
+bool* IWindow::getVisibleFlag() { return &visible_; }
 
-bool IWindow::isOpen() const { return open_; }
+bool IWindow::visible() const { return visible_; }
 
-void IWindow::setOpenFlag(bool open) { open_ = open; }
+void IWindow::setVisible(bool visible) { visible_ = visible; }
 
 void IWindow::tick() {
-    if (this->isOpen()) {
+    if (this->visible()) {
         this->render();
     }
 }

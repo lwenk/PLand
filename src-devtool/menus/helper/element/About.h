@@ -1,16 +1,8 @@
 #pragma once
 #include "components/IComponent.h"
 
-namespace devtool {
+namespace devtool::helper::element {
 
-
-class HelperMenu final : public IMenu {
-public:
-    explicit HelperMenu();
-};
-
-
-namespace internals {
 
 class AboutWindow final : public IWindow {
 public:
@@ -32,6 +24,4 @@ public:
     void tick() override;
 };
 
-} // namespace internals
-
-} // namespace devtool
+} // namespace devtool::helper::element
