@@ -61,16 +61,21 @@ ll::Expected<> LandManagementService::requestCreateOrdinaryLand(Player& player, 
 }
 
 ll::Expected<> LandManagementService::requestCreateSubLand(Player& player) {
+    auto land = impl->mRegistry.getLandAt(player.getPosition(), player.getDimensionId());
+    if (!land) {
+        return ll::makeStringError("操作失败, 当前位置没有领地"_trf(player));
+    }
+    return requestCreateSubLand(player, land);
+}
+ll::Expected<> LandManagementService::requestCreateSubLand(Player& player, std::shared_ptr<Land> const& land) const {
     if (!Config::ensureSubLandFeatureEnabled()) {
         return ll::makeStringError("子领地功能未启用"_trf(player));
     }
     if (!Config::ensureDimensionAllowed(player.getDimensionId())) {
         return ll::makeStringError("你所在的维度无法购买领地"_trf(player));
     }
-
-    auto land = impl->mRegistry.getLandAt(player.getPosition(), player.getDimensionId());
-    if (!land || !land->isOwner(player.getUuid())) {
-        return ll::makeStringError("操作失败, 当前位置没有领地或您不是当前领地主人"_trf(player));
+    if (!land->isOwner(player.getUuid())) {
+        return ll::makeStringError("操作失败, 您不是当前领地主人"_trf(player));
     }
     if (!land->canCreateSubLand()) {
         return ll::makeStringError("操作失败，当前领地无法继续创建子领地"_trf(player));
@@ -82,7 +87,6 @@ ll::Expected<> LandManagementService::requestCreateSubLand(Player& player) {
     if (!impl->mSelectorManager.startSelection(std::move(selector))) {
         return ll::makeStringError("选区开启失败，当前存在未完成的选区任务"_trf(player));
     }
-
     return {};
 }
 

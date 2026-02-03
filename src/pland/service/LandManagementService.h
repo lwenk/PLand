@@ -56,6 +56,8 @@ public:
      */
     ll::Expected<> requestCreateSubLand(Player& player);
 
+    ll::Expected<> requestCreateSubLand(Player& player, std::shared_ptr<Land> const& land) const;
+
     /**
      * 购买普通领地
      * @param player 玩家

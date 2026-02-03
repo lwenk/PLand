@@ -11,8 +11,6 @@
 #include "mc/deps/ecs/WeakEntityRef.h"
 #include "mc/world/actor/player/Player.h"
 
-#include "pland/land/repo/LandContext.h"
-#include "pland/land/repo/StorageError.h"
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
@@ -26,7 +24,9 @@
 #include "pland/land/Land.h"
 #include "pland/land/LandCreateValidator.h"
 #include "pland/land/LandEvent.h"
+#include "pland/land/repo/LandContext.h"
 #include "pland/land/repo/LandRegistry.h"
+#include "pland/land/repo/StorageError.h"
 #include "pland/selector/LandResizeSelector.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/LandHierarchyService.h"
@@ -35,6 +35,7 @@
 #include "pland/service/ServiceLocator.h"
 #include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
+
 
 #include <cstdint>
 #include <stack>
@@ -122,9 +123,15 @@ void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
         sendTransferLandGUI(pl, land);
     });
 
+    if (Config::ensureSubLandFeatureEnabled() && land->canCreateSubLand()) {
+        fm.appendButton("创建子领地"_trf(player), "textures/ui/icon_recipe_nature", "path", [land](Player& pl) {
+            sendCreateSubLandConfirm(pl, land);
+        });
+    }
+
     if (land->isOrdinaryLand()) {
         fm.appendButton("重新选区"_trf(player), "textures/ui/anvil_icon", "path", [land](Player& pl) {
-            sendChangLandRangeGUI(pl, land);
+            sendChangeRangeConfirm(pl, land);
         });
     }
 
@@ -457,9 +464,34 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedL
     });
 }
 
-void LandManagerGUI::sendChangLandRangeGUI(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::sendCreateSubLandConfirm(Player& player, const SharedLand& ptr) {
+    ModalForm{
+        "[PLand] | 创建子领地"_trf(player),
+        "在当前领地名下创建一个子领地\n是否继续?"_trf(player),
+        "继续"_trf(player),
+        "返回"_trf(player)
+    }
+        .sendTo(player, [ptr](Player& player, ModalFormResult const& res, FormCancelReason) {
+            if (!res) return;
+            if (!(bool)res.value()) {
+                LandManagerGUI::sendMainMenu(player, ptr);
+                return;
+            }
+            auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+            if (auto expected = service.requestCreateSubLand(player)) {
+                feedback_utils::sendText(
+                    player,
+                    "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(player, Config::cfg.selector.tool)
+                );
+            } else {
+                feedback_utils::sendError(player, expected.error());
+            }
+        });
+}
+
+void LandManagerGUI::sendChangeRangeConfirm(Player& player, SharedLand const& ptr) {
     ModalForm fm(
-        "[PLand]  | 重新选区"_trf(player),
+        "[PLand] | 重新选区"_trf(player),
         "重新选区为完全重新选择领地的范围，非直接扩充/缩小现有领地范围。\n重新选择的价格计算方式为\"新范围价格 — 旧范围价值\"，是否继续？"_trf(
             player
         ),

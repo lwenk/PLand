@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🧹 其他改动
 
+- 领地管理GUI 新增 **创建子领地** 按钮 @engsr6982
 - 移除对 **iLand** 领地数据转换支持 @engsr6982
 - 重构部分代码，清理屎山 @engsr6982
 

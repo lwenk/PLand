@@ -165,7 +165,7 @@ static auto const New = [](CommandOrigin const& ori, CommandOutput& out, NewPara
         auto expected =
             PLand::getInstance().getServiceLocator().getLandManagementService().requestCreateSubLand(player);
         if (!expected) {
-            feedback_utils::sendErrorText(player, expected.error().message());
+            feedback_utils::sendError(player, expected.error());
             return;
         }
         feedback_utils::sendText(
