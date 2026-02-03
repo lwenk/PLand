@@ -233,8 +233,8 @@ struct LandRegistry::Impl {
     }
 
     bool _save(SharedLand const& land, bool force = false) const {
-        if (!land->isDirty() || !force) {
-            return true; // 没有变化，无需保存
+        if (!land->isDirty() && !force) {
+            return true; // 没有变化，且非强制保存
         }
         if (mDB->set(std::to_string(land->getId()), land->toJson().dump())) {
             land->getDirtyCounter().reset();
