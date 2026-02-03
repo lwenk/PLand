@@ -1,21 +1,12 @@
 #pragma once
-#include "components/CodeEditor.h"
 #include "components/IComponent.h"
+
 #include "pland/Global.h"
 #include "pland/land/Land.h"
 
 namespace devtool::viewer {
 
-class LandEditor : public CodeEditor {
-    land::WeakLand land_;
-
-    friend class LandCacheViewerWindow;
-
-public:
-    explicit LandEditor(land::SharedLand land);
-
-    void renderMenuElement() override;
-};
+class LandEditor;
 
 class LandCacheViewerWindow : public IWindow {
     std::unordered_map<mce::UUID, std::unordered_set<land::SharedLand>> lands_;     // 领地缓存
