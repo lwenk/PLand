@@ -1,8 +1,8 @@
 #include "LandHierarchyService.h"
 
-#include "pland/land/repo/TransactionContext.h"
 #include "pland/land/LandCreateValidator.h"
 #include "pland/land/repo/LandRegistry.h"
+#include "pland/land/repo/TransactionContext.h"
 
 
 namespace land {
@@ -211,11 +211,11 @@ std::shared_ptr<Land> LandHierarchyService::getRoot(std::shared_ptr<Land> const&
     if (!land->hasParentLand()) {
         return land;
     }
-    SharedLand root = getParent(land);
-    while (root->hasParentLand()) {
-        root = getParent(land);
+    SharedLand cur = land;
+    while (auto parent = getParent(cur)) {
+        cur = parent;
     }
-    return root;
+    return cur;
 }
 
 std::unordered_set<std::shared_ptr<Land>> LandHierarchyService::getFamilyTree(std::shared_ptr<Land> const& land) const {
