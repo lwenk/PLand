@@ -146,8 +146,8 @@ struct LandRegistry::Impl {
         auto backup = [&]() {
             auto const backupDir =
                 dataDir
-                / ("backup_db_" + std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()))
-                );
+                / ("backup_db_"
+                   + std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())));
             std::filesystem::copy(
                 dbDir,
                 backupDir,
@@ -206,14 +206,15 @@ struct LandRegistry::Impl {
         }
         if (allocateId) {
             land->_setLandId(mLandIdAllocator->nextId());
-            land->markDirty();
         }
+
         auto result = mLandCache.emplace(land->getId(), land);
         if (!result.second) {
             return StorageError::make(StorageError::ErrorCode::CacheMapError, "Failed to insert land into cache map");
         }
 
         mDimensionChunkMap.addLand(land);
+        land->markDirty(); // 标记为脏数据, 避免持久化失败
         return {};
     }
     ll::Expected<> _removeLand(SharedLand const& ptr) {
