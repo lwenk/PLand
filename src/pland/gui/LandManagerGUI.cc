@@ -277,8 +277,12 @@ void LandManagerGUI::sendEditLandNameGUI(Player& player, SharedLand const& ptr) 
         "请输入新的领地名称"_trf(player),
         ptr->getName(),
         [ptr](Player& pl, std::string result) {
-            ptr->setName(result);
-            feedback_utils::sendText(pl, "领地名称已更新!"_trf(pl));
+            auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+            if (auto expected = service.setLandName(pl, ptr, result)) {
+                feedback_utils::sendText(pl, "领地名称已更改为 {}"_trf(pl, result));
+            } else {
+                feedback_utils::sendError(pl, expected.error());
+            }
         }
     );
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "ll/api/Expected.h"
 #include "pland/Global.h"
 
 #include <mc/deps/core/math/Vec3.h>
@@ -90,6 +91,8 @@ public:
     ll::Expected<> setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point);
 
     ll::Expected<> deleteLand(Player& player, std::shared_ptr<Land> ptr, DeletePolicy policy);
+
+    ll::Expected<> setLandName(Player& player, std::shared_ptr<Land> const& land, std::string name);
 
 private:
     ll::Expected<std::shared_ptr<Land>>

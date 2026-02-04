@@ -4,6 +4,7 @@
 #include "pland/aabb/LandAABB.h"
 #include "pland/drawer/DrawerType.h"
 #include "pland/economy/EconomySystem.h"
+#include <cstddef>
 #include <unordered_set>
 #include <vector>
 
@@ -74,6 +75,23 @@ struct Config {
             // TODO: 更改 Key 类型，string => int
             std::map<std::string, double> dimensionPriceCoefficients; // 维度价格系数，例如维度id的1 是1.2倍 2是1.5倍
         } bought;
+
+        struct {
+            /* 领地名称 */
+            struct {
+                size_t minLen{1};           // 最小长度
+                size_t maxLen{32};          // 最大长度
+                bool   allowNewline{false}; // 是否允许换行
+            } name;
+
+            /* 领地描述 */
+            struct {
+                size_t minLen{0};
+                size_t maxLen{256};
+                bool   allowNewline{true};
+            } description;
+
+        } textRules; // 文本规则
     } land;
 
     struct {
