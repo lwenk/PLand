@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 问题修复
+
+- 修复领地最小间距计算错误 @engsr6982
+
 ### 🧩 逻辑优化
 
 - 优化子领地查询性能 @engsr6982
