@@ -3,6 +3,7 @@
 #include "LandPriceService.h"
 
 #include "pland/events/domain/LandResizedEvent.h"
+#include "pland/events/domain/OwnerChangedEvent.h"
 #include "pland/events/economy/LandRefundFailedEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
 #include "pland/events/player/PlayerChangeLandDescEvent.h"
@@ -10,6 +11,7 @@
 #include "pland/events/player/PlayerChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
 #include "pland/events/player/PlayerRequestCreateLandEvent.h"
+#include "pland/events/player/PlayerTransferLandEvent.h"
 #include "pland/infra/Config.h"
 #include "pland/land/LandResizeSettlement.h"
 #include "pland/land/repo/LandRegistry.h"
@@ -155,7 +157,7 @@ ll::Expected<> LandManagementService::handleChangeRange(
             auto& error = res.error().as<LandCreateValidator::ValidateError>();
             return ll::makeStringError(error.translateError(player.getLocaleCode()));
         }
-        return ll::makeStringError(res.error().message());
+        return res;
     }
     if (auto res = _processResizeSettlement(player, settlement); !res) {
         return res;
@@ -254,6 +256,51 @@ LandManagementService::setLandDescription(Player& player, std::shared_ptr<Land> 
     return {};
 }
 
+ll::Expected<> LandManagementService::changeOwner(std::shared_ptr<Land> const& land, mce::UUID const& newOwner) {
+    auto oldOwner = land->getOwner();
+    if (oldOwner == newOwner) {
+        return {};
+    }
+    land->setOwner(newOwner);
+    ll::event::EventBus::getInstance().publish(event::OwnerChangedEvent{land, oldOwner, newOwner});
+    return {};
+}
+
+ll::Expected<> LandManagementService::transferLand(Player& player, std::shared_ptr<Land> const& land, Player& target) {
+    return transferLand(player, land, target.getUuid());
+}
+
+ll::Expected<>
+LandManagementService::transferLand(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target) {
+    auto const actorUuid  = player.getUuid();
+    auto const isOperator = impl->mRegistry.isOperator(actorUuid);
+    if (!isOperator && actorUuid == target) {
+        return ll::makeStringError("不能将领地转让给自己, 左手倒右手哦!"_trf(player));
+    }
+
+    if (auto expected = ensurePlayerLandCountLimit(target); !expected) {
+        if (expected.error().isA<LandCreateValidator::ValidateError>()) {
+            auto& error = expected.error().as<LandCreateValidator::ValidateError>();
+            return ll::makeStringError(error.translateError(player.getLocaleCode()));
+        }
+        return expected;
+    }
+
+    auto event = event::PlayerTransferLandBeforeEvent{player, land, target};
+    ll::event::EventBus::getInstance().publish(event);
+    if (event.isCancelled()) {
+        return ll::makeStringError("操作失败，请求被取消"_trf(player));
+    }
+
+    if (auto expected = changeOwner(land, target); !expected) {
+        return expected;
+    }
+
+    ll::event::EventBus::getInstance().publish(event::PlayerTransferLandAfterEvent{player, land, target});
+    return {};
+}
+
+
 ll::Expected<std::shared_ptr<Land>>
 LandManagementService::_payMoneyAndCreateOrdinaryLand(Player& player, DefaultSelector* selector, int64_t money) {
     assert(selector != nullptr);
@@ -279,7 +326,7 @@ ll::Expected<> LandManagementService::_addOrdinaryLand(Player& player, std::shar
             auto& error = res.error().as<LandCreateValidator::ValidateError>();
             return ll::makeStringError(error.translateError(player.getLocaleCode()));
         }
-        return ll::makeStringError(res.error().message());
+        return res;
     }
     return impl->mRegistry.addOrdinaryLand(ptr);
 }
@@ -328,7 +375,7 @@ ll::Expected<> LandManagementService::_ensureAndAttachSubLand(
             auto& error = expected.error().as<LandCreateValidator::ValidateError>();
             return ll::makeStringError(error.translateError(player.getLocaleCode()));
         }
-        return ll::makeStringError(expected.error().message());
+        return expected;
     }
     return {};
 }

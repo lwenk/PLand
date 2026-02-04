@@ -3,6 +3,7 @@
 #include "pland/Global.h"
 
 #include <mc/deps/core/math/Vec3.h>
+#include <memory>
 
 
 namespace land {
@@ -95,6 +96,11 @@ public:
     ll::Expected<> setLandName(Player& player, std::shared_ptr<Land> const& land, std::string name);
 
     ll::Expected<> setLandDescription(Player& player, std::shared_ptr<Land> const& land, std::string description);
+
+    ll::Expected<> changeOwner(std::shared_ptr<Land> const& land, mce::UUID const& newOwner);
+
+    ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, Player& target);
+    ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
 
 private:
     ll::Expected<std::shared_ptr<Land>>

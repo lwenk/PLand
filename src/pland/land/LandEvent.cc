@@ -17,14 +17,6 @@ LandID           LandMemberChangeAfterEvent::getLandID() const { return mLandID;
 bool             LandMemberChangeAfterEvent::isAdd() const { return mIsAdd; }
 
 
-Player&          LandOwnerChangeBeforeEvent::getPlayer() const { return mPlayer; }
-mce::UUID const& LandOwnerChangeBeforeEvent::getNewOwner() const { return mNewOwner; }
-LandID           LandOwnerChangeBeforeEvent::getLandID() const { return mLandID; }
-Player&          LandOwnerChangeAfterEvent::getPlayer() const { return mPlayer; }
-mce::UUID const& LandOwnerChangeAfterEvent::getNewOwner() const { return mNewOwner; }
-LandID           LandOwnerChangeAfterEvent::getLandID() const { return mLandID; }
-
-
 // EventEmitter
 #define IMPLEMENT_EVENT_EMITTER(EventName)                                                                             \
     static std::unique_ptr<ll::event::EmitterBase> emitterFactory##EventName();                                        \
@@ -35,7 +27,5 @@ LandID           LandOwnerChangeAfterEvent::getLandID() const { return mLandID; 
 
 IMPLEMENT_EVENT_EMITTER(LandMemberChangeBeforeEvent)
 IMPLEMENT_EVENT_EMITTER(LandMemberChangeAfterEvent)
-IMPLEMENT_EVENT_EMITTER(LandOwnerChangeBeforeEvent)
-IMPLEMENT_EVENT_EMITTER(LandOwnerChangeAfterEvent)
 
 } // namespace land

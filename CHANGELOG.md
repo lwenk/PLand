@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ 新增功能
 
-- 新增领地 **名称**、**描述** 检查 @engsr6982
+- 新增领地 **名称**、**描述** 可配置检查 @engsr6982
 
 ### 🐛 问题修复
 
@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
 - 移除 `PlayerAskCreateLandEvent` 事件 @engsr6982
 - 新增 `PlayerChangeLandNameBeforeEvent`、`PlayerChangeLandNameAfterEvent` 事件 @engsr6982
+- 新增 `PlayerTransferLandBeforeEvent`、`PlayerTransferLandAfterEvent` 事件 @engsr6982
+- 移除 `LandOwnerChangeBeforeEvent`、`LandOwnerChangeAfterEvent` 事件 @engsr6982
+- 新增 `OwnerChangedEvent` 事件 @engsr6982
 
 ## [0.17.1] - 2026-01-28
 

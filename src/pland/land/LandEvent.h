@@ -55,41 +55,4 @@ public:
 };
 
 
-// 领地主人变动(EditLandOwnerGui)
-class [[deprecated("Waiting for reconstruction")]] LandOwnerChangeBeforeEvent final
-: public ll::event::Cancellable<ll::event::Event> {
-protected:
-    Player&          mPlayer;   // 操作者
-    mce::UUID const& mNewOwner; // 新主人 UUID
-    LandID           mLandID;
-
-public:
-    LDAPI LandOwnerChangeBeforeEvent(Player& player, mce::UUID const& newOwner, LandID landID)
-    : Cancellable(),
-      mPlayer(player),
-      mNewOwner(newOwner),
-      mLandID(landID) {}
-
-    LDNDAPI Player& getPlayer() const;
-    LDNDAPI mce::UUID const& getNewOwner() const;
-    LDNDAPI LandID           getLandID() const;
-};
-class [[deprecated("Waiting for reconstruction")]] LandOwnerChangeAfterEvent final : public ll::event::Event {
-protected:
-    Player&          mPlayer;   // 操作者
-    mce::UUID const& mNewOwner; // 目标玩家 UUID
-    LandID           mLandID;
-
-public:
-    LDAPI LandOwnerChangeAfterEvent(Player& player, mce::UUID const& newOwner, LandID landID)
-    : mPlayer(player),
-      mNewOwner(newOwner),
-      mLandID(landID) {}
-
-    LDNDAPI Player& getPlayer() const;
-    LDNDAPI mce::UUID const& getNewOwner() const;
-    LDNDAPI LandID           getLandID() const;
-};
-
-
 } // namespace land
