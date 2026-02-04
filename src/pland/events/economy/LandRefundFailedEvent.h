@@ -1,5 +1,6 @@
 #pragma once
 #include "pland/Global.h"
+#include "pland/events/LandEventMixin.h"
 
 
 #include <ll/api/event/Event.h>
@@ -12,10 +13,9 @@ namespace land {
 class Land;
 namespace event {
 
-class LandRefundFailedEvent final : public ll::event::Event {
-    std::shared_ptr<Land> mLand;
-    mce::UUID const&      mTargetPlayer;
-    int64_t               mRefundAmount{0};
+class LandRefundFailedEvent final : public LandEventMixin<ll::event::Event> {
+    mce::UUID const& mTargetPlayer;
+    int64_t          mRefundAmount{0};
 
 public:
     explicit LandRefundFailedEvent(
@@ -23,15 +23,13 @@ public:
         mce::UUID const&             targetPlayer,
         int64_t                      refundAmount
     )
-    : mLand(land),
+    : LandEventMixin(land),
       mTargetPlayer(targetPlayer),
       mRefundAmount(refundAmount) {}
 
     LDNDAPI mce::UUID const& targetPlayer() const;
 
     LDNDAPI int64_t refundAmount() const;
-
-    LDNDAPI std::shared_ptr<Land> land() const;
 };
 
 } // namespace event

@@ -105,7 +105,7 @@ bool PLand::enable() {
 
             EconomySystem::getInstance().reload();
 
-            if (ev.getConfig().internal.telemetry) {
+            if (ev.config().internal.telemetry) {
                 mImpl->mTelemetry->launch(*getThreadPool());
             } else {
                 mImpl->mTelemetry->shutdown();

@@ -9,9 +9,9 @@ namespace land::event {
 
 class PlayerRequestCreateLandEvent final : public ll::event::PlayerEvent {
 public:
-    explicit PlayerRequestCreateLandEvent(Player& player, LandType type);
+    explicit PlayerRequestCreateLandEvent(Player& player, LandType type) : PlayerEvent(player), mType(type) {}
 
-    LDAPI LandType type() const;
+    LDNDAPI LandType type() const;
 
 private:
     LandType mType;

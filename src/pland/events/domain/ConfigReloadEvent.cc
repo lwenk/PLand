@@ -3,11 +3,7 @@
 
 namespace land::events::inline infra {
 
-
-ConfigReloadEvent::ConfigReloadEvent(land::Config& config) : mConfig(config) {}
-
-Config& ConfigReloadEvent::getConfig() { return mConfig; }
-
+Config& ConfigReloadEvent::config() const { return mConfig; }
 
 IMPLEMENT_EVENT_EMITTER(ConfigReloadEvent)
 

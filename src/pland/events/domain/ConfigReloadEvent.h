@@ -15,9 +15,9 @@ class ConfigReloadEvent final : public ll::event::Event {
     Config& mConfig;
 
 public:
-    LDAPI explicit ConfigReloadEvent(Config& config);
+    explicit ConfigReloadEvent(Config& config) : mConfig(config) {}
 
-    LDNDAPI Config& getConfig();
+    LDNDAPI Config& config() const;
 };
 
 

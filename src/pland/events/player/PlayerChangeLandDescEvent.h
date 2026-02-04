@@ -1,5 +1,6 @@
 #pragma once
 #include "pland/Global.h"
+#include "pland/events/LandEventMixin.h"
 
 #include <utility>
 
@@ -12,17 +13,13 @@ class Land;
 namespace event {
 
 
-class IPlayerChangeLandDescEvent : public ll::event::PlayerEvent {
-    std::shared_ptr<Land> mLand;
-    std::string&          mDesc;
+class IPlayerChangeLandDescEvent : public LandEventMixin<ll::event::PlayerEvent> {
+    std::string& mDesc;
 
 public:
     explicit IPlayerChangeLandDescEvent(Player& player, std::shared_ptr<Land> land, std::string& desc)
-    : PlayerEvent(player),
-      mLand(std::move(land)),
+    : LandEventMixin(std::move(land), player),
       mDesc(desc) {}
-
-    LDNDAPI std::shared_ptr<Land> land() const;
 
     LDNDAPI std::string& description() const;
 };

@@ -1,7 +1,10 @@
 #pragma once
+#include "pland/Global.h"
+#include "pland/events/LandEventMixin.h"
+
 #include "ll/api/event/Cancellable.h"
 #include "ll/api/event/player/PlayerEvent.h"
-#include "pland/Global.h"
+
 #include <memory>
 #include <utility>
 
@@ -11,17 +14,13 @@ class Land;
 namespace event {
 
 
-class IPlayerChangeLandNameEvent : public ll::event::PlayerEvent {
-    std::shared_ptr<Land> mLand;
-    std::string&          mNewName;
+class IPlayerChangeLandNameEvent : public LandEventMixin<ll::event::PlayerEvent> {
+    std::string& mNewName;
 
 public:
     explicit IPlayerChangeLandNameEvent(Player& player, std::shared_ptr<Land> land, std::string& newName)
-    : PlayerEvent{player},
-      mLand{std::move(land)},
+    : LandEventMixin{std::move(land), player},
       mNewName{newName} {}
-
-    LDNDAPI std::shared_ptr<Land> land() const;
 
     LDNDAPI std::string& newName() const;
 };

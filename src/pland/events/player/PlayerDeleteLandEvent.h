@@ -1,5 +1,6 @@
 #pragma once
 #include "pland/Global.h"
+#include "pland/events/LandEventMixin.h"
 
 #include <ll/api/event/Cancellable.h>
 #include <ll/api/event/player/PlayerEvent.h>
@@ -10,23 +11,18 @@ class Land;
 namespace land {
 namespace event {
 
-class PlayerDeleteLandEvent : public ll::event::Cancellable<ll::event::PlayerEvent> {
-    std::shared_ptr<Land> mLand;
-
+class IPlayerDeleteLandEvent : public LandEventMixin<ll::event::PlayerEvent> {
 public:
-    explicit PlayerDeleteLandEvent(Player& player, std::shared_ptr<Land> land)
-    : Cancellable(player),
-      mLand(std::move(land)) {}
-
-    LDNDAPI std::shared_ptr<Land> land() const;
+    explicit IPlayerDeleteLandEvent(Player& player, std::shared_ptr<Land> land)
+    : LandEventMixin(std::move(land), player) {}
 };
 
-class PlayerDeleteLandBeforeEvent final : public PlayerDeleteLandEvent {
-    using PlayerDeleteLandEvent::PlayerDeleteLandEvent;
+class PlayerDeleteLandBeforeEvent final : public ll::event::Cancellable<IPlayerDeleteLandEvent> {
+    using Cancellable::Cancellable;
 };
 
-class PlayerDeleteLandAfterEvent final : public PlayerDeleteLandEvent {
-    using PlayerDeleteLandEvent::PlayerDeleteLandEvent;
+class PlayerDeleteLandAfterEvent final : public IPlayerDeleteLandEvent {
+    using IPlayerDeleteLandEvent::IPlayerDeleteLandEvent;
 };
 
 } // namespace event

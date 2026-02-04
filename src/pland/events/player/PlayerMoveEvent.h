@@ -6,20 +6,20 @@
 namespace land {
 namespace event {
 
-class PlayerMoveEvent : public ll::event::PlayerEvent {
+class IPlayerMoveEvent : public ll::event::PlayerEvent {
     LandID mLandID;
 
 public:
-    explicit PlayerMoveEvent(Player& player, LandID landID) : PlayerEvent(player), mLandID(landID) {}
+    explicit IPlayerMoveEvent(Player& player, LandID landID) : PlayerEvent(player), mLandID(landID) {}
 
     LDNDAPI LandID landId() const;
 };
 
-class PlayerEnterLandEvent final : public PlayerMoveEvent {
-    using PlayerMoveEvent::PlayerMoveEvent;
+class PlayerEnterLandEvent final : public IPlayerMoveEvent {
+    using IPlayerMoveEvent::IPlayerMoveEvent;
 };
-class PlayerLeaveLandEvent final : public PlayerMoveEvent {
-    using PlayerMoveEvent::PlayerMoveEvent;
+class PlayerLeaveLandEvent final : public IPlayerMoveEvent {
+    using IPlayerMoveEvent::IPlayerMoveEvent;
 };
 
 

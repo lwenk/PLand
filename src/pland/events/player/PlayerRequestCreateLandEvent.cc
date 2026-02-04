@@ -6,10 +6,6 @@
 namespace land::event {
 
 
-PlayerRequestCreateLandEvent::PlayerRequestCreateLandEvent(Player& player, LandType type)
-: PlayerEvent(player),
-  mType(type) {}
-
 LandType PlayerRequestCreateLandEvent::type() const { return mType; }
 
 

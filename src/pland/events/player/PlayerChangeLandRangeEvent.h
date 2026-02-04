@@ -1,9 +1,11 @@
 #pragma once
 #include "pland/Global.h"
-
+#include "pland/events/LandEventMixin.h"
 
 #include <ll/api/event/Cancellable.h>
 #include <ll/api/event/player/PlayerEvent.h>
+
+#include <utility>
 
 namespace land {
 struct LandResizeSettlement;
@@ -14,8 +16,7 @@ class Land;
 namespace land {
 namespace event {
 
-class PlayerChangeLandRangeEvent final : public ll::event::Cancellable<ll::event::PlayerEvent> {
-    std::shared_ptr<Land>       mLand;
+class PlayerChangeLandRangeEvent final : public ll::event::Cancellable<LandEventMixin<ll::event::PlayerEvent>> {
     LandAABB const&             mNewRange;
     LandResizeSettlement const& mResizeSettlement;
 
@@ -26,12 +27,9 @@ public:
         LandAABB const&             newRange,
         LandResizeSettlement const& resizeSettlement
     )
-    : Cancellable(player),
-      mLand(land),
+    : Cancellable(std::move(land), player),
       mNewRange(newRange),
       mResizeSettlement(resizeSettlement) {}
-
-    LDNDAPI std::shared_ptr<Land> land() const;
 
     LDNDAPI LandAABB const& newRange() const;
 
