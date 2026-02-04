@@ -466,9 +466,11 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayerGUI(Player& player, SharedL
 
 void LandManagerGUI::sendCreateSubLandConfirm(Player& player, const SharedLand& ptr) {
     ModalForm{
-        "[PLand] | 创建子领地"_trf(player),
-        "在当前领地名下创建一个子领地\n是否继续?"_trf(player),
-        "继续"_trf(player),
+        "[PLand] | 子领地创建确认"_trf(player),
+        "将在当前领地内划出一个新的子领地\n\n子领地将成为独立领地：\n• 位于当前领地范围内\n• 权限完全独立（类似租界）\n是否继续？"_trf(
+            player
+        ),
+        "创建子领地"_trf(player),
         "返回"_trf(player)
     }
         .sendTo(player, [ptr](Player& player, ModalFormResult const& res, FormCancelReason) {
