@@ -94,6 +94,8 @@ public:
 
     ll::Expected<> setLandName(Player& player, std::shared_ptr<Land> const& land, std::string name);
 
+    ll::Expected<> setLandDescription(Player& player, std::shared_ptr<Land> const& land, std::string description);
+
 private:
     ll::Expected<std::shared_ptr<Land>>
     _payMoneyAndCreateOrdinaryLand(Player& player, DefaultSelector* selector, int64_t money);

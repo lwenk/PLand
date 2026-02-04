@@ -40,6 +40,7 @@
 #include <cstdint>
 #include <stack>
 #include <string>
+#include <utility>
 #include <vector>
 
 
@@ -279,7 +280,7 @@ void LandManagerGUI::sendEditLandNameGUI(Player& player, SharedLand const& ptr) 
         [ptr](Player& pl, std::string result) {
             auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
             if (auto expected = service.setLandName(pl, ptr, result)) {
-                feedback_utils::sendText(pl, "领地名称已更改为 {}"_trf(pl, result));
+                feedback_utils::sendText(pl, "领地名称已更新!"_trf(pl, result));
             } else {
                 feedback_utils::sendError(pl, expected.error());
             }
@@ -293,8 +294,12 @@ void LandManagerGUI::sendEditLandDescGUI(Player& player, SharedLand const& ptr) 
         "请输入新的领地描述"_trf(player),
         ptr->getDescribe(),
         [ptr](Player& pl, std::string result) {
-            ptr->setDescribe(result);
-            feedback_utils::sendText(pl, "领地描述已更新!"_trf(pl));
+            auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+            if (auto expected = service.setLandDescription(pl, ptr, std::move(result))) {
+                feedback_utils::sendText(pl, "领地描述已更新!"_trf(pl));
+            } else {
+                feedback_utils::sendError(pl, expected.error());
+            }
         }
     );
 }

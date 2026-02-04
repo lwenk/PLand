@@ -1,11 +1,11 @@
 #include "LandManagementService.h"
-
 #include "LandHierarchyService.h"
 #include "LandPriceService.h"
-#include "ll/api/Expected.h"
+
 #include "pland/events/domain/LandResizedEvent.h"
 #include "pland/events/economy/LandRefundFailedEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
+#include "pland/events/player/PlayerChangeLandDescEvent.h"
 #include "pland/events/player/PlayerChangeLandNameEvent.h"
 #include "pland/events/player/PlayerChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
@@ -20,7 +20,7 @@
 #include "pland/selector/SelectorManager.h"
 #include "pland/selector/SubLandSelector.h"
 
-
+#include "ll/api/Expected.h"
 #include <ll/api/event/EventBus.h>
 
 #include <mc/world/actor/player/Player.h>
@@ -225,6 +225,31 @@ ll::Expected<> LandManagementService::setLandName(Player& player, std::shared_pt
     land->setName(name);
 
     ll::event::EventBus::getInstance().publish(event::PlayerChangeLandNameAfterEvent{player, land, name});
+    return {};
+}
+ll::Expected<>
+LandManagementService::setLandDescription(Player& player, std::shared_ptr<Land> const& land, std::string description) {
+    auto const& rule = Config::cfg.land.textRules.description;
+
+    auto result = StringValidator::validate(
+        description,
+        "领地描述"_trf(player),
+        rule.minLen,
+        rule.maxLen,
+        rule.allowNewline,
+        player.getLocaleCode()
+    );
+    if (!result) return result;
+
+    auto event = event::PlayerChangeLandDescBeforeEvent{player, land, description};
+    ll::event::EventBus::getInstance().publish(event);
+    if (event.isCancelled()) {
+        return ll::makeStringError("操作失败，请求被取消"_trf(player));
+    }
+
+    land->setDescribe(description);
+
+    ll::event::EventBus::getInstance().publish(event::PlayerChangeLandDescAfterEvent{player, land, description});
     return {};
 }
 
