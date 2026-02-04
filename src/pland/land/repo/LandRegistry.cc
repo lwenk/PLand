@@ -253,25 +253,25 @@ LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
     impl->_openDatabaseAndEnsureVersion();
 
     auto lock = std::unique_lock<std::shared_mutex>(impl->mMutex);
-    logger.trace("加载操作员...");
+    logger.info("加载管理员...");
     impl->_loadOperators();
-    logger.info("已加载 {} 位操作员", impl->mLandOperators.size());
+    logger.info("已加载 {} 位管理员", impl->mLandOperators.size());
 
-    logger.trace("加载玩家设置...");
+    logger.info("加载玩家个人设置...");
     impl->_loadPlayerSettings();
-    logger.info("已加载 {} 位玩家的设置", impl->mPlayerSettings.size());
+    logger.info("已加载 {} 位玩家的个人设置", impl->mPlayerSettings.size());
 
-    logger.trace("加载领地数据...");
+    logger.info("加载领地数据...");
     impl->_loadLands();
-    logger.info("已加载 {} 块领地数据", impl->mLandCache.size());
+    logger.info("已加载 {} 个领地", impl->mLandCache.size());
 
-    logger.trace("加载模板权限表...");
+    logger.info("加载领地默认权限模板...");
     impl->_loadLandTemplatePermTable();
-    logger.info("已加载模板权限表");
+    logger.info("领地默认权限模板加载完成");
 
-    logger.trace("构建维度区块映射...");
+    logger.info("构建领地空间索引...");
     impl->_buildDimensionChunkMap();
-    logger.info("初始化维度区块映射完成");
+    logger.info("领地空间索引构建完成");
 
     lock.unlock();
     logger.info("构建领地层级缓存...");
@@ -299,7 +299,7 @@ LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
                 }
             }
         }
-        logger.info("构建完成，共处理 {} 个领地家族(树)", familyTreeRoot.size());
+        logger.info("构建完成，共处理 {} 个领地组", familyTreeRoot.size());
     }
 
     impl->mThread = std::thread([this]() {
