@@ -104,8 +104,8 @@ public: // 领地查询API
     LDNDAPI std::unordered_set<std::shared_ptr<Land>>
             getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid dimid) const;
 
-    using ContextFilter = std::function<bool(LandContext const&)>;
-    LDNDAPI std::vector<std::shared_ptr<Land>> getLandsWhereRaw(ContextFilter const& filter) const;
+    using CustomFilter = std::function<bool(std::shared_ptr<Land> const&)>;
+    LDNDAPI std::vector<std::shared_ptr<Land>> getLandsWhere(CustomFilter const& filter) const;
 
 public:
     LDAPI static ChunkID             EncodeChunkID(int x, int z);

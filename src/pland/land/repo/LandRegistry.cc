@@ -691,12 +691,12 @@ LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid di
     return lands;
 }
 
-std::vector<std::shared_ptr<Land>> LandRegistry::getLandsWhereRaw(ContextFilter const& filter) const {
+std::vector<std::shared_ptr<Land>> LandRegistry::getLandsWhere(CustomFilter const& filter) const {
     std::shared_lock<std::shared_mutex> lock(impl->mMutex);
 
     std::vector<std::shared_ptr<Land>> result;
     for (auto const& [id, land] : impl->mLandCache) {
-        if (filter(land->_getContext())) {
+        if (filter(land)) {
             result.push_back(land);
         }
     }

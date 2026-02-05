@@ -2,6 +2,7 @@
 #include "LandHierarchyService.h"
 #include "LandPriceService.h"
 
+#include "ll/api/coro/CoroTask.h"
 #include "pland/events/domain/LandResizedEvent.h"
 #include "pland/events/domain/MemberChangedEvent.h"
 #include "pland/events/domain/OwnerChangedEvent.h"
@@ -62,15 +63,16 @@ LandManagementService::LandManagementService(
     impl->mLegacyOwnerMigrationListener =
         ll::event::EventBus::getInstance().emplaceListener<ll::event::PlayerJoinEvent>(
             [this](ll::event::PlayerJoinEvent const& ev) {
-                if (ev.self().isSimulatedPlayer()) return;
+                auto& player = ev.self();
+                if (player.isSimulatedPlayer()) return;
 
-                auto xuid  = ev.self().getXuid();
-                auto lands = impl->mRegistry.getLandsWhereRaw([&xuid](LandContext const& land) {
-                    return land.mOwnerDataIsXUID && land.mLandOwner == xuid;
+                auto xuid = player.getXuid();
+                auto uuid = player.getUuid();
+
+                auto lands = impl->mRegistry.getLandsWhere([&xuid](std::shared_ptr<Land> const& land) {
+                    return land->isOwnerDataIsXUID() && land->getRawOwner() == xuid;
                 });
-
                 if (!lands.empty()) {
-                    auto& uuid = ev.self().getUuid();
                     for (auto& land : lands) {
                         land->migrateOwner(uuid);
                     }
