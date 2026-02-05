@@ -15,6 +15,7 @@
 #include "pland/gui/common/EditLandPermTableUtilGUI.h"
 #include "pland/gui/form/BackSimpleForm.h"
 #include "pland/land/Config.h"
+#include "pland/land/Land.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/service/LandHierarchyService.h"
 #include "pland/service/LandManagementService.h"
@@ -31,7 +32,7 @@ namespace land {
 using namespace ll::form;
 
 
-void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
+void LandManagerGUI::sendMainMenu(Player& player, std::shared_ptr<Land> land) {
     auto fm = SimpleForm{};
 
     auto localeCode = player.getLocaleCode();
@@ -132,7 +133,7 @@ void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
     fm.sendTo(player);
 }
 
-void LandManagerGUI::sendEditLandPermGUI(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::sendEditLandPermGUI(Player& player, std::shared_ptr<Land> const& ptr) {
     EditLandPermTableUtilGUI::sendTo(player, ptr->getPermTable(), [ptr](Player& self, LandPermTable newTable) {
         ptr->setPermTable(newTable);
         feedback_utils::sendText(self, "权限表已更新"_trl(self.getLocaleCode()));
@@ -140,7 +141,7 @@ void LandManagerGUI::sendEditLandPermGUI(Player& player, SharedLand const& ptr) 
 }
 
 
-void LandManagerGUI::showRemoveConfirm(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::showRemoveConfirm(Player& player, std::shared_ptr<Land> const& ptr) {
     switch (ptr->getType()) {
     case LandType::Ordinary:
     case LandType::Sub:
@@ -155,7 +156,7 @@ void LandManagerGUI::showRemoveConfirm(Player& player, SharedLand const& ptr) {
     }
 }
 
-void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::confirmSimpleDelete(Player& player, std::shared_ptr<Land> const& ptr) {
     if (!ptr->isOrdinaryLand() && !ptr->isSubLand()) {
         return;
     }
@@ -188,7 +189,7 @@ void LandManagerGUI::confirmSimpleDelete(Player& player, SharedLand const& ptr) 
         });
 }
 
-void LandManagerGUI::confirmParentDelete(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::confirmParentDelete(Player& player, std::shared_ptr<Land> const& ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
 
     auto localeCode = player.getLocaleCode();
@@ -228,7 +229,7 @@ void LandManagerGUI::confirmParentDelete(Player& player, SharedLand const& ptr) 
     fm.sendTo(player);
 }
 
-void LandManagerGUI::confirmMixDelete(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::confirmMixDelete(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
@@ -268,7 +269,7 @@ void LandManagerGUI::confirmMixDelete(Player& player, SharedLand const& ptr) {
     fm.sendTo(player);
 }
 
-void LandManagerGUI::sendEditLandNameGUI(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::sendEditLandNameGUI(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
     EditStringUtilGUI::sendTo(
@@ -286,7 +287,7 @@ void LandManagerGUI::sendEditLandNameGUI(Player& player, SharedLand const& ptr) 
         }
     );
 }
-void LandManagerGUI::sendEditLandDescGUI(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::sendEditLandDescGUI(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
     EditStringUtilGUI::sendTo(
@@ -304,7 +305,7 @@ void LandManagerGUI::sendEditLandDescGUI(Player& player, SharedLand const& ptr) 
         }
     );
 }
-void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::sendTransferLandGUI(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
@@ -326,12 +327,12 @@ void LandManagerGUI::sendTransferLandGUI(Player& player, SharedLand const& ptr) 
 
     fm.sendTo(player);
 }
-void LandManagerGUI::_sendTransferLandToOnlinePlayer(Player& player, const SharedLand& ptr) {
+void LandManagerGUI::_sendTransferLandToOnlinePlayer(Player& player, const std::shared_ptr<Land>& ptr) {
     ChooseOnlinePlayerUtilGUI::sendTo(player, [ptr](Player& self, Player& target) {
         _confirmTransferLand(self, ptr, target.getUuid(), target.getRealName());
     });
 }
-void LandManagerGUI::_sendTransferLandToOfflinePlayer(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::_sendTransferLandToOfflinePlayer(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
     CustomForm fm("[PLand] | 转让给离线玩家"_trl(localeCode));
@@ -360,10 +361,10 @@ void LandManagerGUI::_sendTransferLandToOfflinePlayer(Player& player, SharedLand
     });
 }
 void LandManagerGUI::_confirmTransferLand(
-    Player&           player,
-    const SharedLand& ptr,
-    mce::UUID         target,
-    std::string       displayName
+    Player&                      player,
+    const std::shared_ptr<Land>& ptr,
+    mce::UUID                    target,
+    std::string                  displayName
 ) {
     auto localeCode = player.getLocaleCode();
 
@@ -401,7 +402,7 @@ void LandManagerGUI::_confirmTransferLand(
         });
 }
 
-void LandManagerGUI::sendCreateSubLandConfirm(Player& player, const SharedLand& ptr) {
+void LandManagerGUI::sendCreateSubLandConfirm(Player& player, const std::shared_ptr<Land>& ptr) {
     auto localeCode = player.getLocaleCode();
 
     ModalForm{
@@ -433,7 +434,7 @@ void LandManagerGUI::sendCreateSubLandConfirm(Player& player, const SharedLand& 
         });
 }
 
-void LandManagerGUI::sendChangeRangeConfirm(Player& player, SharedLand const& ptr) {
+void LandManagerGUI::sendChangeRangeConfirm(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
     ModalForm fm(
@@ -469,7 +470,7 @@ void LandManagerGUI::sendChangeRangeConfirm(Player& player, SharedLand const& pt
 }
 
 
-void LandManagerGUI::sendChangeMember(Player& player, SharedLand ptr) {
+void LandManagerGUI::sendChangeMember(Player& player, std::shared_ptr<Land> ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
 
     auto localeCode = player.getLocaleCode();
@@ -490,14 +491,14 @@ void LandManagerGUI::sendChangeMember(Player& player, SharedLand ptr) {
 
     fm.sendTo(player);
 }
-void LandManagerGUI::_sendAddOnlineMember(Player& player, SharedLand ptr) {
+void LandManagerGUI::_sendAddOnlineMember(Player& player, std::shared_ptr<Land> ptr) {
     ChooseOnlinePlayerUtilGUI::sendTo(
         player,
         [ptr](Player& self, Player& target) { _confirmAddMember(self, ptr, target.getUuid(), target.getRealName()); },
         BackSimpleForm<>::makeCallback<sendChangeMember>(ptr)
     );
 }
-void LandManagerGUI::_sendAddOfflineMember(Player& player, SharedLand ptr) {
+void LandManagerGUI::_sendAddOfflineMember(Player& player, std::shared_ptr<Land> ptr) {
     auto localeCode = player.getLocaleCode();
 
     CustomForm fm("[PLand] | 添加离线成员"_trl(localeCode));
@@ -526,7 +527,12 @@ void LandManagerGUI::_sendAddOfflineMember(Player& player, SharedLand ptr) {
         _confirmAddMember(self, ptr, targetUuid, playerName);
     });
 }
-void LandManagerGUI::_confirmAddMember(Player& player, SharedLand ptr, mce::UUID member, std::string displayName) {
+void LandManagerGUI::_confirmAddMember(
+    Player&               player,
+    std::shared_ptr<Land> ptr,
+    mce::UUID             member,
+    std::string           displayName
+) {
     auto localeCode = player.getLocaleCode();
 
     ModalForm fm(
@@ -552,7 +558,7 @@ void LandManagerGUI::_confirmAddMember(Player& player, SharedLand ptr, mce::UUID
         }
     });
 }
-void LandManagerGUI::_confirmRemoveMember(Player& player, SharedLand ptr, mce::UUID member) {
+void LandManagerGUI::_confirmRemoveMember(Player& player, std::shared_ptr<Land> ptr, mce::UUID member) {
     auto info       = ll::service::PlayerInfo::getInstance().fromUuid(member);
     auto localeCode = player.getLocaleCode();
 

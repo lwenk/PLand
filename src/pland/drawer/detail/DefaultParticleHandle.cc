@@ -114,7 +114,7 @@ public:
         return id;
     }
 
-    void draw(SharedLand const& land) {
+    void draw(std::shared_ptr<Land> const& land) {
         if (mDrawedLands.contains(land->getId())) {
             return;
         }

@@ -9,6 +9,7 @@
 #include "pland/land/repo/LandContext.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/utils/FeedbackUtils.h"
+#include "pland/land/Land.h"
 
 #include "ll/api/service/PlayerInfo.h"
 
@@ -90,11 +91,11 @@ void LandOperatorManagerGUI::sendChooseLandGUI(Player& player, mce::UUID const& 
     sendChooseLandAdvancedGUI(player, PLand::getInstance().getLandRegistry().getLands(targetPlayer));
 }
 
-void LandOperatorManagerGUI::sendChooseLandAdvancedGUI(Player& player, std::vector<SharedLand> lands) {
+void LandOperatorManagerGUI::sendChooseLandAdvancedGUI(Player& player, std::vector<std::shared_ptr<Land>> lands) {
     ChooseLandAdvancedUtilGUI::sendTo(
         player,
         lands,
-        [](Player& self, SharedLand ptr) { LandManagerGUI::sendMainMenu(self, ptr); },
+        [](Player& self, std::shared_ptr<Land> ptr) { LandManagerGUI::sendMainMenu(self, ptr); },
         BackSimpleForm<>::makeCallback<sendMainMenu>()
     );
 }

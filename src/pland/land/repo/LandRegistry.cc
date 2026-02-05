@@ -42,18 +42,18 @@
 namespace land {
 
 struct LandRegistry::Impl {
-    std::unique_ptr<ll::data::KeyValueDB>         mDB;                             // 领地数据库
-    std::vector<mce::UUID>                        mLandOperators;                  // 领地操作员
-    std::unordered_map<mce::UUID, PlayerSettings> mPlayerSettings;                 // 玩家设置
-    std::unordered_map<LandID, SharedLand>        mLandCache;                      // 领地缓存
-    mutable std::shared_mutex                     mMutex;                          // 读写锁
-    std::unique_ptr<internal::LandIdAllocator>    mLandIdAllocator{nullptr};       // 领地ID分配器
-    internal::LandDimensionChunkMap               mDimensionChunkMap;              // 维度区块映射
-    std::unique_ptr<LandTemplatePermTable>        mLandTemplatePermTable{nullptr}; // 领地模板权限表
-    std::thread                                   mThread;                         // 线程
-    std::atomic<bool>                             mThreadQuit{false};              // 线程退出标志
-    mutable std::mutex                            mThreadMutex;                    // 线程互斥锁(仅 mThreadCV 使用)
-    std::condition_variable                       mThreadCV;                       // 线程条件变量
+    std::unique_ptr<ll::data::KeyValueDB>             mDB;                             // 领地数据库
+    std::vector<mce::UUID>                            mLandOperators;                  // 领地操作员
+    std::unordered_map<mce::UUID, PlayerSettings>     mPlayerSettings;                 // 玩家设置
+    std::unordered_map<LandID, std::shared_ptr<Land>> mLandCache;                      // 领地缓存
+    mutable std::shared_mutex                         mMutex;                          // 读写锁
+    std::unique_ptr<internal::LandIdAllocator>        mLandIdAllocator{nullptr};       // 领地ID分配器
+    internal::LandDimensionChunkMap                   mDimensionChunkMap;              // 维度区块映射
+    std::unique_ptr<LandTemplatePermTable>            mLandTemplatePermTable{nullptr}; // 领地模板权限表
+    std::thread                                       mThread;                         // 线程
+    std::atomic<bool>                                 mThreadQuit{false};              // 线程退出标志
+    mutable std::mutex                                mThreadMutex;                    // 线程互斥锁(仅 mThreadCV 使用)
+    std::condition_variable                           mThreadCV;                       // 线程条件变量
 
 
     void _loadOperators() {
@@ -201,7 +201,7 @@ struct LandRegistry::Impl {
         }
     }
 
-    ll::Expected<> _addLand(SharedLand land, bool allocateId = true) {
+    ll::Expected<> _addLand(std::shared_ptr<Land> land, bool allocateId = true) {
         if (!land || (allocateId && land->getId() != INVALID_LAND_ID)) {
             return StorageError::make(StorageError::ErrorCode::InvalidLand, "The land is invalid or land ID is not -1");
         }
@@ -218,7 +218,7 @@ struct LandRegistry::Impl {
         land->markDirty(); // 标记为脏数据, 避免持久化失败
         return {};
     }
-    ll::Expected<> _removeLand(SharedLand const& ptr) {
+    ll::Expected<> _removeLand(std::shared_ptr<Land> const& ptr) {
         mDimensionChunkMap.removeLand(ptr);
         if (!mLandCache.erase(ptr->getId())) {
             mDimensionChunkMap.addLand(ptr);
@@ -233,7 +233,7 @@ struct LandRegistry::Impl {
         return {};
     }
 
-    bool _save(SharedLand const& land, bool force = false) const {
+    bool _save(std::shared_ptr<Land> const& land, bool force = false) const {
         if (!land->isDirty() && !force) {
             return true; // 没有变化，且非强制保存
         }
@@ -396,12 +396,12 @@ bool LandRegistry::hasLand(LandID id) const {
     return impl->mLandCache.find(id) != impl->mLandCache.end();
 }
 
-void LandRegistry::refreshLandRange(SharedLand const& ptr) {
+void LandRegistry::refreshLandRange(std::shared_ptr<Land> const& ptr) {
     std::unique_lock<std::shared_mutex> lock(impl->mMutex);
     impl->mDimensionChunkMap.refreshRange(ptr);
 }
 
-ll::Expected<> LandRegistry::addOrdinaryLand(SharedLand const& land) {
+ll::Expected<> LandRegistry::addOrdinaryLand(std::shared_ptr<Land> const& land) {
     if (!land->isOrdinaryLand()) {
         return StorageError::make(
             StorageError::ErrorCode::LandTypeMismatch,
@@ -415,7 +415,7 @@ ll::Expected<> LandRegistry::addOrdinaryLand(SharedLand const& land) {
     }
     return impl->_addLand(land);
 }
-ll::Expected<> LandRegistry::removeOrdinaryLand(SharedLand const& ptr) {
+ll::Expected<> LandRegistry::removeOrdinaryLand(std::shared_ptr<Land> const& ptr) {
     if (!ptr->isOrdinaryLand()) {
         return StorageError::make(
             StorageError::ErrorCode::LandTypeMismatch,
@@ -488,7 +488,7 @@ ll::Expected<> LandRegistry::executeTransaction(
     return {};
 }
 
-SharedLand LandRegistry::getLand(LandID id) const {
+std::shared_ptr<Land> LandRegistry::getLand(LandID id) const {
     std::shared_lock lock(impl->mMutex);
 
     auto landIt = impl->mLandCache.find(id);
@@ -497,20 +497,20 @@ SharedLand LandRegistry::getLand(LandID id) const {
     }
     return nullptr;
 }
-std::vector<SharedLand> LandRegistry::getLands() const {
+std::vector<std::shared_ptr<Land>> LandRegistry::getLands() const {
     std::shared_lock lock(impl->mMutex);
 
-    std::vector<SharedLand> lands;
+    std::vector<std::shared_ptr<Land>> lands;
     lands.reserve(impl->mLandCache.size());
     for (auto& land : impl->mLandCache) {
         lands.push_back(land.second);
     }
     return lands;
 }
-std::vector<SharedLand> LandRegistry::getLands(std::vector<LandID> const& ids) const {
+std::vector<std::shared_ptr<Land>> LandRegistry::getLands(std::vector<LandID> const& ids) const {
     std::shared_lock lock(impl->mMutex);
 
-    std::vector<SharedLand> lands;
+    std::vector<std::shared_ptr<Land>> lands;
     for (auto id : ids) {
         if (auto iter = impl->mLandCache.find(id); iter != impl->mLandCache.end()) {
             lands.push_back(iter->second);
@@ -518,10 +518,10 @@ std::vector<SharedLand> LandRegistry::getLands(std::vector<LandID> const& ids) c
     }
     return lands;
 }
-std::vector<SharedLand> LandRegistry::getLands(LandDimid dimid) const {
+std::vector<std::shared_ptr<Land>> LandRegistry::getLands(LandDimid dimid) const {
     std::shared_lock lock(impl->mMutex);
 
-    std::vector<SharedLand> lands;
+    std::vector<std::shared_ptr<Land>> lands;
     for (auto& land : impl->mLandCache) {
         if (land.second->getDimensionId() == dimid) {
             lands.push_back(land.second);
@@ -529,10 +529,10 @@ std::vector<SharedLand> LandRegistry::getLands(LandDimid dimid) const {
     }
     return lands;
 }
-std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, bool includeShared) const {
+std::vector<std::shared_ptr<Land>> LandRegistry::getLands(mce::UUID const& uuid, bool includeShared) const {
     std::shared_lock lock(impl->mMutex);
 
-    std::vector<SharedLand> lands;
+    std::vector<std::shared_ptr<Land>> lands;
     for (auto& land : impl->mLandCache) {
         if (land.second->isOwner(uuid) || (includeShared && land.second->isMember(uuid))) {
             lands.push_back(land.second);
@@ -540,10 +540,10 @@ std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, bool inclu
     }
     return lands;
 }
-std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, LandDimid dimid) const {
+std::vector<std::shared_ptr<Land>> LandRegistry::getLands(mce::UUID const& uuid, LandDimid dimid) const {
     std::shared_lock lock(impl->mMutex);
 
-    std::vector<SharedLand> lands;
+    std::vector<std::shared_ptr<Land>> lands;
     for (auto& land : impl->mLandCache) {
         if (land.second->getDimensionId() == dimid && land.second->isOwner(uuid)) {
             lands.push_back(land.second);
@@ -551,20 +551,21 @@ std::vector<SharedLand> LandRegistry::getLands(mce::UUID const& uuid, LandDimid 
     }
     return lands;
 }
-std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> LandRegistry::getLandsByOwner() const {
+std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>> LandRegistry::getLandsByOwner() const {
     std::shared_lock lock(impl->mMutex);
 
-    std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> lands;
+    std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>> lands;
     for (const auto& ptr : impl->mLandCache | std::views::values) {
         auto& owner = ptr->getOwner();
         lands[owner].insert(ptr);
     }
     return lands;
 }
-std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> LandRegistry::getLandsByOwner(LandDimid dimid) const {
+std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>>
+LandRegistry::getLandsByOwner(LandDimid dimid) const {
     std::shared_lock lock(impl->mMutex);
 
-    std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> res;
+    std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>> res;
     for (const auto& ptr : impl->mLandCache | std::views::values) {
         if (ptr->getDimensionId() != dimid) {
             continue;
@@ -589,9 +590,9 @@ LandPermType LandRegistry::getPermType(mce::UUID const& uuid, LandID id, bool in
 }
 
 
-SharedLand LandRegistry::getLandAt(BlockPos const& pos, LandDimid dimid) const {
-    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
-    std::unordered_set<SharedLand>      result;
+std::shared_ptr<Land> LandRegistry::getLandAt(BlockPos const& pos, LandDimid dimid) const {
+    std::shared_lock<std::shared_mutex>       lock(impl->mMutex);
+    std::unordered_set<std::shared_ptr<Land>> result;
 
     auto landsIds = impl->mDimensionChunkMap.queryLand(dimid, EncodeChunkID(pos.x >> 4, pos.z >> 4));
     if (!landsIds) {
@@ -612,8 +613,8 @@ SharedLand LandRegistry::getLandAt(BlockPos const& pos, LandDimid dimid) const {
         }
 
         // 子领地优先级最高
-        SharedLand deepestLand = nullptr;
-        int        maxLevel    = -1;
+        std::shared_ptr<Land> deepestLand = nullptr;
+        int                   maxLevel    = -1;
         for (auto& land : result) {
             int currentLevel = land->getNestedLevel();
             if (currentLevel > maxLevel) {
@@ -626,15 +627,16 @@ SharedLand LandRegistry::getLandAt(BlockPos const& pos, LandDimid dimid) const {
 
     return nullptr;
 }
-std::unordered_set<SharedLand> LandRegistry::getLandAt(BlockPos const& center, int radius, LandDimid dimid) const {
+std::unordered_set<std::shared_ptr<Land>>
+LandRegistry::getLandAt(BlockPos const& center, int radius, LandDimid dimid) const {
     std::shared_lock<std::shared_mutex> lock(impl->mMutex);
 
     if (!impl->mDimensionChunkMap.hasDimension(dimid)) {
         return {};
     }
 
-    std::unordered_set<ChunkID>    visitedChunks; // 记录已访问的区块
-    std::unordered_set<SharedLand> lands;
+    std::unordered_set<ChunkID>               visitedChunks; // 记录已访问的区块
+    std::unordered_set<std::shared_ptr<Land>> lands;
 
     int minChunkX = (center.x - radius) >> 4;
     int minChunkZ = (center.z - radius) >> 4;
@@ -665,7 +667,7 @@ std::unordered_set<SharedLand> LandRegistry::getLandAt(BlockPos const& center, i
     }
     return lands;
 }
-std::unordered_set<SharedLand>
+std::unordered_set<std::shared_ptr<Land>>
 LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid dimid) const {
     std::shared_lock<std::shared_mutex> lock(impl->mMutex);
 
@@ -673,8 +675,8 @@ LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid di
         return {};
     }
 
-    std::unordered_set<ChunkID>    visitedChunks;
-    std::unordered_set<SharedLand> lands;
+    std::unordered_set<ChunkID>               visitedChunks;
+    std::unordered_set<std::shared_ptr<Land>> lands;
 
     int minChunkX = std::min(pos1.x, pos2.x) >> 4;
     int minChunkZ = std::min(pos1.z, pos2.z) >> 4;
@@ -706,10 +708,10 @@ LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid di
     return lands;
 }
 
-std::vector<SharedLand> LandRegistry::getLandsWhereRaw(ContextFilter const& filter) const {
+std::vector<std::shared_ptr<Land>> LandRegistry::getLandsWhereRaw(ContextFilter const& filter) const {
     std::shared_lock<std::shared_mutex> lock(impl->mMutex);
 
-    std::vector<SharedLand> result;
+    std::vector<std::shared_ptr<Land>> result;
     for (auto const& [id, land] : impl->mLandCache) {
         if (filter(land->_getContext())) {
             result.push_back(land);

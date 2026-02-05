@@ -16,14 +16,12 @@ class UUID;
 };
 
 namespace land {
-
-class Land;
 namespace service {
 class LandHierarchyService;
 class LandManagementService;
 } // namespace service
 
-using SharedLand = std::shared_ptr<Land>; // 共享指针
+
 class Land final : std::enable_shared_from_this<Land> {
 public:
     LD_DISABLE_COPY(Land);
@@ -41,7 +39,7 @@ public:
 
     template <typename... Args>
         requires std::constructible_from<Land, Args...>
-    static SharedLand make(Args&&... args) {
+    static std::shared_ptr<Land> make(Args&&... args) {
         return std::make_shared<Land>(std::forward<Args>(args)...);
     }
 
@@ -191,7 +189,7 @@ public:
     LDAPI void load(nlohmann::json& json); // 加载数据
     LDAPI nlohmann::json toJson() const;   // 导出数据
 
-    LDAPI bool operator==(SharedLand const& other) const;
+    LDAPI bool operator==(Land const& other) const;
 
 private:
     struct Impl;

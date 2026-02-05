@@ -21,6 +21,7 @@
 #include "pland/PLand.h"
 #include "pland/events/player/PlayerMoveEvent.h"
 #include "pland/land/Config.h"
+#include "pland/land/Land.h"
 #include "pland/land/repo/LandRegistry.h"
 
 #include <unordered_map>

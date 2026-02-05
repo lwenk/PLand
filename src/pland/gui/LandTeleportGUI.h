@@ -1,11 +1,11 @@
 #pragma once
 #include "pland/Global.h"
-#include "pland/land/Land.h"
 
 class Player;
 
 namespace land {
 
+class Land;
 
 class LandTeleportGUI {
 public:
@@ -13,7 +13,7 @@ public:
 
     LDAPI static void sendTo(Player& player); // sendTo -> impl
 
-    LDAPI static void impl(Player& player, SharedLand land);
+    LDAPI static void impl(Player& player, std::shared_ptr<Land> land);
 };
 
 

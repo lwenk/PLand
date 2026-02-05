@@ -37,9 +37,9 @@ void EventListener::registerILAWorldListeners() {
 
     RegisterListenerIf(Config::cfg.listeners.ExplosionBeforeEvent, [&]() {
         return bus->emplaceListener<ila::mc::ExplosionBeforeEvent>([db, logger](ila::mc::ExplosionBeforeEvent& ev) {
-            auto       explosionPos = BlockPos{ev.explosion().mPos};
-            auto       dimid        = ev.blockSource().getDimensionId();
-            SharedLand centerLand   = db->getLandAt(explosionPos, dimid);
+            auto                  explosionPos = BlockPos{ev.explosion().mPos};
+            auto                  dimid        = ev.blockSource().getDimensionId();
+            std::shared_ptr<Land> centerLand   = db->getLandAt(explosionPos, dimid);
 
             EVENT_TRACE("ExplosionEvent", EVENT_TRACE_LOG, "pos={}", explosionPos.toString());
 

@@ -10,7 +10,7 @@
 namespace land {
 
 
-LandResizeSelector::LandResizeSelector(Player& player, SharedLand land)
+LandResizeSelector::LandResizeSelector(Player& player, std::shared_ptr<Land> land)
 : ISelector(player, land->getDimensionId(), land->is3D()),
   mLand(land) {
     mOldRangeDrawId = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(player)->draw(
@@ -31,7 +31,7 @@ LandResizeSelector::~LandResizeSelector() {
     }
 }
 
-SharedLand LandResizeSelector::getLand() const { return mLand.lock(); }
+std::shared_ptr<Land> LandResizeSelector::getLand() const { return mLand.lock(); }
 
 
 } // namespace land

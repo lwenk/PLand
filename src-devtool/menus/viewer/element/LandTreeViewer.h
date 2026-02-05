@@ -2,6 +2,7 @@
 #include "components/IComponent.h"
 #include "pland/Global.h"
 #include "pland/land/Land.h"
+
 #include <imgui.h>
 #include <memory>
 #include <vector>
@@ -28,14 +29,15 @@ private:
     struct NodeLayout {
         float                                    x, y;     // 相对画布的逻辑坐标
         float                                    width;    // 子树总宽度
-        land::SharedLand                         land;     // 领地数据
+        std::shared_ptr<land::Land>              land;     // 领地数据
         std::vector<std::unique_ptr<NodeLayout>> children; // 子节点
     };
 
     // 布局计算
-    std::unique_ptr<NodeLayout> _buildTree(land::SharedLand const& root, land::service::LandHierarchyService& service);
-    float                       _calculateSubtreeWidth(NodeLayout* node);
-    void                        _assignCoordinates(NodeLayout* node, float x_offset, float y_depth);
+    std::unique_ptr<NodeLayout>
+          _buildTree(std::shared_ptr<land::Land> const& root, land::service::LandHierarchyService& service);
+    float _calculateSubtreeWidth(NodeLayout* node);
+    void  _assignCoordinates(NodeLayout* node, float x_offset, float y_depth);
 
     // 渲染辅助
     void _drawLink(ImDrawList* dl, NodeLayout* parent, NodeLayout* child, const ImVec2& origin, float scale);

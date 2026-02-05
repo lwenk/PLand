@@ -208,7 +208,7 @@ void Land::load(nlohmann::json& json) {
 }
 nlohmann::json Land::toJson() const { return json_util::struct2json(impl->mContext); }
 
-bool Land::operator==(SharedLand const& other) const { return impl->mContext.mLandID == other->impl->mContext.mLandID; }
+bool Land::operator==(Land const& other) const { return impl->mContext.mLandID == other.impl->mContext.mLandID; }
 
 
 // friend LandHierarchyService API

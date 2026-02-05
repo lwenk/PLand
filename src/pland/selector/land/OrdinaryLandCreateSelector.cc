@@ -13,7 +13,7 @@ namespace land {
 OrdinaryLandCreateSelector::OrdinaryLandCreateSelector(Player& player, bool is3D)
 : ISelector(player, player.getDimensionId(), is3D) {}
 
-SharedLand OrdinaryLandCreateSelector::newLand() const {
+std::shared_ptr<Land> OrdinaryLandCreateSelector::newLand() const {
     if (!isPointABSet()) {
         return nullptr;
     }

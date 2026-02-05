@@ -30,7 +30,7 @@ void LandCacheViewer::tick() { window_->tick(); }
 // LandCacheViewerWindow
 LandCacheViewerWindow::LandCacheViewerWindow() { this->setVisible(true); }
 
-void LandCacheViewerWindow::handleButtonClicked(Buttons bt, land::SharedLand land) {
+void LandCacheViewerWindow::handleButtonClicked(Buttons bt, std::shared_ptr<land::Land> land) {
     switch (bt) {
     case EditLand:
         handleEditLand(land);
@@ -40,7 +40,7 @@ void LandCacheViewerWindow::handleButtonClicked(Buttons bt, land::SharedLand lan
         break;
     }
 }
-void LandCacheViewerWindow::handleEditLand(land::SharedLand land) {
+void LandCacheViewerWindow::handleEditLand(std::shared_ptr<land::Land> land) {
     auto id = land->getId();
     if (!editors_.contains(id)) {
         editors_.emplace(id, std::make_unique<LandEditor>(land));
@@ -48,7 +48,7 @@ void LandCacheViewerWindow::handleEditLand(land::SharedLand land) {
     auto const& editor = editors_[id];
     editor->setVisible(!editor->visible());
 }
-void LandCacheViewerWindow::handleExportLand(land::SharedLand land) {
+void LandCacheViewerWindow::handleExportLand(std::shared_ptr<land::Land> land) {
     namespace fs = std::filesystem;
     auto dir     = land::PLand::getInstance().getSelf().getModDir() / "devtool_exports";
     if (!std::filesystem::exists(dir)) {

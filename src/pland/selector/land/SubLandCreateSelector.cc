@@ -10,7 +10,7 @@
 namespace land {
 
 
-SubLandCreateSelector::SubLandCreateSelector(Player& player, SharedLand parent)
+SubLandCreateSelector::SubLandCreateSelector(Player& player, std::shared_ptr<Land> parent)
 : ISelector(player, parent->getDimensionId(), true) {
     mParentLand        = parent;
     mParentRangeDrawId = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(player)->draw(
@@ -31,9 +31,9 @@ SubLandCreateSelector::~SubLandCreateSelector() {
     }
 }
 
-SharedLand SubLandCreateSelector::getParentLand() const { return mParentLand.lock(); }
+std::shared_ptr<Land> SubLandCreateSelector::getParentLand() const { return mParentLand.lock(); }
 
-SharedLand SubLandCreateSelector::newSubLand() const {
+std::shared_ptr<Land> SubLandCreateSelector::newSubLand() const {
     if (!isPointABSet()) {
         return nullptr;
     }

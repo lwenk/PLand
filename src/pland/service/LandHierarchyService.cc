@@ -3,8 +3,7 @@
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/land/repo/TransactionContext.h"
 #include "pland/land/validator/LandCreateValidator.h"
-
-
+#include "pland/land/Land.h"
 
 namespace land {
 namespace service {
@@ -176,7 +175,7 @@ int LandHierarchyService::getNestedLevel(std::shared_ptr<Land> const& land) cons
         return 0;
     }
 
-    std::stack<SharedLand> stack;
+    std::stack<std::shared_ptr<Land>> stack;
     stack.push(getParent(land));
     int level = 0;
     while (!stack.empty()) {
@@ -212,7 +211,7 @@ std::shared_ptr<Land> LandHierarchyService::getRoot(std::shared_ptr<Land> const&
     if (!land->hasParentLand()) {
         return land;
     }
-    SharedLand cur = land;
+    std::shared_ptr<Land> cur = land;
     while (auto parent = getParent(cur)) {
         cur = parent;
     }
@@ -227,7 +226,7 @@ std::unordered_set<std::shared_ptr<Land>> LandHierarchyService::getFamilyTree(st
 
 ll::coro::Generator<std::shared_ptr<Land>>
 LandHierarchyService::getDescendants(std::shared_ptr<Land> const& land) const {
-    std::stack<SharedLand> stack;
+    std::stack<std::shared_ptr<Land>> stack;
     stack.push(land);
     while (!stack.empty()) {
         auto current = stack.top();
@@ -241,7 +240,7 @@ LandHierarchyService::getDescendants(std::shared_ptr<Land> const& land) const {
     }
 }
 ll::coro::Generator<std::shared_ptr<Land>> LandHierarchyService::getAncestors(std::shared_ptr<Land> const& land) const {
-    std::stack<SharedLand> stack;
+    std::stack<std::shared_ptr<Land>> stack;
     stack.push(land);
     while (!stack.empty()) {
         auto cur = stack.top();
@@ -255,7 +254,7 @@ ll::coro::Generator<std::shared_ptr<Land>> LandHierarchyService::getAncestors(st
 
 std::unordered_set<std::shared_ptr<Land>>
 LandHierarchyService::getSelfAndAncestors(std::shared_ptr<Land> const& land) const {
-    std::unordered_set<SharedLand> parentLands;
+    std::unordered_set<std::shared_ptr<Land>> parentLands;
     for (auto ptr : getAncestors(land)) {
         parentLands.insert(ptr);
     }
@@ -264,7 +263,7 @@ LandHierarchyService::getSelfAndAncestors(std::shared_ptr<Land> const& land) con
 
 std::unordered_set<std::shared_ptr<Land>>
 LandHierarchyService::getSelfAndDescendants(std::shared_ptr<Land> const& land) const {
-    std::unordered_set<SharedLand> descendants;
+    std::unordered_set<std::shared_ptr<Land>> descendants;
     for (auto ptr : getDescendants(land)) {
         descendants.insert(ptr);
     }

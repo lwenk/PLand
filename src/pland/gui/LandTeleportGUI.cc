@@ -22,7 +22,7 @@ void LandTeleportGUI::sendTo(Player& player) {
     );
 }
 
-void LandTeleportGUI::impl(Player& player, SharedLand land) {
+void LandTeleportGUI::impl(Player& player, std::shared_ptr<Land> land) {
     auto const& tpPos = land->getTeleportPos();
     // TODO: 改进未设置语义，迁移到 std::optional<T>
     if (tpPos.isZero() || !land->getAABB().hasPos(tpPos.as<Vec3>())) {

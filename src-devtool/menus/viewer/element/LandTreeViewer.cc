@@ -40,7 +40,7 @@ void LandTreeViewer::render() {
     auto& registry         = land::PLand::getInstance().getLandRegistry();
 
     // 获取根领地对象
-    land::SharedLand rootLand = registry.getLand(mRootId);
+    std::shared_ptr<land::Land> rootLand = registry.getLand(mRootId);
     if (!rootLand) {
         ImGui::TextColored(ImVec4(1, 0, 0, 1), "Invalid Land ID or Land not found.");
         return;
@@ -134,7 +134,7 @@ void LandTreeViewer::render() {
 }
 
 std::unique_ptr<LandTreeViewer::NodeLayout>
-LandTreeViewer::_buildTree(land::SharedLand const& root, land::service::LandHierarchyService& service) {
+LandTreeViewer::_buildTree(std::shared_ptr<land::Land> const& root, land::service::LandHierarchyService& service) {
     auto node   = std::make_unique<NodeLayout>();
     node->land  = root;
     node->width = 0;

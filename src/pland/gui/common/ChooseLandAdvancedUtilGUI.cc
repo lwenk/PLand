@@ -1,9 +1,13 @@
 #include "ChooseLandAdvancedUtilGUI.h"
+
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/SimpleForm.h"
+
 #include "pland/gui/form/BackPaginatedSimpleForm.h"
 #include "pland/gui/form/BackSimpleForm.h"
 #include "pland/gui/form/PaginatedSimpleForm.h"
+#include "pland/land/Land.h"
+
 #include <cassert>
 
 
@@ -14,7 +18,7 @@ using ll::form::CustomFormResult;
 
 
 class ChooseLandAdvancedUtilGUI::Impl final {
-    std::vector<SharedLand>                 mLands{};                    // 领地数据
+    std::vector<std::shared_ptr<Land>>      mLands{};                    // 领地数据
     ChooseCallback                          mCallback{};                 // 回调
     BackSimpleForm<>::ButtonCallback        mBackCallback{};             // 返回按钮回调
     std::optional<std::string>              mFuzzyKeyword{std::nullopt}; // 模糊搜索关键字
@@ -22,7 +26,11 @@ class ChooseLandAdvancedUtilGUI::Impl final {
     std::map<View, BackPaginatedSimpleForm> mViews{};                    // 视图
 
 public:
-    explicit Impl(std::vector<SharedLand> lands, ChooseCallback callback, BackSimpleForm<>::ButtonCallback back = {})
+    explicit Impl(
+        std::vector<std::shared_ptr<Land>> lands,
+        ChooseCallback                     callback,
+        BackSimpleForm<>::ButtonCallback   back = {}
+    )
     : mLands(std::move(lands)),
       mCallback(std::move(callback)),
       mBackCallback(std::move(back)) {
@@ -234,9 +242,9 @@ public:
 
 // ChooseLandAdvancedUtilGUI
 ChooseLandAdvancedUtilGUI::ChooseLandAdvancedUtilGUI(
-    std::vector<SharedLand>          lands,
-    ChooseCallback                   callback,
-    BackSimpleForm<>::ButtonCallback back
+    std::vector<std::shared_ptr<Land>> lands,
+    ChooseCallback                     callback,
+    BackSimpleForm<>::ButtonCallback   back
 ) {
     impl_ = new Impl(std::move(lands), std::move(callback), std::move(back));
 }

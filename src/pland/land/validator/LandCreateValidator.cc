@@ -2,6 +2,7 @@
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
 #include "pland/land/Config.h"
+#include "pland/land/Land.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/service/LandHierarchyService.h"
 #include "pland/utils/FeedbackUtils.h"
@@ -17,6 +18,7 @@
 #include "nonstd/expected.hpp"
 
 #include <magic_enum.hpp>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
@@ -25,7 +27,7 @@ namespace land {
 
 
 ll::Expected<>
-LandCreateValidator::validateCreateOrdinaryLand(LandRegistry& registry, Player& player, SharedLand land) {
+LandCreateValidator::validateCreateOrdinaryLand(LandRegistry& registry, Player& player, std::shared_ptr<Land> land) {
     if (auto res = isPlayerLandCountLimitExceeded(registry, player.getUuid()); !res) {
         return res;
     }
@@ -42,7 +44,7 @@ LandCreateValidator::validateCreateOrdinaryLand(LandRegistry& registry, Player& 
 }
 
 ll::Expected<>
-LandCreateValidator::validateChangeLandRange(LandRegistry& registry, SharedLand land, LandAABB newRange) {
+LandCreateValidator::validateChangeLandRange(LandRegistry& registry, std::shared_ptr<Land> land, LandAABB newRange) {
     if (auto res = isLandRangeLegal(newRange, land->getDimensionId(), land->is3D()); !res) {
         return res;
     }
@@ -57,7 +59,7 @@ LandCreateValidator::validateChangeLandRange(LandRegistry& registry, SharedLand 
 
 ll::Expected<> LandCreateValidator::validateCreateSubLand(
     Player&                        player,
-    SharedLand                     land,
+    std::shared_ptr<Land>          land,
     LandAABB const&                subRange,
     LandRegistry&                  registry,
     service::LandHierarchyService& service
@@ -143,9 +145,9 @@ ll::Expected<> LandCreateValidator::isLandRangeLegal(LandAABB const& range, Land
 
 
 ll::Expected<> LandCreateValidator::isOrdinaryLandRangeConflict(
-    LandRegistry&           registry,
-    SharedLand const&       land,
-    std::optional<LandAABB> newRange
+    LandRegistry&                registry,
+    std::shared_ptr<Land> const& land,
+    std::optional<LandAABB>      newRange
 ) {
     auto&       aabb       = newRange ? *newRange : land->getAABB();
     auto const& minSpacing = Config::cfg.land.minSpacing;
@@ -177,7 +179,7 @@ ll::Expected<> LandCreateValidator::isOrdinaryLandRangeConflict(
 
 ll::Expected<> LandCreateValidator::isSubLandPositionLegal(
     service::LandHierarchyService& hierarchyService,
-    SharedLand const&              land,
+    std::shared_ptr<Land> const&   land,
     LandAABB const&                subRange
 ) {
     // 子领地必须位于父领地内

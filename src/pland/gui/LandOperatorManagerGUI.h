@@ -1,10 +1,14 @@
 #pragma once
 #include "pland/Global.h"
-#include "pland/land/Land.h"
 
 class Player;
+namespace mce {
+class UUID;
+}
 
 namespace land {
+
+class Land;
 
 
 /**
@@ -20,7 +24,7 @@ public:
     LDAPI static void sendChoosePlayerFromDb(Player& player, ChoosePlayerCallback callback);
 
     LDAPI static void sendChooseLandGUI(Player& player, mce::UUID const& targetPlayer);
-    LDAPI static void sendChooseLandAdvancedGUI(Player& player, std::vector<SharedLand> lands);
+    LDAPI static void sendChooseLandAdvancedGUI(Player& player, std::vector<std::shared_ptr<Land>> lands);
 };
 
 

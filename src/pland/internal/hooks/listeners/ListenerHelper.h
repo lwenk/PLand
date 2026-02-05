@@ -52,7 +52,8 @@
 namespace land {
 
 // 共享的权限检查辅助函数
-inline bool PreCheckLandExistsAndPermission(SharedLand const& ptr, mce::UUID const& uuid = mce::UUID::EMPTY()) {
+inline bool
+PreCheckLandExistsAndPermission(std::shared_ptr<Land> const& ptr, mce::UUID const& uuid = mce::UUID::EMPTY()) {
     if (
         !ptr ||                                                      // 无领地
         (PLand::getInstance().getLandRegistry().isOperator(uuid)) || // 管理员

@@ -1,7 +1,6 @@
 #pragma once
 #include "pland/Global.h"
 #include "pland/aabb/LandAABB.h"
-#include "pland/land/Land.h"
 
 #include "ll/api/Expected.h"
 
@@ -10,11 +9,17 @@
 #include <optional>
 
 class Player;
+namespace mce {
+class UUID;
+} // namespace mce
 
 namespace land {
 
-
+class Land;
 class LandRegistry;
+namespace service {
+class LandHierarchyService;
+}
 
 /**
  * @brief 领地创建验证器
@@ -118,14 +123,14 @@ public:
 
 public:
     LDNDAPI static ll::Expected<>
-    validateCreateOrdinaryLand(LandRegistry& registry, Player& player, SharedLand land); // 普通领地
+    validateCreateOrdinaryLand(LandRegistry& registry, Player& player, std::shared_ptr<Land> land); // 普通领地
 
     LDNDAPI static ll::Expected<>
-    validateChangeLandRange(LandRegistry& registry, SharedLand land, LandAABB newRange); // 改变范围
+    validateChangeLandRange(LandRegistry& registry, std::shared_ptr<Land> land, LandAABB newRange); // 改变范围
 
     LDNDAPI static ll::Expected<> validateCreateSubLand(
         Player&                        player,
-        SharedLand                     land,
+        std::shared_ptr<Land>          land,
         LandAABB const&                subRange,
         LandRegistry&                  registry,
         service::LandHierarchyService& service
@@ -152,9 +157,9 @@ public:
      * @param newRange 新范围，若为空则使用 land 的范围
      */
     LDNDAPI static ll::Expected<> isOrdinaryLandRangeConflict(
-        LandRegistry&           registry,
-        SharedLand const&       land,
-        std::optional<LandAABB> newRange = std::nullopt
+        LandRegistry&                registry,
+        std::shared_ptr<Land> const& land,
+        std::optional<LandAABB>      newRange = std::nullopt
     );
 
     /**
@@ -169,7 +174,7 @@ public:
      */
     LDNDAPI static ll::Expected<> isSubLandPositionLegal(
         service::LandHierarchyService& hierarchyService,
-        SharedLand const&              land,
+        std::shared_ptr<Land> const&   land,
         LandAABB const&                subRange
     );
 };

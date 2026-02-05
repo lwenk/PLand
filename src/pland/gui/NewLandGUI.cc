@@ -77,7 +77,7 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
     fm.appendLabel("确认选区的Y轴范围\n您可以在此调节Y轴范围，如果不需要修改，请直接点击提交"_trl(localeCode));
 
     SubLandCreateSelector* subSelector = nullptr;
-    SharedLand             parentLand  = nullptr;
+    std::shared_ptr<Land>  parentLand  = nullptr;
     if (subSelector = selector->as<SubLandCreateSelector>(); subSelector) {
         if (parentLand = subSelector->getParentLand(); parentLand) {
             auto& aabb = parentLand->getAABB();

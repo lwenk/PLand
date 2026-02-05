@@ -1,9 +1,7 @@
 #pragma once
 #include "pland/Global.h"
-#include "pland/land/Land.h"
 
 #include <memory>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
@@ -12,8 +10,14 @@
 
 class Player;
 class BlockPos;
+namespace mce {
+class UUID;
+}
 
 namespace land {
+
+class Land;
+class LandContext;
 
 struct PlayerSettings {
     bool showEnterLandTitle{true};     // 是否显示进入领地提示
@@ -54,11 +58,11 @@ public:
 
     LDNDAPI bool hasLand(LandID id) const;
 
-    LDAPI void refreshLandRange(SharedLand const& ptr); // 刷新领地范围
+    LDAPI void refreshLandRange(std::shared_ptr<Land> const& ptr); // 刷新领地范围
 
-    LDNDAPI ll::Expected<> addOrdinaryLand(SharedLand const& land);
+    LDNDAPI ll::Expected<> addOrdinaryLand(std::shared_ptr<Land> const& land);
 
-    LDNDAPI ll::Expected<> removeOrdinaryLand(SharedLand const& ptr);
+    LDNDAPI ll::Expected<> removeOrdinaryLand(std::shared_ptr<Land> const& ptr);
 
 
     /**
@@ -75,25 +79,28 @@ public:
 
 
 public: // 领地查询API
-    LDNDAPI SharedLand getLand(LandID id) const;
-    LDNDAPI std::vector<SharedLand> getLands() const;
-    LDNDAPI std::vector<SharedLand> getLands(std::vector<LandID> const& ids) const;
-    LDNDAPI std::vector<SharedLand> getLands(LandDimid dimid) const;
-    LDNDAPI std::vector<SharedLand> getLands(mce::UUID const& uuid, bool includeShared = false) const;
-    LDNDAPI std::vector<SharedLand> getLands(mce::UUID const& uuid, LandDimid dimid) const;
-    LDNDAPI std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> getLandsByOwner() const;
-    LDNDAPI std::unordered_map<mce::UUID, std::unordered_set<SharedLand>> getLandsByOwner(LandDimid dimid) const;
+    LDNDAPI std::shared_ptr<Land> getLand(LandID id) const;
+    LDNDAPI std::vector<std::shared_ptr<Land>> getLands() const;
+    LDNDAPI std::vector<std::shared_ptr<Land>> getLands(std::vector<LandID> const& ids) const;
+    LDNDAPI std::vector<std::shared_ptr<Land>> getLands(LandDimid dimid) const;
+    LDNDAPI std::vector<std::shared_ptr<Land>> getLands(mce::UUID const& uuid, bool includeShared = false) const;
+    LDNDAPI std::vector<std::shared_ptr<Land>> getLands(mce::UUID const& uuid, LandDimid dimid) const;
+    LDNDAPI std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>> getLandsByOwner() const;
+    LDNDAPI std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>>
+            getLandsByOwner(LandDimid dimid) const;
 
     LDNDAPI LandPermType getPermType(mce::UUID const& uuid, LandID id = 0, bool includeOperator = true) const;
 
-    LDNDAPI SharedLand getLandAt(BlockPos const& pos, LandDimid dimid) const;
+    LDNDAPI std::shared_ptr<Land> getLandAt(BlockPos const& pos, LandDimid dimid) const;
 
-    LDNDAPI std::unordered_set<SharedLand> getLandAt(BlockPos const& center, int radius, LandDimid dimid) const;
+    LDNDAPI std::unordered_set<std::shared_ptr<Land>>
+            getLandAt(BlockPos const& center, int radius, LandDimid dimid) const;
 
-    LDNDAPI std::unordered_set<SharedLand> getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid dimid) const;
+    LDNDAPI std::unordered_set<std::shared_ptr<Land>>
+            getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid dimid) const;
 
     using ContextFilter = std::function<bool(LandContext const&)>;
-    LDNDAPI std::vector<SharedLand> getLandsWhereRaw(ContextFilter const& filter) const;
+    LDNDAPI std::vector<std::shared_ptr<Land>> getLandsWhereRaw(ContextFilter const& filter) const;
 
 public:
     LDAPI static ChunkID             EncodeChunkID(int x, int z);

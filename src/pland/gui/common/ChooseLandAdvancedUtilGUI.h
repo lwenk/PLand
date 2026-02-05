@@ -1,20 +1,21 @@
 #pragma once
 #include "pland/Global.h"
 #include "pland/gui/form/BackSimpleForm.h"
-#include "pland/land/Land.h"
+
 #include <concepts>
 #include <memory>
 
 
 namespace land {
 
+class Land;
 
 class ChooseLandAdvancedUtilGUI {
     class Impl;
     Impl* impl_;
 
 public:
-    using ChooseCallback = std::function<void(Player&, SharedLand choosedLand)>;
+    using ChooseCallback = std::function<void(Player&, std::shared_ptr<Land> choosedLand)>;
 
     enum class View {
         All = 0,      // 所有领地视图
@@ -25,9 +26,9 @@ public:
     };
 
     LDAPI explicit ChooseLandAdvancedUtilGUI(
-        std::vector<SharedLand>          lands,
-        ChooseCallback                   callback,
-        BackSimpleForm<>::ButtonCallback back = {}
+        std::vector<std::shared_ptr<Land>> lands,
+        ChooseCallback                     callback,
+        BackSimpleForm<>::ButtonCallback   back = {}
     );
 
     LDAPI void sendTo(Player& player);

@@ -1,5 +1,6 @@
 #include "LandDimensionChunkMap.h"
 #include "BidirectionalMap.h"
+#include "pland/land/Land.h"
 #include "pland/land/repo/LandRegistry.h"
 
 
@@ -43,7 +44,7 @@ std::unordered_set<ChunkID> const* LandDimensionChunkMap::queryChunk(LandDimid d
     return &mMap.at(dimId).at(landId);
 }
 
-void LandDimensionChunkMap::addLand(SharedLand const& land) {
+void LandDimensionChunkMap::addLand(std::shared_ptr<Land> const& land) {
     auto landDimId = land->getDimensionId();
     auto landId    = land->getId();
 
@@ -56,7 +57,7 @@ void LandDimensionChunkMap::addLand(SharedLand const& land) {
     }
 }
 
-void LandDimensionChunkMap::removeLand(SharedLand const& land) {
+void LandDimensionChunkMap::removeLand(std::shared_ptr<Land> const& land) {
     auto landDimId = land->getDimensionId();
     auto landId    = land->getId();
 
@@ -72,7 +73,7 @@ void LandDimensionChunkMap::removeLand(SharedLand const& land) {
     }
 }
 
-void LandDimensionChunkMap::refreshRange(SharedLand const& land) {
+void LandDimensionChunkMap::refreshRange(std::shared_ptr<Land> const& land) {
     auto landDimId = land->getDimensionId();
     if (!mMap.contains(landDimId)) {
         return;
