@@ -2,6 +2,7 @@
 #include "LandHierarchyService.h"
 #include "LandPriceService.h"
 
+#include "ll/api/event/ListenerBase.h"
 #include "ll/api/i18n/I18n.h"
 #include "pland/events/domain/LandResizedEvent.h"
 #include "pland/events/domain/MemberChangedEvent.h"
@@ -26,8 +27,8 @@
 #include "pland/selector/land/SubLandCreateSelector.h"
 #include "pland/service/SelectionService.h"
 
-
 #include "ll/api/Expected.h"
+#include "ll/api/event/player/PlayerJoinEvent.h"
 #include <ll/api/event/EventBus.h>
 
 #include <mc/world/actor/player/Player.h>
@@ -41,6 +42,8 @@ struct LandManagementService::Impl {
     SelectionService&     mSelectionService;
     LandHierarchyService& mHierarchyService;
     LandPriceService&     mPriceService;
+
+    ll::event::ListenerPtr mLegacyOwnerMigrationListener;
 };
 
 LandManagementService::LandManagementService(
@@ -49,8 +52,32 @@ LandManagementService::LandManagementService(
     LandHierarchyService& hierarchyService,
     LandPriceService&     priceService
 )
-: impl(std::make_unique<Impl>(registry, selectionService, hierarchyService, priceService)) {}
-LandManagementService::~LandManagementService() {}
+: impl(std::make_unique<Impl>(registry, selectionService, hierarchyService, priceService)) {
+    // TODO: 移除此监听器
+    // 虽然 v0.18.0 移除了对 iLand 数据转换的支持，但依然可能有残存的数据未转换
+    // 因此这里仅作临时转换处理，待基本无旧数据后，移除此监听器
+    impl->mLegacyOwnerMigrationListener =
+        ll::event::EventBus::getInstance().emplaceListener<ll::event::PlayerJoinEvent>(
+            [this](ll::event::PlayerJoinEvent const& ev) {
+                if (ev.self().isSimulatedPlayer()) return;
+
+                auto xuid  = ev.self().getXuid();
+                auto lands = impl->mRegistry.getLandsWhereRaw([&xuid](LandContext const& land) {
+                    return land.mOwnerDataIsXUID && land.mLandOwner == xuid;
+                });
+
+                if (!lands.empty()) {
+                    auto& uuid = ev.self().getUuid();
+                    for (auto& land : lands) {
+                        land->migrateOwner(uuid);
+                    }
+                }
+            }
+        );
+}
+LandManagementService::~LandManagementService() {
+    ll::event::EventBus::getInstance().removeListener(impl->mLegacyOwnerMigrationListener);
+}
 
 
 ll::Expected<> LandManagementService::requestCreateOrdinaryLand(Player& player, bool is3D) const {

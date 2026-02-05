@@ -95,8 +95,7 @@ struct LandScheduler::Impl {
                 continue;
             }
 
-            if (auto settings = registry.getPlayerSettings(player->getUuid());
-                settings && !settings->showBottomContinuedTip) {
+            if (!registry.getOrCreatePlayerSettings(player->getUuid()).showBottomContinuedTip) {
                 continue; // 如果玩家设置不显示底部提示，则跳过
             }
 
@@ -160,8 +159,7 @@ LandScheduler::LandScheduler() : impl(std::make_unique<Impl>()) {
             auto& player   = ev.self();
             auto& registry = PLand::getInstance().getLandRegistry();
 
-            if (auto settings = registry.getPlayerSettings(player.getUuid());
-                settings && !settings->showEnterLandTitle) {
+            if (!registry.getOrCreatePlayerSettings(player.getUuid()).showEnterLandTitle) {
                 return; // 如果玩家设置不显示进入领地提示,则不显示
             }
 

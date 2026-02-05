@@ -379,22 +379,14 @@ std::vector<mce::UUID> const& LandRegistry::getOperators() const {
 }
 
 
-PlayerSettings* LandRegistry::getPlayerSettings(mce::UUID const& uuid) {
+PlayerSettings& LandRegistry::getOrCreatePlayerSettings(mce::UUID const& uuid) {
     std::shared_lock<std::shared_mutex> lock(impl->mMutex);
-    auto                                iter = impl->mPlayerSettings.find(uuid);
+
+    auto iter = impl->mPlayerSettings.find(uuid);
     if (iter == impl->mPlayerSettings.end()) {
-        return nullptr;
+        iter = impl->mPlayerSettings.emplace(uuid, PlayerSettings{}).first;
     }
-    return &iter->second;
-}
-bool LandRegistry::setPlayerSettings(mce::UUID const& uuid, PlayerSettings settings) {
-    std::unique_lock<std::shared_mutex> lock(impl->mMutex);
-    impl->mPlayerSettings[uuid] = std::move(settings);
-    return true;
-}
-bool LandRegistry::hasPlayerSettings(mce::UUID const& uuid) const {
-    std::shared_lock<std::shared_mutex> lock(impl->mMutex);
-    return impl->mPlayerSettings.find(uuid) != impl->mPlayerSettings.end();
+    return iter->second;
 }
 
 LandTemplatePermTable& LandRegistry::getLandTemplatePermTable() const { return *impl->mLandTemplatePermTable; }

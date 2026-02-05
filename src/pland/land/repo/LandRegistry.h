@@ -48,11 +48,7 @@ public:
 
     LDNDAPI std::vector<mce::UUID> const& getOperators() const;
 
-    LDNDAPI bool hasPlayerSettings(mce::UUID const& uuid) const;
-
-    LDNDAPI PlayerSettings* getPlayerSettings(mce::UUID const& uuid);
-
-    LDAPI bool setPlayerSettings(mce::UUID const& uuid, PlayerSettings settings);
+    LDNDAPI PlayerSettings& getOrCreatePlayerSettings(mce::UUID const& uuid);
 
     LDNDAPI LandTemplatePermTable& getLandTemplatePermTable() const;
 

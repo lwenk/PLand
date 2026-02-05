@@ -68,8 +68,6 @@ class EventListener {
 
     // 为不同事件类别声明注册函数
     // 按照 ll 和 ila 库进行拆分
-    void registerLLSessionListeners();
-
     void registerLLPlayerListeners();
     void registerILAPlayerListeners();
 

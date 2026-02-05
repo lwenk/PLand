@@ -8,7 +8,6 @@ namespace land {
 
 EventListener::EventListener() {
     // 调用所有分类的注册函数
-    registerLLSessionListeners();
 
     registerLLPlayerListeners();
     registerILAPlayerListeners();
