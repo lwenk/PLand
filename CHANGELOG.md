@@ -28,16 +28,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### 🔔 事件更改
 
+> 本次版本重构了领地事件体系，旧事件已全部移除，不再提供兼容与迁移映射。  
+> 请基于以下新增事件重新接入监听逻辑。
+
+- [-] 移除 `LandEvent.h` 内所有事件 @engsr6982
 - [+] 新增 `LandResizedEvent` 事件 @engsr6982
-- [+] 新增 `LandRefundFailedEvent` 事件 @engsr6982
-- [+] 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
-- [+] 新增 `PlayerChangeLandNameBeforeEvent`、`PlayerChangeLandNameAfterEvent` 事件 @engsr6982
-- [+] 新增 `PlayerTransferLandBeforeEvent`、`PlayerTransferLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `MemberChangedEvent` 事件 @engsr6982
 - [+] 新增 `OwnerChangedEvent` 事件 @engsr6982
-- [+] 新增 `PlayerRequestChangeLandRangeBeforeEvent`、`PlayerRequestChangeLandRangeAfterEvent` 事件 @engsr6982
-- [+] 新增 `PlayerApplyLandRangeChangeBeforeEvent`、`PlayerApplyLandRangeChangeAfterEvent` 事件 @engsr6982
-- [-] 移除 `PlayerAskCreateLandEvent` 事件 @engsr6982
-- [-] 移除 `LandOwnerChangeBeforeEvent`、`LandOwnerChangeAfterEvent` 事件 @engsr6982
+- [+] 新增 `LandRefundFailedEvent` 事件 @engsr6982
+- [+] 新增 `PlayerApplyLandRangeChangeBeforeEvent`, `PlayerApplyLandRangeChangeAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerBuyLandBeforeEvent`, `PlayerBuyLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerChangeLandDescBeforeEvent`, `PlayerChangeLandDescAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerChangeLandMemberBeforeEvent`, `PlayerChangeLandMemberAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerChangeLandNameBeforeEvent`, `PlayerChangeLandNameAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerDeleteLandBeforeEvent`, `PlayerDeleteLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerEnterLandEvent`, `PlayerLeaveLandEvent` 事件 @engsr6982
+- [+] 新增 `PlayerRequestChangeLandRangeBeforeEvent`, `PlayerRequestChangeLandRangeAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerTransferLandBeforeEvent`, `PlayerTransferLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
 
 ## [0.17.1] - 2026-01-28
 
