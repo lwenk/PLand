@@ -112,11 +112,25 @@ public:
 
     ll::Expected<> requestChangeRange(Player& player, std::shared_ptr<Land> const& land);
 
+    ll::Expected<> addMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
+    ll::Expected<> removeMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
+
+
 private:
+    ll::Expected<>
+    _playerChangeMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target, bool isAdd);
+
+    enum class ChangeMemberResult {
+        Success,
+        AlreadyMember,
+        NotMember,
+    };
+    ChangeMemberResult _changeMember(std::shared_ptr<Land> const& land, mce::UUID const& target, bool isAdd);
+
     ll::Expected<> _ensureChangeRangelegal(
-        std::shared_ptr<Land> const& land,
-        LandAABB const&              newRange,
-        std::optional<std::string>   localeCode = std::nullopt
+        std::shared_ptr<Land> const&    land,
+        LandAABB const&                 newRange,
+        std::optional<std::string_view> localeCode = std::nullopt
     );
 
     ll::Expected<> _applyRangeChange(Player& player, std::shared_ptr<Land> const& land, LandAABB const& newRange);

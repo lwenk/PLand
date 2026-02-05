@@ -12,7 +12,6 @@
 #include "pland/gui/form/BackSimpleForm.h"
 #include "pland/infra/Config.h"
 #include "pland/land/Land.h"
-#include "pland/land/LandEvent.h"
 #include "pland/land/LandResizeSettlement.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/land/repo/StorageError.h"

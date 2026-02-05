@@ -2,12 +2,15 @@
 #include "LandHierarchyService.h"
 #include "LandPriceService.h"
 
+#include "ll/api/i18n/I18n.h"
 #include "pland/events/domain/LandResizedEvent.h"
+#include "pland/events/domain/MemberChangedEvent.h"
 #include "pland/events/domain/OwnerChangedEvent.h"
 #include "pland/events/economy/LandRefundFailedEvent.h"
 #include "pland/events/player/PlayerApplyLandRangeChangeEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
 #include "pland/events/player/PlayerChangeLandDescEvent.h"
+#include "pland/events/player/PlayerChangeLandMemberEvent.h"
 #include "pland/events/player/PlayerChangeLandNameEvent.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
 #include "pland/events/player/PlayerRequestChangeLandRangeEvent.h"
@@ -317,15 +320,76 @@ ll::Expected<> LandManagementService::requestChangeRange(Player& player, std::sh
     return {};
 }
 
-ll::Expected<> LandManagementService::_ensureChangeRangelegal(
+ll::Expected<>
+LandManagementService::addMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target) {
+    return _playerChangeMember(player, land, target, true);
+}
+
+ll::Expected<>
+LandManagementService::removeMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target) {
+    return _playerChangeMember(player, land, target, false);
+}
+
+ll::Expected<> LandManagementService::_playerChangeMember(
+    Player&                      player,
     std::shared_ptr<Land> const& land,
-    LandAABB const&              newRange,
-    std::optional<std::string>   localeCode
+    mce::UUID const&             target,
+    bool                         isAdd
+) {
+    if (isAdd && land->isOwner(target)) {
+        return ll::makeStringError("操作失败，领地主人不能被添加为成员"_trf(player));
+    }
+
+    auto event = event::PlayerChangeLandMemberBeforeEvent{player, land, target, isAdd};
+    ll::event::EventBus::getInstance().publish(event);
+    if (event.isCancelled()) {
+        return ll::makeStringError("操作失败，请求被取消"_trf(player));
+    }
+
+    auto result = _changeMember(land, target, isAdd);
+    switch (result) {
+    case ChangeMemberResult::Success:
+        break;
+    case ChangeMemberResult::AlreadyMember:
+        return ll::makeStringError("操作失败，该玩家已经是领地成员"_trf(player));
+    case ChangeMemberResult::NotMember:
+        return ll::makeStringError("操作失败，该玩家不是领地成员"_trf(player));
+    default:
+        return ll::makeStringError("操作失败，未知错误"_trf(player));
+    }
+
+    ll::event::EventBus::getInstance().publish(event::PlayerChangeLandMemberAfterEvent{player, land, target, isAdd});
+    return {};
+}
+
+LandManagementService::ChangeMemberResult
+LandManagementService::_changeMember(std::shared_ptr<Land> const& land, mce::UUID const& target, bool isAdd) {
+    using ll::operator""_trl;
+    bool isMember = land->isMember(target);
+    if (isAdd && isMember) {
+        return ChangeMemberResult::AlreadyMember;
+    }
+    if (!isAdd && !isMember) {
+        return ChangeMemberResult::NotMember;
+    }
+
+    isAdd ? land->addLandMember(target) : land->removeLandMember(target);
+
+    ll::event::EventBus::getInstance().publish(event::MemberChangedEvent{land, target, isAdd});
+    return ChangeMemberResult::Success;
+}
+
+ll::Expected<> LandManagementService::_ensureChangeRangelegal(
+    std::shared_ptr<Land> const&    land,
+    LandAABB const&                 newRange,
+    std::optional<std::string_view> localeCode
 ) {
     if (auto res = LandCreateValidator::validateChangeLandRange(impl->mRegistry, land, newRange); !res) {
         if (res.error().isA<LandCreateValidator::ValidateError>()) {
             auto& error = res.error().as<LandCreateValidator::ValidateError>();
-            return ll::makeStringError(error.translateError(localeCode.value_or("zh_CN")));
+            return ll::makeStringError(
+                error.translateError(localeCode.value_or(ll::i18n::getDefaultLocaleCode()).data())
+            );
         }
         return res;
     }

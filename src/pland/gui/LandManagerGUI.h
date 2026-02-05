@@ -34,10 +34,12 @@ public:
     LDAPI static void sendCreateSubLandConfirm(Player& player, SharedLand const& ptr); // 创建子领地确认
     LDAPI static void sendChangeRangeConfirm(Player& player, SharedLand const& ptr);   // 更改领地范围
 
-    LDAPI static void sendChangeMemberGUI(Player& player, SharedLand ptr);                     // 更改成员
-    LDAPI static void _sendAddMemberGUI(Player& player, SharedLand ptr);                       // 添加在线成员
-    LDAPI static void _sendAddOfflineMemberGUI(Player& player, SharedLand ptr);                // 添加离线成员
-    LDAPI static void _sendRemoveMemberGUI(Player& player, SharedLand ptr, mce::UUID members); // 移除成员
+    LDAPI static void sendChangeMember(Player& player, SharedLand ptr);      // 更改成员
+    LDAPI static void _sendAddOnlineMember(Player& player, SharedLand ptr);  // 添加在线成员
+    LDAPI static void _sendAddOfflineMember(Player& player, SharedLand ptr); // 添加离线成员
+    LDAPI static void
+    _confirmAddMember(Player& player, SharedLand ptr, mce::UUID member, std::string displayName); // 添加成员
+    LDAPI static void _confirmRemoveMember(Player& player, SharedLand ptr, mce::UUID members);    // 移除成员
 };
 
 

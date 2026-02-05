@@ -1,45 +1,27 @@
 #include "pland/gui/LandManagerGUI.h"
 #include "LandTeleportGUI.h"
 
-#include "ll/api/event/EventBus.h"
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/ModalForm.h"
 #include "ll/api/form/SimpleForm.h"
 #include "ll/api/service/PlayerInfo.h"
 
-#include "mc/deps/ecs/WeakEntityRef.h"
 #include "mc/world/actor/player/Player.h"
-
 #include "mc/world/level/Level.h"
-#include "pland/Global.h"
+
 #include "pland/PLand.h"
-#include "pland/aabb/LandAABB.h"
-#include "pland/drawer/DrawHandleManager.h"
-#include "pland/economy/EconomySystem.h"
-#include "pland/economy/PriceCalculate.h"
 #include "pland/gui/CommonUtilGUI.h"
 #include "pland/gui/common/EditLandPermTableUtilGUI.h"
 #include "pland/gui/form/BackSimpleForm.h"
 #include "pland/infra/Config.h"
-#include "pland/land/Land.h"
-#include "pland/land/LandEvent.h"
-#include "pland/land/repo/LandContext.h"
 #include "pland/land/repo/LandRegistry.h"
-#include "pland/land/repo/StorageError.h"
-#include "pland/land/validator/LandCreateValidator.h"
-#include "pland/selector/SelectorManager.h"
-#include "pland/selector/land/LandResizeSelector.h"
 #include "pland/service/LandHierarchyService.h"
 #include "pland/service/LandManagementService.h"
 #include "pland/service/LandPriceService.h"
 #include "pland/service/ServiceLocator.h"
 #include "pland/utils/FeedbackUtils.h"
-#include "pland/utils/McUtils.h"
 
-
-#include <cstdint>
-#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,7 +75,7 @@ void LandManagerGUI::sendMainMenu(Player& player, SharedLand land) {
         sendEditLandPermGUI(pl, land);
     });
     fm.appendButton("修改成员"_trf(player), "textures/ui/FriendsIcon", "path", [land](Player& pl) {
-        sendChangeMemberGUI(pl, land);
+        sendChangeMember(pl, land);
     });
     fm.appendButton("修改领地名称"_trf(player), "textures/ui/book_edit_default", "path", [land](Player& pl) {
         sendEditLandNameGUI(pl, land);
@@ -449,84 +431,35 @@ void LandManagerGUI::sendChangeRangeConfirm(Player& player, SharedLand const& pt
 }
 
 
-void LandManagerGUI::sendChangeMemberGUI(Player& player, SharedLand ptr) {
+void LandManagerGUI::sendChangeMember(Player& player, SharedLand ptr) {
     auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
 
     fm.appendButton("添加在线成员"_trf(player), "textures/ui/color_plus", "path", [ptr](Player& self) {
-        _sendAddMemberGUI(self, ptr);
+        _sendAddOnlineMember(self, ptr);
     });
     fm.appendButton("添加离线成员"_trf(player), "textures/ui/color_plus", "path", [ptr](Player& self) {
-        _sendAddOfflineMemberGUI(self, ptr);
+        _sendAddOfflineMember(self, ptr);
     });
 
     auto& infos = ll::service::PlayerInfo::getInstance();
     for (auto& member : ptr->getMembers()) {
         auto i = infos.fromUuid(member);
         fm.appendButton(i.has_value() ? i->name : member.asString(), [member, ptr](Player& self) {
-            _sendRemoveMemberGUI(self, ptr, member);
+            _confirmRemoveMember(self, ptr, member);
         });
     }
 
     fm.sendTo(player);
 }
-void LandManagerGUI::_sendAddMemberGUI(Player& player, SharedLand ptr) {
+void LandManagerGUI::_sendAddOnlineMember(Player& player, SharedLand ptr) {
     ChooseOnlinePlayerUtilGUI::sendTo(
         player,
-        [ptr](Player& self, Player& target) {
-            if (self.getUuid() == target.getUuid()
-                && !PLand::getInstance().getLandRegistry().isOperator(self.getUuid())) {
-                feedback_utils::sendErrorText(self, "不能添加自己为领地成员哦!"_trf(self));
-                return;
-            }
-
-            LandMemberChangeBeforeEvent ev(self, target.getUuid(), ptr->getId(), true);
-            ll::event::EventBus::getInstance().publish(ev);
-            if (ev.isCancelled()) {
-                return;
-            }
-
-            ModalForm fm(
-                "[PLand]  | 添加成员"_trf(self),
-                "您确定要添加 {} 为领地成员吗?"_trf(self, target.getRealName()),
-                "确认"_trf(self),
-                "返回"_trf(self)
-            );
-            fm.sendTo(
-                self,
-                [ptr, weak = target.getWeakEntity()](Player& self, ModalFormResult const& res, FormCancelReason) {
-                    if (!res) {
-                        return;
-                    }
-                    Player* target = weak.tryUnwrap<Player>();
-                    if (!target) {
-                        feedback_utils::sendErrorText(self, "目标玩家已离线，无法继续操作!"_trf(self));
-                        return;
-                    }
-
-                    if (!(bool)res.value()) {
-                        sendChangeMemberGUI(self, ptr);
-                        return;
-                    }
-
-                    if (ptr->isMember(target->getUuid())) {
-                        feedback_utils::sendErrorText(self, "该玩家已经是领地成员, 请不要重复添加哦!"_trf(self));
-                        return;
-                    }
-
-                    ptr->addLandMember(target->getUuid());
-                    feedback_utils::sendText(self, "添加成功!"_trf(self));
-
-                    LandMemberChangeAfterEvent ev(self, target->getUuid(), ptr->getId(), true);
-                    ll::event::EventBus::getInstance().publish(ev);
-                }
-            );
-        },
-        BackSimpleForm<>::makeCallback<sendChangeMemberGUI>(ptr)
+        [ptr](Player& self, Player& target) { _confirmAddMember(self, ptr, target.getUuid(), target.getRealName()); },
+        BackSimpleForm<>::makeCallback<sendChangeMember>(ptr)
     );
 }
-
-void LandManagerGUI::_sendAddOfflineMemberGUI(Player& player, SharedLand ptr) {
-    CustomForm fm("[PLand]  | 添加离线成员"_trf(player));
+void LandManagerGUI::_sendAddOfflineMember(Player& player, SharedLand ptr) {
+    CustomForm fm("[PLand] | 添加离线成员"_trf(player));
     fm.appendInput("playerName", "请输入离线玩家名称"_trf(player), "玩家名称");
     fm.sendTo(player, [ptr](Player& self, CustomFormResult const& res, FormCancelReason) {
         if (!res) {
@@ -535,74 +468,50 @@ void LandManagerGUI::_sendAddOfflineMemberGUI(Player& player, SharedLand ptr) {
         auto playerName = std::get<std::string>(res->at("playerName"));
         if (playerName.empty()) {
             feedback_utils::sendErrorText(self, "玩家名称不能为空!"_trf(self));
-            sendChangeMemberGUI(self, ptr);
+            sendChangeMember(self, ptr);
             return;
         }
 
         auto playerInfo = ll::service::PlayerInfo::getInstance().fromName(playerName);
         if (!playerInfo) {
             feedback_utils::sendErrorText(self, "未找到该玩家信息，请检查名称是否正确!"_trf(self));
-            sendChangeMemberGUI(self, ptr);
+            sendChangeMember(self, ptr);
             return;
         }
 
         auto& targetUuid = playerInfo->uuid;
-
-        if (self.getUuid() == targetUuid && !PLand::getInstance().getLandRegistry().isOperator(self.getUuid())) {
-            feedback_utils::sendErrorText(self, "不能添加自己为领地成员哦!"_trf(self));
-            sendChangeMemberGUI(self, ptr);
-            return;
-        }
-
-        LandMemberChangeBeforeEvent ev(self, targetUuid, ptr->getId(), true);
-        ll::event::EventBus::getInstance().publish(ev);
-        if (ev.isCancelled()) {
-            return;
-        }
-
-        ModalForm confirmFm(
-            "[PLand]  | 添加离线成员"_trf(self),
-            "您确定要添加 {} 为领地成员吗?"_trf(self, playerName),
-            "确认"_trf(self),
-            "返回"_trf(self)
-        );
-        confirmFm.sendTo(
-            self,
-            [ptr, targetUuid, playerName](Player& self, ModalFormResult const& confirmRes, FormCancelReason) {
-                if (!confirmRes) {
-                    return;
-                }
-                if (!(bool)confirmRes.value()) {
-                    sendChangeMemberGUI(self, ptr);
-                    return;
-                }
-
-                if (ptr->isMember(targetUuid)) {
-                    feedback_utils::sendErrorText(self, "该玩家已经是领地成员, 请不要重复添加哦!"_trf(self));
-                    return;
-                }
-
-                ptr->addLandMember(targetUuid);
-                feedback_utils::sendText(self, "添加成功!"_trf(self));
-
-                LandMemberChangeAfterEvent ev(self, targetUuid, ptr->getId(), true);
-                ll::event::EventBus::getInstance().publish(ev);
-            }
-        );
+        _confirmAddMember(self, ptr, targetUuid, playerName);
     });
 }
+void LandManagerGUI::_confirmAddMember(Player& player, SharedLand ptr, mce::UUID member, std::string displayName) {
+    ModalForm fm(
+        "[PLand] | 添加成员"_trf(player),
+        "您确定要添加 {} 为领地成员吗?"_trf(player, displayName),
+        "确认"_trf(player),
+        "返回"_trf(player)
+    );
+    fm.sendTo(player, [ptr, member](Player& self, ModalFormResult const& res, FormCancelReason) {
+        if (!res) {
+            return;
+        }
+        if (!(bool)res.value()) {
+            sendChangeMember(self, ptr);
+            return;
+        }
 
-void LandManagerGUI::_sendRemoveMemberGUI(Player& player, SharedLand ptr, mce::UUID member) {
-    LandMemberChangeBeforeEvent ev(player, member, ptr->getId(), false);
-    ll::event::EventBus::getInstance().publish(ev);
-    if (ev.isCancelled()) {
-        return;
-    }
-
+        auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+        if (auto expected = service.addMember(self, ptr, member)) {
+            feedback_utils::sendText(self, "添加成功!"_trf(self));
+        } else {
+            feedback_utils::sendError(self, expected.error());
+        }
+    });
+}
+void LandManagerGUI::_confirmRemoveMember(Player& player, SharedLand ptr, mce::UUID member) {
     auto info = ll::service::PlayerInfo::getInstance().fromUuid(member);
 
     ModalForm fm(
-        "[PLand]  | 移除成员"_trf(player),
+        "[PLand] | 移除成员"_trf(player),
         "您确定要移除成员 \"{}\" 吗?"_trf(player, info.has_value() ? info->name : member.asString()),
         "确认"_trf(player),
         "返回"_trf(player)
@@ -611,17 +520,17 @@ void LandManagerGUI::_sendRemoveMemberGUI(Player& player, SharedLand ptr, mce::U
         if (!res) {
             return;
         }
-
         if (!(bool)res.value()) {
-            sendChangeMemberGUI(self, ptr);
+            sendChangeMember(self, ptr);
             return;
         }
 
-        ptr->removeLandMember(member);
-        feedback_utils::sendText(self, "移除成功!"_trf(self));
-
-        LandMemberChangeAfterEvent ev(self, member, ptr->getId(), false);
-        ll::event::EventBus::getInstance().publish(ev);
+        auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+        if (auto expected = service.removeMember(self, ptr, member)) {
+            feedback_utils::sendText(self, "移除成员成功!"_trf(self));
+        } else {
+            feedback_utils::sendError(self, expected.error());
+        }
     });
 }
 
