@@ -27,7 +27,7 @@
 
 namespace land {
 
-void LandBuyGUI::impl(Player& player) {
+void LandBuyGUI::sendTo(Player& player) {
     auto localeCode = player.getLocaleCode();
 
     auto manager = land::PLand::getInstance().getSelectorManager();
@@ -44,15 +44,15 @@ void LandBuyGUI::impl(Player& player) {
 
 
     if (auto def = selector->as<OrdinaryLandCreateSelector>()) {
-        impl(player, def);
+        _impl(player, def);
     } else if (auto re = selector->as<LandResizeSelector>()) {
-        impl(player, re);
+        _impl(player, re);
     } else if (auto sub = selector->as<SubLandCreateSelector>()) {
-        impl(player, sub);
+        _impl(player, sub);
     }
 }
 
-void LandBuyGUI::impl(Player& player, OrdinaryLandCreateSelector* selector) {
+void LandBuyGUI::_impl(Player& player, OrdinaryLandCreateSelector* selector) {
     auto localeCode = player.getLocaleCode();
 
     bool const is3D  = selector->is3D();
@@ -113,7 +113,7 @@ void LandBuyGUI::impl(Player& player, OrdinaryLandCreateSelector* selector) {
     fm.sendTo(player);
 }
 
-void LandBuyGUI::impl(Player& player, LandResizeSelector* selector) {
+void LandBuyGUI::_impl(Player& player, LandResizeSelector* selector) {
     auto localeCode = player.getLocaleCode();
 
     auto aabb = selector->newLandAABB();
@@ -192,7 +192,7 @@ void LandBuyGUI::impl(Player& player, LandResizeSelector* selector) {
     fm.sendTo(player);
 }
 
-void LandBuyGUI::impl(Player& player, SubLandCreateSelector* selector) {
+void LandBuyGUI::_impl(Player& player, SubLandCreateSelector* selector) {
     auto localeCode = player.getLocaleCode();
 
     auto subLandRange = selector->newLandAABB();

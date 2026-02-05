@@ -205,7 +205,7 @@ static auto const Cancel = [](CommandOrigin const& ori, CommandOutput& out) {
 static auto const Buy = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
-    LandBuyGUI::impl(player);
+    LandBuyGUI::sendTo(player);
 };
 
 static auto const Reload = [](CommandOrigin const& ori, CommandOutput& out) {
