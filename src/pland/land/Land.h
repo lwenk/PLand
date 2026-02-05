@@ -100,9 +100,9 @@ public:
 
     LDNDAPI bool isMember(mce::UUID const& uuid) const;
 
-    LDNDAPI bool isConvertedLand() const;
+    [[deprecated]] LDNDAPI bool isConvertedLand() const;
 
-    LDNDAPI bool isOwnerDataIsXUID() const;
+    [[deprecated]] LDNDAPI bool isOwnerDataIsXUID() const;
 
     LDNDAPI bool isCollision(BlockPos const& pos, int radius) const;
 
@@ -188,7 +188,7 @@ public:
      * 迁移领地主人信息 (XUID -> UUID)
      * @param ownerUUID 领地主人 UUID
      */
-    LDAPI void migrateOwner(mce::UUID const& ownerUUID);
+    [[deprecated]] LDAPI void migrateOwner(mce::UUID const& ownerUUID);
 
     LDAPI void load(nlohmann::json& json); // 加载数据
     LDAPI nlohmann::json toJson() const;   // 导出数据

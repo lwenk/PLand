@@ -114,8 +114,8 @@ struct LandContext {
     std::string              mLandName{"Unnamed territories"_tr()}; // 领地名称
     std::string              mLandDescribe{"No description"_tr()};  // 领地描述
     int                      mOriginalBuyPrice{0};                  // 原始购买价格
-    bool                     mIsConvertedLand{false};               // 是否为转换后的领地(其它插件创建的领地)
-    bool                     mOwnerDataIsXUID{false}; // 领地主人数据是否为XUID (如果为true，则主人上线自动转换为UUID)
+    [[deprecated]] bool      mIsConvertedLand{false};               // 是否为转换后的领地(其它插件创建的领地)
+    [[deprecated]] bool      mOwnerDataIsXUID{false}; // 领地主人数据是否为XUID (如果为true，则主人上线自动转换为UUID)
     LandID                   mParentLandID{INVALID_LAND_ID}; // 父领地ID
     std::vector<LandID>      mSubLandIDs{};                  // 子领地ID
 };

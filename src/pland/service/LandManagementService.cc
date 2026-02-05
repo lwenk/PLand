@@ -43,7 +43,7 @@ struct LandManagementService::Impl {
     LandHierarchyService& mHierarchyService;
     LandPriceService&     mPriceService;
 
-    ll::event::ListenerPtr mLegacyOwnerMigrationListener;
+    [[deprecated]] ll::event::ListenerPtr mLegacyOwnerMigrationListener;
 };
 
 LandManagementService::LandManagementService(
