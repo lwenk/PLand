@@ -65,21 +65,23 @@ void EconomySystem::reload() { impl->reload(); }
 std::shared_ptr<econbridge::IEconomy> EconomySystem::get() const { return impl->mEconomyImpl; }
 
 std::string EconomySystem::getCostMessage(Player& player, llong amount) const {
+    auto localeCode = player.getLocaleCode();
+
     auto& config = Config::cfg.economy;
     if (!config.enabled) {
-        return "\n[Tip] 经济系统未启用，本次操作不消耗 {}"_trf(player, config.economyName);
+        return "\n[Tip] 经济系统未启用，本次操作不消耗 {}"_trl(localeCode, config.economyName);
     }
 
     llong currentMoney = get()->get(player.getUuid());
     bool  isEnough     = currentMoney >= amount;
 
-    return "\n[Tip] 本次操作需要: {0} {1} | 当前余额: {2} | 剩余余额: {3} | {4}"_trf(
-        player,
+    return "\n[Tip] 本次操作需要: {0} {1} | 当前余额: {2} | 剩余余额: {3} | {4}"_trl(
+        localeCode,
         amount,
         config.economyName,
         currentMoney,
         currentMoney - amount,
-        isEnough ? "余额充足"_trf(player) : "余额不足"_trf(player)
+        isEnough ? "余额充足"_trl(localeCode) : "余额不足"_trl(localeCode)
     );
 }
 

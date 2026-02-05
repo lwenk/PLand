@@ -2,9 +2,9 @@
 #include "pland/Global.h"
 #include "pland/land/Land.h"
 
+class Player;
 
 namespace land {
-
 
 class LandManagerGUI {
 public:

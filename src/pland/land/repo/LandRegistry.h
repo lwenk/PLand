@@ -16,12 +16,8 @@ class BlockPos;
 namespace land {
 
 struct PlayerSettings {
-    bool        showEnterLandTitle{true};       // 是否显示进入领地提示
-    bool        showBottomContinuedTip{true};   // 是否持续显示底部提示
-    std::string localeCode{SERVER_LOCALE_CODE}; // 语言 system / server / xxx
-
-    inline static constexpr std::string_view SYSTEM_LOCALE_CODE = "system";
-    inline static constexpr std::string_view SERVER_LOCALE_CODE = "server";
+    bool showEnterLandTitle{true};     // 是否显示进入领地提示
+    bool showBottomContinuedTip{true}; // 是否持续显示底部提示
 };
 
 class LandTemplatePermTable;
@@ -76,8 +72,10 @@ public:
      */
     using TransactionCallback = std::function<bool(TransactionContext& ctx)>;
 
-    LDNDAPI ll::Expected<>
-    executeTransaction(std::unordered_set<std::shared_ptr<Land>> const& participants, TransactionCallback const& executor);
+    LDNDAPI ll::Expected<> executeTransaction(
+        std::unordered_set<std::shared_ptr<Land>> const& participants,
+        TransactionCallback const&                       executor
+    );
 
 
 public: // 领地查询API

@@ -24,12 +24,12 @@ public:
      * @param localeCode 本地化代码(用户异常翻译,传递给 i18n 系统)
      */
     LDNDAPI static ll::Expected<> validate(
-        std::string_view           input,
-        std::string_view           fieldName,
-        size_t                     minLen,
-        size_t                     maxLen,
-        bool                       allowNewline = false,
-        std::optional<std::string> localeCode   = std::nullopt
+        std::string_view                input,
+        std::string_view                fieldName,
+        size_t                          minLen,
+        size_t                          maxLen,
+        bool                            allowNewline = false,
+        std::optional<std::string_view> localeCode   = std::nullopt
     );
 };
 

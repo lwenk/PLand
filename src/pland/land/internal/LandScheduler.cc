@@ -27,7 +27,6 @@
 #include <vector>
 
 
-
 namespace land::internal {
 
 struct LandScheduler::Impl {
@@ -109,10 +108,12 @@ struct LandScheduler::Impl {
             auto& owner = land->getOwner();
             auto  info  = playerInfo.fromUuid(owner);
             if (land->isOwner(player->getUuid())) {
-                pkt.mTitleText = "[Land] 当前正在领地 {}"_trf(*player, land->getName());
+                pkt.mTitleText = "[Land] 当前正在领地 {}"_trl(player->getLocaleCode(), land->getName());
             } else {
-                pkt.mTitleText =
-                    "[Land] 这里是 {} 的领地"_trf(*player, info.has_value() ? info->name : owner.asString());
+                pkt.mTitleText = "[Land] 这里是 {} 的领地"_trl(
+                    player->getLocaleCode(),
+                    info.has_value() ? info->name : owner.asString()
+                );
             }
 
             pkt.sendTo(*player);
@@ -174,9 +175,9 @@ LandScheduler::LandScheduler() : impl(std::make_unique<Impl>()) {
 
             if (land->isOwner(player.getUuid())) {
                 title.mTitleText    = land->getName();
-                subTitle.mTitleText = "欢迎回来"_trf(player);
+                subTitle.mTitleText = "欢迎回来"_trl(player.getLocaleCode());
             } else {
-                title.mTitleText    = "Welcome to"_trf(player);
+                title.mTitleText    = "Welcome to"_trl(player.getLocaleCode());
                 subTitle.mTitleText = land->getName();
             }
 

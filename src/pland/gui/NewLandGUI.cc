@@ -31,9 +31,11 @@ namespace land {
 
 
 void NewLandGUI::sendChooseLandDim(Player& player) {
+    auto localeCode = player.getLocaleCode();
+
     ModalForm(
-        ("[PLand] | 选择领地维度"_trf(player)),
-        "请选择领地维度\n\n2D: 领地拥有整个Y轴\n3D: 自行选择Y轴范围"_trf(player),
+        ("[PLand] | 选择领地维度"_trl(localeCode)),
+        "请选择领地维度\n\n2D: 领地拥有整个Y轴\n3D: 自行选择Y轴范围"_trl(localeCode),
         "2D", // true
         "3D"  // false
     )
@@ -54,7 +56,10 @@ void NewLandGUI::sendChooseLandDim(Player& player) {
 
             feedback_utils::sendText(
                 pl,
-                "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(pl, Config::cfg.selector.tool)
+                "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trl(
+                    pl.getLocaleCode(),
+                    Config::cfg.selector.tool
+                )
             );
         });
 }
@@ -65,9 +70,11 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
     if (!selector) {
         return;
     }
-    CustomForm fm(("[PLand] | 确认Y轴范围"_trf(player)));
+    auto localeCode = player.getLocaleCode();
 
-    fm.appendLabel("确认选区的Y轴范围\n您可以在此调节Y轴范围，如果不需要修改，请直接点击提交"_trf(player));
+    CustomForm fm(("[PLand] | 确认Y轴范围"_trl(localeCode)));
+
+    fm.appendLabel("确认选区的Y轴范围\n您可以在此调节Y轴范围，如果不需要修改，请直接点击提交"_trl(localeCode));
 
     SubLandCreateSelector* subSelector = nullptr;
     SharedLand             parentLand  = nullptr;
@@ -75,8 +82,8 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
         if (parentLand = subSelector->getParentLand(); parentLand) {
             auto& aabb = parentLand->getAABB();
             fm.appendLabel(
-                "当前为子领地模式，子领地的Y轴范围不能超过父领地。\n父领地Y轴范围: {} ~ {}"_trf(
-                    player,
+                "当前为子领地模式，子领地的Y轴范围不能超过父领地。\n父领地Y轴范围: {} ~ {}"_trl(
+                    localeCode,
                     aabb.min.y,
                     aabb.max.y
                 )
@@ -84,8 +91,8 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
         }
     }
 
-    fm.appendInput("start", "开始Y轴"_trf(player), "int", std::to_string(selector->getPointA()->y));
-    fm.appendInput("end", "结束Y轴"_trf(player), "int", std::to_string(selector->getPointB()->y));
+    fm.appendInput("start", "开始Y轴"_trl(localeCode), "int", std::to_string(selector->getPointA()->y));
+    fm.appendInput("end", "结束Y轴"_trl(localeCode), "int", std::to_string(selector->getPointB()->y));
 
     fm.appendLabel(exception);
 
@@ -97,16 +104,17 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
         std::string start = std::get<std::string>(res->at("start"));
         std::string end   = std::get<std::string>(res->at("end"));
 
+        auto localeCode = pl.getLocaleCode();
         try {
             int64_t startY = std::stoll(start);
             int64_t endY   = std::stoll(end);
             if (startY >= INT32_MAX || startY <= INT32_MIN || endY >= INT32_MAX || endY <= INT32_MIN) {
-                sendConfirmPrecinctsYRange(pl, "数值过大，请输入正确的Y轴范围"_trf(pl));
+                sendConfirmPrecinctsYRange(pl, "数值过大，请输入正确的Y轴范围"_trl(localeCode));
                 return;
             }
 
             if (startY >= endY) {
-                sendConfirmPrecinctsYRange(pl, "请输入正确的Y轴范围, 开始Y轴必须小于结束Y轴"_trf(pl));
+                sendConfirmPrecinctsYRange(pl, "请输入正确的Y轴范围, 开始Y轴必须小于结束Y轴"_trl(localeCode));
                 return;
             }
 
@@ -117,7 +125,10 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
 
                 auto& aabb = parentLand->getAABB();
                 if (startY < aabb.min.y || endY > aabb.max.y) {
-                    sendConfirmPrecinctsYRange(pl, "请输入正确的Y轴范围, 子领地的Y轴范围不能超过父领地"_trf(pl));
+                    sendConfirmPrecinctsYRange(
+                        pl,
+                        "请输入正确的Y轴范围, 子领地的Y轴范围不能超过父领地"_trl(localeCode)
+                    );
                     return;
                 }
             }
@@ -125,7 +136,7 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
             selector->setYRange(startY, endY);
             selector->onPointConfirmed();
         } catch (...) {
-            sendConfirmPrecinctsYRange(pl, "处理失败,请输入正确的Y轴范围"_trf(pl));
+            sendConfirmPrecinctsYRange(pl, "处理失败,请输入正确的Y轴范围"_trl(localeCode));
         }
     });
 }

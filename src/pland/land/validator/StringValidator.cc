@@ -11,14 +11,14 @@ namespace land {
 using ll::operator""_trl;
 
 ll::Expected<> StringValidator::validate(
-    std::string_view           input,
-    std::string_view           fieldName,
-    size_t                     minLen,
-    size_t                     maxLen,
-    bool                       allowNewline,
-    std::optional<std::string> localeCode
+    std::string_view                input,
+    std::string_view                fieldName,
+    size_t                          minLen,
+    size_t                          maxLen,
+    bool                            allowNewline,
+    std::optional<std::string_view> localeCode
 ) {
-    auto locale = localeCode.value_or("zh_CN");
+    auto locale = localeCode.value_or(ll::i18n::getDefaultLocaleCode());
     if (input.empty()) {
         if (minLen > 0) return ll::makeStringError("{}不能为空"_trl(locale, fieldName));
         return {};

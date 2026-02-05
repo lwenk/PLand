@@ -18,8 +18,9 @@ ISelector::ISelector(Player& player, LandDimid dimid, bool is3D)
 : mPlayer(player.getWeakEntity()),
   mDimid(dimid),
   m3D(is3D) {
-    mTitlePacket.mTitleText    = "[ {}选区 ]"_trf(player, m3D ? "3D" : "2D");
-    mSubTitlePacket.mTitleText = "输入 /pland set a 或使用 '{}' 选择点 A"_trf(player, Config::cfg.selector.alias);
+    auto localeCode            = player.getLocaleCode();
+    mTitlePacket.mTitleText    = "[ {}选区 ]"_trl(localeCode, m3D ? "3D" : "2D");
+    mSubTitlePacket.mTitleText = "输入 /pland set a 或使用 '{}' 选择点 A"_trl(localeCode, Config::cfg.selector.alias);
 }
 
 ISelector::~ISelector() {
@@ -74,7 +75,10 @@ void ISelector::setYRange(int start, int end) {
     mPointA->y = start;
     mPointB->y = end;
     if (auto player = getPlayer()) {
-        feedback_utils::sendText(player, "已设置选区高度范围: {} ~ {}"_trf(player, mPointA->y, mPointB->y));
+        feedback_utils::sendText(
+            player,
+            "已设置选区高度范围: {} ~ {}"_trl(player->getLocaleCode(), mPointA->y, mPointB->y)
+        );
     }
 }
 
@@ -118,28 +122,29 @@ std::string ISelector::dumpDebugInfo() const {
 // virtual
 void ISelector::onPointASet() {
     if (auto player = getPlayer()) {
-        feedback_utils::sendText(player, "已选择点 A: {}"_trf(player, *mPointA));
+        feedback_utils::sendText(player, "已选择点 A: {}"_trl(player->getLocaleCode(), *mPointA));
 
         // 更新副标题
-        mSubTitlePacket.mTitleText = "输入 /pland set b 或使用 '{}' 选择点 B"_trf(*player, Config::cfg.selector.alias);
+        mSubTitlePacket.mTitleText =
+            "输入 /pland set b 或使用 '{}' 选择点 B"_trl(player->getLocaleCode(), Config::cfg.selector.alias);
     }
 }
 
 void ISelector::onPointBSet() {
     if (auto player = getPlayer()) {
-        feedback_utils::sendText(player, "已选择点 B: {}"_trf(player, *mPointB));
+        feedback_utils::sendText(player, "已选择点 B: {}"_trl(player->getLocaleCode(), *mPointB));
     }
 }
 
 void ISelector::onPointAUpdated() {
     if (auto player = getPlayer()) {
-        feedback_utils::sendText(player, "已更新点 A: {}"_trf(player, *mPointA));
+        feedback_utils::sendText(player, "已更新点 A: {}"_trl(player->getLocaleCode(), *mPointA));
     }
 }
 
 void ISelector::onPointBUpdated() {
     if (auto player = getPlayer()) {
-        feedback_utils::sendText(player, "已更新点 B: {}"_trf(player, *mPointB));
+        feedback_utils::sendText(player, "已更新点 B: {}"_trl(player->getLocaleCode(), *mPointB));
     }
 }
 
@@ -149,8 +154,10 @@ void ISelector::onPointABSet() {
         return;
     }
 
-    mTitlePacket.mTitleText    = "[ 选区完成 ]"_trf(*player);
-    mSubTitlePacket.mTitleText = "输入 /pland buy 呼出购买菜单"_trf(player, Config::cfg.selector.alias);
+    auto localeCode = player->getLocaleCode();
+
+    mTitlePacket.mTitleText    = "[ 选区完成 ]"_trl(localeCode);
+    mSubTitlePacket.mTitleText = "输入 /pland buy 呼出购买菜单"_trl(localeCode, Config::cfg.selector.alias);
 
 
     if (!is3D()) {
@@ -163,7 +170,7 @@ void ISelector::onPointABSet() {
 
             onPointConfirmed();
         } else {
-            feedback_utils::sendErrorText(player, "获取维度失败"_trf(player));
+            feedback_utils::sendErrorText(player, "获取维度失败"_trl(localeCode));
         }
         return;
     }

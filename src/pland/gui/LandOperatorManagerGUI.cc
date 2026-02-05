@@ -1,56 +1,55 @@
 #include "LandOperatorManagerGUI.h"
-#include "pland/land/repo/LandContext.h"
 #include "CommonUtilGUI.h"
 #include "LandManagerGUI.h"
-#include "ll/api/service/PlayerInfo.h"
 #include "pland/PLand.h"
 #include "pland/gui/common/ChooseLandAdvancedUtilGUI.h"
 #include "pland/gui/common/EditLandPermTableUtilGUI.h"
-#include "pland/gui/form/BackPaginatedSimpleForm.h"
 #include "pland/gui/form/BackSimpleForm.h"
 #include "pland/land/LandTemplatePermTable.h"
+#include "pland/land/repo/LandContext.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/utils/FeedbackUtils.h"
-#include "pland/utils/McUtils.h"
 
-
+#include "ll/api/service/PlayerInfo.h"
 
 namespace land {
 
 
 void LandOperatorManagerGUI::sendMainMenu(Player& player) {
+    auto localeCode = player.getLocaleCode();
+
     if (!PLand::getInstance().getLandRegistry().isOperator(player.getUuid())) {
-        feedback_utils::sendErrorText(player, "无权限访问此表单"_trf(player));
+        feedback_utils::sendErrorText(player, "无权限访问此表单"_trl(localeCode));
         return;
     }
 
     auto fm = BackSimpleForm<>::make();
 
-    fm.setTitle("[PLand] | 领地管理"_trf(player));
-    fm.setContent("请选择您要进行的操作"_trf(player));
+    fm.setTitle("[PLand] | 领地管理"_trl(localeCode));
+    fm.setContent("请选择您要进行的操作"_trl(localeCode));
 
-    fm.appendButton("管理脚下领地"_trf(player), "textures/ui/free_download", "path", [](Player& self) {
+    fm.appendButton("管理脚下领地"_trl(localeCode), "textures/ui/free_download", "path", [](Player& self) {
         auto lands = PLand::getInstance().getLandRegistry().getLandAt(self.getPosition(), self.getDimensionId());
         if (!lands) {
-            feedback_utils::sendErrorText(self, "您当前所处位置没有领地"_trf(self));
+            feedback_utils::sendErrorText(self, "您当前所处位置没有领地"_trl(self.getLocaleCode()));
             return;
         }
         LandManagerGUI::sendMainMenu(self, lands);
     });
-    fm.appendButton("管理玩家领地"_trf(player), "textures/ui/FriendsIcon", "path", [](Player& self) {
+    fm.appendButton("管理玩家领地"_trl(localeCode), "textures/ui/FriendsIcon", "path", [](Player& self) {
         sendChoosePlayerFromDb(self, static_cast<void (*)(Player&, mce::UUID const&)>(sendChooseLandGUI));
     });
-    fm.appendButton("管理指定领地"_trf(player), "textures/ui/magnifyingGlass", "path", [](Player& self) {
+    fm.appendButton("管理指定领地"_trl(localeCode), "textures/ui/magnifyingGlass", "path", [](Player& self) {
         // sendChooseLandGUI(self, PLand::getInstance().getLandRegistry().getLands());
         sendChooseLandAdvancedGUI(self, PLand::getInstance().getLandRegistry().getLands());
     });
-    fm.appendButton("编辑默认权限"_trf(player), "textures/ui/icon_map", "path", [](Player& self) {
+    fm.appendButton("编辑默认权限"_trl(localeCode), "textures/ui/icon_map", "path", [](Player& self) {
         EditLandPermTableUtilGUI::sendTo(
             self,
             PLand::getInstance().getLandRegistry().getLandTemplatePermTable().get(),
             [](Player& self, LandPermTable newTable) {
                 PLand::getInstance().getLandRegistry().getLandTemplatePermTable().set(newTable);
-                feedback_utils::sendText(self, "权限表已更新"_trf(self));
+                feedback_utils::sendText(self, "权限表已更新"_trl(self.getLocaleCode()));
             }
         );
     });
@@ -60,9 +59,11 @@ void LandOperatorManagerGUI::sendMainMenu(Player& player) {
 
 
 void LandOperatorManagerGUI::sendChoosePlayerFromDb(Player& player, ChoosePlayerCallback callback) {
+    auto localeCode = player.getLocaleCode();
+
     auto fm = BackSimpleForm<>::make<LandOperatorManagerGUI::sendMainMenu>();
-    fm.setTitle("[PLand] | 玩家列表"_trf(player));
-    fm.setContent("请选择您要管理的玩家"_trf(player));
+    fm.setTitle("[PLand] | 玩家列表"_trl(localeCode));
+    fm.setContent("请选择您要管理的玩家"_trl(localeCode));
 
     auto const& infos = ll::service::PlayerInfo::getInstance();
     auto const  lands = PLand::getInstance().getLandRegistry().getLands();

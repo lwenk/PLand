@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 
+class Player;
 
 namespace land {
 

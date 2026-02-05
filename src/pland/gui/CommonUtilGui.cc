@@ -23,7 +23,7 @@ void ChooseOnlinePlayerUtilGUI::sendTo(
     BackSimpleForm<>::ButtonCallback back
 ) {
     auto fm = BackSimpleForm<>{std::move(back)};
-    fm.setTitle("[PLand] | 选择玩家"_trf(player));
+    fm.setTitle("[PLand] | 选择玩家"_trl(player.getLocaleCode()));
 
     ll::service::getLevel()->forEachPlayer([callback, &fm](Player& target) {
         if (target.isSimulatedPlayer()) {

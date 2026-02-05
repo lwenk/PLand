@@ -75,6 +75,7 @@ public:
     }
 
     void buildForms(Player& player) {
+        auto localeCode = player.getLocaleCode();
         if (mViews.empty()) {
             mViews.emplace(View::All, BackPaginatedSimpleForm::make(makeBackCallback()));
             mViews.emplace(View::OnlyOrdinary, BackPaginatedSimpleForm::make(makeBackCallback()));
@@ -83,13 +84,13 @@ public:
             mViews.emplace(View::OnlySub, BackPaginatedSimpleForm::make(makeBackCallback()));
 
             for (auto& [view, form] : mViews) {
-                form.setTitle("选择领地"_trf(player));
-                form.setContent("请选择一个领地:"_trf(player));
+                form.setTitle("选择领地"_trl(localeCode));
+                form.setContent("请选择一个领地:"_trl(localeCode));
 
                 // 重置过滤器（仅在非主视图或存在模糊搜索关键字时）
                 if (view != View::All || mFuzzyKeyword.has_value()) {
                     form.appendButton(
-                        "重置过滤器"_trf(player),
+                        "重置过滤器"_trl(localeCode),
                         "textures/ui/refresh_light",
                         "path",
                         [thiz = getThis()](Player& self) {
@@ -107,7 +108,7 @@ public:
                 }
 
                 form.appendButton(
-                    "模糊搜索"_trf(player),
+                    "模糊搜索"_trl(localeCode),
                     "textures/ui/magnifyingGlass",
                     "path",
                     [thiz = getThis()](Player& self) {
@@ -121,7 +122,7 @@ public:
                 switch (view) {
                 case View::All:
                     form.appendButton(
-                        "过滤: >全部领地<"_trf(player),
+                        "过滤: >全部领地<"_trl(localeCode),
                         "textures/ui/store_sort_icon",
                         "path",
                         makeNextViewCallback()
@@ -129,7 +130,7 @@ public:
                     break;
                 case View::OnlyOrdinary:
                     form.appendButton(
-                        "过滤: >普通领地<"_trf(player),
+                        "过滤: >普通领地<"_trl(localeCode),
                         "textures/ui/store_sort_icon",
                         "path",
                         makeNextViewCallback()
@@ -137,7 +138,7 @@ public:
                     break;
                 case View::OnlyParent:
                     form.appendButton(
-                        "过滤: >父领地<"_trf(player),
+                        "过滤: >父领地<"_trl(localeCode),
                         "textures/ui/store_sort_icon",
                         "path",
                         makeNextViewCallback()
@@ -145,7 +146,7 @@ public:
                     break;
                 case View::OnlyMix:
                     form.appendButton(
-                        "过滤: >混合领地<"_trf(player),
+                        "过滤: >混合领地<"_trl(localeCode),
                         "textures/ui/store_sort_icon",
                         "path",
                         makeNextViewCallback()
@@ -153,7 +154,7 @@ public:
                     break;
                 case View::OnlySub:
                     form.appendButton(
-                        "过滤: >子领地<"_trf(player),
+                        "过滤: >子领地<"_trl(localeCode),
                         "textures/ui/store_sort_icon",
                         "path",
                         makeNextViewCallback()
@@ -171,7 +172,7 @@ public:
             auto wLand = std::weak_ptr(land);
 
             std::string text =
-                "{}\n维度: {} | ID: {}"_trf(player, land->getName(), land->getDimensionId(), land->getId());
+                "{}\n维度: {} | ID: {}"_trl(localeCode, land->getName(), land->getDimensionId(), land->getId());
 
             mViews.at(View::All).appendButton(text, "textures/ui/icon_recipe_nature", "path", makeCallback(wLand));
 
@@ -198,8 +199,10 @@ public:
 
     void sendFuzzySearch(Player& player) {
         CustomForm fm;
-        fm.setTitle("[PLand] | 模糊搜索领地"_trf(player));
-        fm.appendInput("name", "请输入领地名称"_trf(player), "string", mFuzzyKeyword.value_or(""));
+
+        auto localeCode = player.getLocaleCode();
+        fm.setTitle("[PLand] | 模糊搜索领地"_trl(localeCode));
+        fm.appendInput("name", "请输入领地名称"_trl(localeCode), "string", mFuzzyKeyword.value_or(""));
         fm.sendTo(player, [thiz = getThis()](Player& self, CustomFormResult const& res, auto) {
             if (!thiz) return;
             if (!res) {

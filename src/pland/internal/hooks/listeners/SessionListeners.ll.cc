@@ -51,7 +51,6 @@ void EventListener::registerLLSessionListeners() {
             logger->debug("Player {} disconnect, remove all resources");
 
             auto& uuid = player.getUuid();
-            GlobalPlayerLocaleCodeCached.erase(uuid);
             land::PLand::getInstance().getSelectorManager()->stopSelection(uuid);
             PLand::getInstance().getDrawHandleManager()->removeHandle(player);
         })

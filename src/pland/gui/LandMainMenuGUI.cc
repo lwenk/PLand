@@ -17,15 +17,17 @@ namespace land {
 
 
 void LandMainMenuGUI::sendTo(Player& player) {
-    auto fm = BackSimpleForm<>::make();
-    fm.setTitle("[PLand] | 领地菜单"_trf(player));
-    fm.setContent("欢迎使用 Pland 领地管理插件\n\n请选择一个功能"_trf(player));
+    auto localeCode = player.getLocaleCode();
 
-    fm.appendButton("新建领地"_trf(player), "textures/ui/anvil_icon", "path", [](Player& pl) {
+    auto fm = BackSimpleForm<>::make();
+    fm.setTitle("[PLand] | 领地菜单"_trl(localeCode));
+    fm.setContent("欢迎使用 Pland 领地管理插件\n\n请选择一个功能"_trl(localeCode));
+
+    fm.appendButton("新建领地"_trl(localeCode), "textures/ui/anvil_icon", "path", [](Player& pl) {
         NewLandGUI::sendChooseLandDim(pl);
     });
 
-    fm.appendButton("管理领地"_trf(player), "textures/ui/icon_spring", "path", [](Player& pl) {
+    fm.appendButton("管理领地"_trl(localeCode), "textures/ui/icon_spring", "path", [](Player& pl) {
         ChooseLandAdvancedUtilGUI::sendTo(
             pl,
             PLand::getInstance().getLandRegistry().getLands(pl.getUuid()),
@@ -35,16 +37,16 @@ void LandMainMenuGUI::sendTo(Player& player) {
     });
 
     if (Config::cfg.land.landTp || PLand::getInstance().getLandRegistry().isOperator(player.getUuid())) {
-        fm.appendButton("领地传送"_trf(player), "textures/ui/icon_recipe_nature", "path", [](Player& pl) {
+        fm.appendButton("领地传送"_trl(localeCode), "textures/ui/icon_recipe_nature", "path", [](Player& pl) {
             LandTeleportGUI::sendTo(pl);
         });
     }
 
-    fm.appendButton("个人设置"_trf(player), "textures/ui/icon_setting", "path", [](Player& pl) {
+    fm.appendButton("个人设置"_trl(localeCode), "textures/ui/icon_setting", "path", [](Player& pl) {
         PlayerSettingGUI::sendTo(pl);
     });
 
-    fm.appendButton("关闭"_trf(player), "textures/ui/cancel", "path");
+    fm.appendButton("关闭"_trl(localeCode), "textures/ui/cancel", "path");
     fm.sendTo(player);
 }
 

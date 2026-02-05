@@ -1,16 +1,18 @@
 #include "EditLandPermTableUtilGUI.h"
-#include "pland/land/repo/LandContext.h"
 #include "ll/api/form/CustomForm.h"
+#include "pland/land/repo/LandContext.h"
 #include "pland/utils/JsonUtil.h"
+
 
 namespace land {
 
 
 void EditLandPermTableUtilGUI::sendTo(Player& player, const LandPermTable& table, Callback callback) {
-    ll::form::CustomForm fm("[PLand] | 编辑权限"_trf(player));
+    auto localeCode = player.getLocaleCode();
 
-    auto& i18n       = ll::i18n::getInstance();
-    auto  localeCode = GetPlayerLocaleCodeFromSettings(player);
+    ll::form::CustomForm fm("[PLand] | 编辑权限"_trl(localeCode));
+
+    auto& i18n = ll::i18n::getInstance();
 
     auto json = json_util::struct2json(table);
     for (auto& [k, v] : json.items()) {

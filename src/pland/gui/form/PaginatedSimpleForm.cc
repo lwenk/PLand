@@ -104,10 +104,12 @@ void PaginatedSimpleForm::buildSpecialButtons(Player& player) {
     if (!mSpecialButtons.empty()) {
         return;
     }
+    auto localeCode = player.getLocaleCode();
+
     mSpecialButtons.emplace(
         SpecialButton::PrevPage,
         ButtonData{
-            "上一页"_trf(player),
+            "上一页"_trl(localeCode),
             "textures/ui/book_pageleft_default",
             "path",
             [weak = std::weak_ptr(shared_from_this())](Player& self) {
@@ -120,7 +122,7 @@ void PaginatedSimpleForm::buildSpecialButtons(Player& player) {
     mSpecialButtons.emplace(
         SpecialButton::NextPage,
         ButtonData{
-            "下一页"_trf(player),
+            "下一页"_trl(localeCode),
             "textures/ui/book_pageright_default",
             "path",
             [weak = std::weak_ptr(shared_from_this())](Player& self) {
@@ -133,7 +135,7 @@ void PaginatedSimpleForm::buildSpecialButtons(Player& player) {
     mSpecialButtons.emplace(
         SpecialButton::Special,
         ButtonData{
-            "跳转到指定页码"_trf(player),
+            "跳转到指定页码"_trl(localeCode),
             "textures/ui/mashup_PaintBrush",
             "path",
             [weak = std::weak_ptr(shared_from_this())](Player& self) {
@@ -146,7 +148,7 @@ void PaginatedSimpleForm::buildSpecialButtons(Player& player) {
     mSpecialButtons.emplace(
         SpecialButton::JumpToFirstPage,
         ButtonData{
-            "跳转到第一页"_trf(player),
+            "跳转到第一页"_trl(localeCode),
             "textures/ui/book_shiftleft_hover",
             "path",
             [weak = std::weak_ptr(shared_from_this())](Player& self) {
@@ -159,7 +161,7 @@ void PaginatedSimpleForm::buildSpecialButtons(Player& player) {
     mSpecialButtons.emplace(
         SpecialButton::JumpToLastPage,
         ButtonData{
-            "跳转到最后一页"_trf(player),
+            "跳转到最后一页"_trl(localeCode),
             "textures/ui/book_shiftright_hover",
             "path",
             [weak = std::weak_ptr(shared_from_this())](Player& self) {
@@ -313,17 +315,19 @@ void PaginatedSimpleForm::sendSpecialPage(Player& player, int pageNumber) {
     mCurrentPageNumber = pageNumber;
 }
 void PaginatedSimpleForm::sendChoosePageForm(Player& player) {
+    auto localeCode = player.getLocaleCode();
+
     auto fm = std::make_unique<ll::form::CustomForm>();
-    fm->setTitle("跳转到指定页码"_trf(player));
+    fm->setTitle("跳转到指定页码"_trl(localeCode));
     fm->appendSlider(
         "page",
-        "共 {} 页，请选择页码："_trf(player, mTotalPages),
+        "共 {} 页，请选择页码："_trl(localeCode, mTotalPages),
         1,
         mTotalPages,
         1.0,
         mCurrentPageNumber
     );
-    fm->setSubmitButton("跳转"_trf(player));
+    fm->setSubmitButton("跳转"_trl(localeCode));
 
     fm->sendTo(player, [thiz = shared_from_this()](Player& self, ll::form::CustomFormResult const& res, auto) {
         if (!res) {

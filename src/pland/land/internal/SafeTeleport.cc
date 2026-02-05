@@ -23,12 +23,13 @@
 #include <mc/network/packet/SetTitlePacket.h>
 #include <mc/world/level/BlockSource.h>
 #include <mc/world/level/ChunkPos.h>
+#include <mc/world/level/Level.h>
 #include <mc/world/level/block/Block.h>
 #include <mc/world/level/chunk/ChunkSource.h>
 #include <mc/world/level/chunk/ChunkState.h>
 #include <mc/world/level/chunk/LevelChunk.h>
 #include <mc/world/level/dimension/Dimension.h>
-#include <mc/world/level/Level.h>
+
 
 #include <cstdint>
 
@@ -115,7 +116,8 @@ class Task {
             logger.debug("[TPR] Y: {}  Block: {}", y, block->getTypeName());
 #endif
 
-            if (!block->isAir() &&                                 // 落脚点不是空气
+            if (
+                !block->isAir() &&                                 // 落脚点不是空气
                 !dangerousBlocks.contains(block->getTypeName()) && // 落脚点不是危险方块
                 headBlock->isAir() &&                              // 头部方块是空气
                 legBlock->isAir()                                  // 腿部方块是空气
@@ -185,7 +187,7 @@ public:
 
     void sendWaitChunkLoadTip() {
         if (auto player = getPlayer()) {
-            mTipPacket.mTitleText = "等待区块加载... ({}/{})"_trf(*player, mCounter, MaxCounter);
+            mTipPacket.mTitleText = "等待区块加载... ({}/{})"_trl(player->getLocaleCode(), mCounter, MaxCounter);
             mTipPacket.sendTo(*player);
         }
     }
@@ -305,37 +307,37 @@ struct SafeTeleport::Impl {
 
     void handlePending(SharedTask& task) {
         auto& player = *task->getPlayer();
-        feedback_utils::sendText(player, "[1/4] 任务已创建"_trf(player));
+        feedback_utils::sendText(player, "[1/4] 任务已创建"_trl(player.getLocaleCode()));
 
         if (task->isTargetChunkFullyLoaded()) {
             task->updateState(TaskState::ChunkLoaded);
         } else {
             task->updateState(TaskState::WaitingChunkLoad);
-            feedback_utils::sendText(player, "[2/4] 目标区块未加载，等待目标区块加载..."_trf(player));
+            feedback_utils::sendText(player, "[2/4] 目标区块未加载，等待目标区块加载..."_trl(player.getLocaleCode()));
         }
     }
     void handleWaitingChunkLoad(SharedTask& task) { task->checkChunkStatus(); }
     void handleChunkLoadTimeout(SharedTask& task) {
         auto& player = *task->getPlayer();
-        feedback_utils::sendText(player, "[2/4] 目标区块加载超时，正在返回原位置..."_trf(player));
+        feedback_utils::sendText(player, "[2/4] 目标区块加载超时，正在返回原位置..."_trl(player.getLocaleCode()));
         task->rollback();
         task->updateState(TaskState::TaskFailed);
     }
     void handleChunkLoaded(SharedTask& task) {
         auto& player = *task->getPlayer();
-        feedback_utils::sendText(player, "[3/4] 区块已加载，正在寻找安全位置..."_trf(player));
+        feedback_utils::sendText(player, "[3/4] 区块已加载，正在寻找安全位置..."_trl(player.getLocaleCode()));
         task->launchFindPosTask();
         task->updateState(TaskState::FindingSafePos);
     }
     void handleFoundSafePos(SharedTask& task) {
         auto& player = *task->getPlayer();
-        feedback_utils::sendText(player, "[4/4] 安全位置已找到，正在传送..."_trf(player));
+        feedback_utils::sendText(player, "[4/4] 安全位置已找到，正在传送..."_trl(player.getLocaleCode()));
         task->commit();
         task->updateState(TaskState::TaskCompleted);
     }
     void handleNoSafePos(SharedTask& task) {
         auto& player = *task->getPlayer();
-        feedback_utils::sendText(player, "[3/4] 未找到安全位置，正在返回原位置..."_trf(player));
+        feedback_utils::sendText(player, "[3/4] 未找到安全位置，正在返回原位置..."_trl(player.getLocaleCode()));
         task->rollback();
         task->updateState(TaskState::TaskFailed);
     }

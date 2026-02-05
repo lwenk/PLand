@@ -4,6 +4,8 @@
 #include "pland/Global.h"
 #include "pland/land/Land.h"
 
+#include "mc/platform/UUID.h"
+
 namespace devtool::viewer {
 
 class LandEditor;

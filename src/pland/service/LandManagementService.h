@@ -1,12 +1,18 @@
 #pragma once
-#include "ll/api/Expected.h"
 #include "pland/Global.h"
 #include "pland/aabb/LandAABB.h"
 
 #include <mc/deps/core/math/Vec3.h>
+
+#include "ll/api/Expected.h"
+
 #include <memory>
 #include <optional>
 
+class Player;
+namespace mce {
+class UUID;
+}
 
 namespace land {
 struct LandResizeSettlement;

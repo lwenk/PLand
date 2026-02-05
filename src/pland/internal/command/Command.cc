@@ -1,7 +1,6 @@
 #include "magic_enum.hpp"
 
 #include "Command.h"
-#include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/drawer/DrawHandleManager.h"
 #include "pland/events/domain/ConfigReloadEvent.h"
@@ -16,7 +15,6 @@
 #include "pland/service/LandManagementService.h"
 #include "pland/service/ServiceLocator.h"
 #include "pland/utils/FeedbackUtils.h"
-#include "pland/utils/McUtils.h"
 
 
 #include "ll/api/command/Command.h"
@@ -26,13 +24,11 @@
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/i18n/I18n.h"
 #include "ll/api/io/Logger.h"
-#include "ll/api/service/Bedrock.h"
 #include "ll/api/service/PlayerInfo.h"
 
 
 #include "mc/deps/core/math/Color.h"
 #include "mc/deps/core/utility/optional_ref.h"
-#include "mc/network/packet/LevelChunkPacket.h"
 #include "mc/platform/UUID.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOriginType.h"
@@ -43,17 +39,9 @@
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/level/BlockPos.h"
 
-
-#include <algorithm>
-#include <filesystem>
 #include <memory>
 #include <sstream>
 #include <vector>
-
-
-#ifdef LD_DEVTOOL
-#include "DevToolApp.h"
-#endif
 
 
 namespace land::internal {
@@ -170,7 +158,10 @@ static auto const New = [](CommandOrigin const& ori, CommandOutput& out, NewPara
         }
         feedback_utils::sendText(
             player,
-            "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(player, Config::cfg.selector.tool)
+            "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trl(
+                player.getLocaleCode(),
+                Config::cfg.selector.tool
+            )
         );
         break;
     }
@@ -186,7 +177,10 @@ static auto const Set = [](CommandOrigin const& ori, CommandOutput& out, SetPara
     auto& player = *static_cast<Player*>(ori.getEntity());
 
     if (!PLand::getInstance().getSelectorManager()->hasSelector(player)) {
-        feedback_utils::sendErrorText(out, "您还没有开启领地选区，请先使用 /pland new 命令"_trf(player));
+        feedback_utils::sendErrorText(
+            out,
+            "您还没有开启领地选区，请先使用 /pland new 命令"_trl(player.getLocaleCode())
+        );
         return;
     }
 
@@ -204,7 +198,7 @@ static auto const Cancel = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
     PLand::getInstance().getSelectorManager()->stopSelection(player);
-    feedback_utils::sendText(out, "已取消新建领地"_trf(player));
+    feedback_utils::sendText(out, "已取消新建领地"_trl(player.getLocaleCode()));
 };
 
 
@@ -232,32 +226,33 @@ struct DrawParam {
 static auto const Draw = [](CommandOrigin const& ori, CommandOutput& out, DrawParam const& param) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
 
-    auto& player = *static_cast<Player*>(ori.getEntity());
-    auto& db     = PLand::getInstance().getLandRegistry();
-    auto  handle = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(player);
+    auto& player     = *static_cast<Player*>(ori.getEntity());
+    auto  localeCode = player.getLocaleCode();
+    auto& db         = PLand::getInstance().getLandRegistry();
+    auto  handle     = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(player);
 
     switch (param.type) {
     case DrawType::Disable: {
         handle->clearLand();
-        feedback_utils::sendText(out, "领地绘制已关闭"_trf(player));
+        feedback_utils::sendText(out, "领地绘制已关闭"_trl(localeCode));
         break;
     }
 
     case DrawType::CurrentLand: {
         auto land = db.getLandAt(player.getPosition(), player.getDimensionId().id);
         if (!land) {
-            feedback_utils::sendErrorText(out, "您当前不在领地内"_trf(player));
+            feedback_utils::sendErrorText(out, "您当前不在领地内"_trl(localeCode));
             return;
         }
         handle->draw(land, mce::Color::GREEN());
-        feedback_utils::sendText(out, "已绘制领地"_trf(player));
+        feedback_utils::sendText(out, "已绘制领地"_trl(localeCode));
         break;
     }
 
     case DrawType::NearLand: {
         auto lands = db.getLandAt(player.getPosition(), Config::cfg.land.drawRange, player.getDimensionId().id);
         for (auto& land : lands) handle->draw(land, mce::Color::WHITE());
-        feedback_utils::sendText(out, "已绘制附近 {} 个领地"_trf(player, lands.size()));
+        feedback_utils::sendText(out, "已绘制附近 {} 个领地"_trl(localeCode, lands.size()));
         break;
     }
     }
@@ -265,84 +260,40 @@ static auto const Draw = [](CommandOrigin const& ori, CommandOutput& out, DrawPa
 
 static auto const SetLandTeleportPos = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
-    auto& player = *static_cast<Player*>(ori.getEntity());
+    auto& player     = *static_cast<Player*>(ori.getEntity());
+    auto  localeCode = player.getLocaleCode();
 
     auto& mod      = PLand::getInstance();
     auto& registry = mod.getLandRegistry();
     auto  point    = player.getPosition();
     auto  land     = registry.getLandAt(point, player.getDimensionId().id);
     if (!land) {
-        feedback_utils::sendErrorText(out, "您当前不在领地内"_trf(player));
+        feedback_utils::sendErrorText(out, "您当前不在领地内"_trl(localeCode));
         return;
     }
 
     auto& service = mod.getServiceLocator().getLandManagementService();
     if (auto res = service.setLandTeleportPos(player, land, point)) {
-        feedback_utils::notifySuccess(player, "传送点已更新为: {}"_trf(player, point.toString()));
+        feedback_utils::notifySuccess(player, "传送点已更新为: {}"_trl(localeCode, point.toString()));
     } else {
         feedback_utils::sendError(player, res.error());
     }
 };
 
-
-static auto const SetLanguage = [](CommandOrigin const& ori, CommandOutput& out) {
-    CHECK_TYPE(ori, out, CommandOriginType::Player);
-    auto& player = *static_cast<Player*>(ori.getEntity());
-
-    using ll::form::CustomForm;
-    using ll::form::CustomFormResult;
-    using ll::form::FormCancelReason;
-
-    static std::vector<std::string> langs = {
-        PlayerSettings::SERVER_LOCALE_CODE.data(),
-        PlayerSettings::SYSTEM_LOCALE_CODE.data()
-    };
-    if (langs.size() == 2) {
-        std::filesystem::path const& langDir = land::PLand::getInstance().getSelf().getLangDir();
-        for (auto const& lang : std::filesystem::directory_iterator(langDir)) {
-            if (lang.path().extension() == ".json") {
-                langs.push_back(lang.path().stem().string());
-            }
-        }
-    }
-    CustomForm fm(("[PLand] | 选择语言"_trf(player)));
-    fm.appendLabel("system: 为使用当前客户端语言\nserver: 为使用服务端语言"_trf(player));
-    fm.appendLabel("当前使用语言包: {}"_trf(player, GetPlayerLocaleCodeFromSettings(player)));
-    fm.appendDropdown("lang", "选择语言"_trf(player), langs);
-    fm.sendTo(player, [](Player& pl, CustomFormResult const& res, FormCancelReason) {
-        if (!res) {
-            return;
-        }
-
-        auto lang = std::get<std::string>(res->at("lang"));
-
-        auto& uuid     = pl.getUuid();
-        auto& db       = PLand::getInstance().getLandRegistry();
-        auto  settings = db.getPlayerSettings(uuid);
-        if (!settings) {
-            db.setPlayerSettings(uuid, PlayerSettings{});
-            settings = db.getPlayerSettings(uuid);
-        }
-
-        settings->localeCode               = lang;
-        GlobalPlayerLocaleCodeCached[uuid] = lang;
-        feedback_utils::sendText(pl, "语言包已切换为: {}"_trf(pl, lang));
-    });
-};
-
 static auto const This = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
-    auto& player = *static_cast<Player*>(ori.getEntity());
+    auto& player     = *static_cast<Player*>(ori.getEntity());
+    auto  localeCode = player.getLocaleCode();
 
     auto land = PLand::getInstance().getLandRegistry().getLandAt(player.getPosition(), player.getDimensionId());
     if (!land) {
-        feedback_utils::sendText(player, "当前位置没有领地"_trf(player));
+        feedback_utils::sendText(player, "当前位置没有领地"_trl(localeCode));
         return;
     }
 
     auto& uuid = player.getUuid();
     if (!land->isOwner(uuid) && !PLand::getInstance().getLandRegistry().isOperator(uuid)) {
-        feedback_utils::sendText(player, "当前位置不是你的领地"_trf(player));
+        feedback_utils::sendText(player, "当前位置不是你的领地"_trl(localeCode));
         return;
     }
 
@@ -396,9 +347,6 @@ bool LandCommand::setup() {
 
     // pland set teleport_pos 设置传送点
     cmd.overload().text("set").text("teleport_pos").execute(Lambda::SetLandTeleportPos);
-
-    // pland set language 设置语言
-    cmd.overload().text("set").text("language").execute(Lambda::SetLanguage);
 
 #ifdef LD_DEVTOOL
     // pland devtool

@@ -63,9 +63,6 @@
 - `/pland this`
   - 打开当前位置的领地管理GUI（领地主人）
 
-- `/pland set language`
-  - 选择语言（玩家）
-
 - `/pland draw <disable|near_land|current_land>`
   - 开启绘制领地范围(需在 `Config.json` 中设置 `setupDrawCommand: true`)
     - `disable` 关闭绘制
