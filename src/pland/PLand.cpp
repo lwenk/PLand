@@ -56,13 +56,24 @@ struct PLand::Impl {
     explicit Impl() : mSelf(*ll::mod::NativeMod::current()) {}
 };
 
+bool ensureStableVersion() {
+    auto tag = land::BuildInfo::Tag;
+    if (tag.find("-g") != std::string_view::npos) {
+        return false;
+    }
+    if (!tag.empty() && tag.front() == 'v') {
+        tag.remove_prefix(1);
+    }
+    return ll::data::Version::valid(tag);
+}
 
 bool PLand::load() {
     auto& logger = getSelf().getLogger();
     logger.info("{}-{}-{}", BuildInfo::Tag, BuildInfo::Branch, BuildInfo::Commit);
-    if (BuildInfo::Branch != "main") {
-        logger.warn("This is a development build. It may not be stable and may contain bugs.");
+    if (!ensureStableVersion()) {
+        logger.warn("This is a development build ({}). It may not be stable.", BuildInfo::Tag);
     }
+
     if (auto res = ll::i18n::getInstance().load(getSelf().getLangDir()); !res) {
         logger.error("Load language file failed, plugin will use default language.");
         res.error().log(logger);
