@@ -457,11 +457,6 @@ ll::Expected<> LandRegistry::executeTransaction(
             auto snapshot = snapshots[land.get()];
             land->_reinit(std::move(snapshot.context), snapshot.dirtyCount);
         }
-
-        // 回滚 ID 分配器
-        for (size_t i = 0; i < ctx.mAllocatedIds.size(); ++i) {
-            impl->mLandIdAllocator->revertId();
-        }
         return StorageError::make(StorageError::ErrorCode::TransactionError, "Transaction aborted.");
     }
 
