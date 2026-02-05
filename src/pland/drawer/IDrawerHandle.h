@@ -33,8 +33,8 @@ protected:
 public:
     LD_DISABLE_COPY_AND_MOVE(IDrawerHandle);
 
-    LDAPI explicit IDrawerHandle() = default;
-    LDAPI virtual ~IDrawerHandle() = default;
+    LDAPI IDrawerHandle();
+    LDAPI virtual ~IDrawerHandle();
 
     LDAPI void setTargetPlayer(Player& player);
 

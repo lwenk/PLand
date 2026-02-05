@@ -12,13 +12,13 @@ class TransactionContext {
     std::unordered_set<LandID> mLandsToRemove;
 
 public:
-    explicit TransactionContext(LandRegistry& landRegistry);
+    LDNDAPI explicit TransactionContext(LandRegistry& landRegistry);
 
     LD_DISABLE_COPY_AND_MOVE(TransactionContext);
 
-    void allocateId(std::shared_ptr<Land> const& land);
+    LDAPI void allocateId(std::shared_ptr<Land> const& land);
 
-    void markForRemoval(std::shared_ptr<Land> const& land);
+    LDAPI void markForRemoval(std::shared_ptr<Land> const& land);
 };
 
 } // namespace land

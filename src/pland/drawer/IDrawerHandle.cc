@@ -4,6 +4,9 @@
 
 namespace land::drawer {
 
+IDrawerHandle::IDrawerHandle()  = default;
+IDrawerHandle::~IDrawerHandle() = default;
+
 void IDrawerHandle::setTargetPlayer(Player& player) { mTargetPlayer = player.getWeakEntity(); }
 
 optional_ref<Player> IDrawerHandle::getTargetPlayer() const { return mTargetPlayer.tryUnwrap<Player>(); }

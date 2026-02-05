@@ -47,7 +47,7 @@ public: /* public */
 
     LDNDAPI service::ServiceLocator& getServiceLocator() const;
 
-    internal::SafeTeleport& getSafeTeleport() const;
+    LDNDAPI internal::SafeTeleport& getSafeTeleport() const;
 
 #ifdef LD_DEVTOOL
     void setDevToolVisible(bool visible);

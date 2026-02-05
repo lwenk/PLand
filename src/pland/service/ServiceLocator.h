@@ -23,13 +23,13 @@ public:
 
     LD_DISABLE_COPY_AND_MOVE(ServiceLocator);
 
-    LandManagementService& getLandManagementService() const;
+    LDNDAPI LandManagementService& getLandManagementService() const;
 
-    LandHierarchyService& getLandHierarchyService() const;
+    LDNDAPI LandHierarchyService& getLandHierarchyService() const;
 
-    LandPriceService& getLandPriceService() const;
+    LDNDAPI LandPriceService& getLandPriceService() const;
 
-    SelectionService& getSelectionService() const;
+    LDNDAPI SelectionService& getSelectionService() const;
 };
 
 } // namespace service

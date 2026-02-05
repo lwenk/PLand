@@ -24,11 +24,11 @@ struct StorageError : public ll::ErrorInfoBase {
     ErrorCode   mCode{ErrorCode::None};
     std::string mMessage; // for debug
 
-    StorageError(ErrorCode code, std::string message);
+    LDNDAPI StorageError(ErrorCode code, std::string message);
 
-    std::string message() const noexcept override;
+    LDNDAPI std::string message() const noexcept override;
 
-    static bool hasError(ErrorCode errors, ErrorCode flag);
+    LDNDAPI static bool hasError(ErrorCode errors, ErrorCode flag);
 
     template <typename... Args>
     [[nodiscard]] static inline auto make(Args... args) {

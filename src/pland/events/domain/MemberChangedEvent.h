@@ -1,8 +1,11 @@
 #pragma once
+#include "pland/Global.h"
+#include "pland/events/LandEventMixin.h"
+
 #include "ll/api/event/Event.h"
 
 #include "mc/platform/UUID.h"
-#include "pland/events/LandEventMixin.h"
+
 #include <memory>
 #include <utility>
 
@@ -20,9 +23,9 @@ public:
       mTarget(target),
       mIsAdd(isAdd) {}
 
-    mce::UUID target() const;
+    LDNDAPI mce::UUID target() const;
 
-    bool isAdd() const;
+    LDNDAPI bool isAdd() const;
 };
 
 

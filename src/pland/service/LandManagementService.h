@@ -58,15 +58,15 @@ public:
      * @param player 玩家
      * @param is3D 领地类别
      */
-    ll::Expected<> requestCreateOrdinaryLand(Player& player, bool is3D) const;
+    LDNDAPI ll::Expected<> requestCreateOrdinaryLand(Player& player, bool is3D) const;
 
     /**
      * 请求创建子领地
      * @param player 玩家
      */
-    ll::Expected<> requestCreateSubLand(Player& player);
+    LDNDAPI ll::Expected<> requestCreateSubLand(Player& player);
 
-    ll::Expected<> requestCreateSubLand(Player& player, std::shared_ptr<Land> const& land) const;
+    LDNDAPI ll::Expected<> requestCreateSubLand(Player& player, std::shared_ptr<Land> const& land) const;
 
     /**
      * 购买普通领地
@@ -75,7 +75,8 @@ public:
      * @param money 需支付经济
      * @return 领地对象
      */
-    ll::Expected<std::shared_ptr<Land>> buyLand(Player& player, OrdinaryLandCreateSelector* selector, int64_t money);
+    LDNDAPI ll::Expected<std::shared_ptr<Land>>
+            buyLand(Player& player, OrdinaryLandCreateSelector* selector, int64_t money);
 
     /**
      * 购买子领地
@@ -84,7 +85,7 @@ public:
      * @param money 需要支付的经济
      * @return 子领地对象
      */
-    ll::Expected<std::shared_ptr<Land>> buyLand(Player& player, SubLandCreateSelector* selector, int64_t money);
+    LDNDAPI ll::Expected<std::shared_ptr<Land>> buyLand(Player& player, SubLandCreateSelector* selector, int64_t money);
 
     /**
      * 处理领地范围变更
@@ -92,8 +93,8 @@ public:
      * @param selector 选区
      * @param settlement 结算数据
      */
-    ll::Expected<>
-    handleChangeRange(Player& player, LandResizeSelector* selector, LandResizeSettlement const& settlement);
+    LDNDAPI ll::Expected<>
+            handleChangeRange(Player& player, LandResizeSelector* selector, LandResizeSettlement const& settlement);
 
     /**
      * 确保玩家领地数量不超过上限
@@ -101,25 +102,26 @@ public:
      * @return 是否成功
      * @note 如果失败，此函数返回 ValidateError
      */
-    ll::Expected<> ensurePlayerLandCountLimit(mce::UUID const& uuid) const;
+    LDNDAPI ll::Expected<> ensurePlayerLandCountLimit(mce::UUID const& uuid) const;
 
-    ll::Expected<> setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point);
+    LDNDAPI ll::Expected<> setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point);
 
-    ll::Expected<> deleteLand(Player& player, std::shared_ptr<Land> ptr, DeletePolicy policy);
+    LDNDAPI ll::Expected<> deleteLand(Player& player, std::shared_ptr<Land> ptr, DeletePolicy policy);
 
-    ll::Expected<> setLandName(Player& player, std::shared_ptr<Land> const& land, std::string name);
+    LDNDAPI ll::Expected<> setLandName(Player& player, std::shared_ptr<Land> const& land, std::string name);
 
-    ll::Expected<> setLandDescription(Player& player, std::shared_ptr<Land> const& land, std::string description);
+    LDNDAPI ll::Expected<>
+            setLandDescription(Player& player, std::shared_ptr<Land> const& land, std::string description);
 
-    ll::Expected<> changeOwner(std::shared_ptr<Land> const& land, mce::UUID const& newOwner);
+    LDNDAPI ll::Expected<> changeOwner(std::shared_ptr<Land> const& land, mce::UUID const& newOwner);
 
-    ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, Player& target);
-    ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
+    LDNDAPI ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, Player& target);
+    LDNDAPI ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
 
-    ll::Expected<> requestChangeRange(Player& player, std::shared_ptr<Land> const& land);
+    LDNDAPI ll::Expected<> requestChangeRange(Player& player, std::shared_ptr<Land> const& land);
 
-    ll::Expected<> addMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
-    ll::Expected<> removeMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
+    LDNDAPI ll::Expected<> addMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
+    LDNDAPI ll::Expected<> removeMember(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
 
 
 private:

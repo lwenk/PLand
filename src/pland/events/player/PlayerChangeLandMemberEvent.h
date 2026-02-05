@@ -1,10 +1,12 @@
 #pragma once
 #include "ll/api/event/Cancellable.h"
-#include <utility>
-
 #include "ll/api/event/player/PlayerEvent.h"
 
+#include "pland/Global.h"
 #include "pland/events/LandEventMixin.h"
+
+
+#include <utility>
 
 namespace land::event {
 
@@ -19,9 +21,9 @@ public:
       mTarget(target),
       mIsAdd(isAdd) {}
 
-    mce::UUID target() const;
+    LDNDAPI mce::UUID target() const;
 
-    bool isAdd() const;
+    LDNDAPI bool isAdd() const;
 };
 
 class PlayerChangeLandMemberBeforeEvent final : public ll::event::Cancellable<IPlayerChangeLandMemberEvent> {
