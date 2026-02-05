@@ -12,10 +12,12 @@
 #include "pland/land/validator/LandCreateValidator.h"
 #include "pland/utils/JsonUtil.h"
 
-
 #include "ll/api/Expected.h"
+#include "ll/api/coro/CoroTask.h"
+#include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/data/KeyValueDB.h"
 #include "ll/api/i18n/I18n.h"
+#include "ll/api/thread/ThreadPoolExecutor.h"
 
 #include "mc/platform/UUID.h"
 #include "mc/world/actor/player/Player.h"
@@ -27,6 +29,7 @@
 #include "internal/LandMigrator.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <memory>
@@ -50,13 +53,11 @@ struct LandRegistry::Impl {
     std::unique_ptr<internal::LandIdAllocator>        mLandIdAllocator{nullptr};       // 领地ID分配器
     internal::LandDimensionChunkMap                   mDimensionChunkMap;              // 维度区块映射
     std::unique_ptr<LandTemplatePermTable>            mLandTemplatePermTable{nullptr}; // 领地模板权限表
-    std::thread                                       mThread;                         // 线程
-    std::atomic<bool>                                 mThreadQuit{false};              // 线程退出标志
-    mutable std::mutex                                mThreadMutex;                    // 线程互斥锁(仅 mThreadCV 使用)
-    std::condition_variable                           mThreadCV;                       // 线程条件变量
 
+    ll::coro::InterruptableSleep mInterruptableSleep; // 中断等待
+    std::atomic_bool             mCoroAbort{false};   // 协程中断标志
 
-    void _loadOperators() {
+    void _loadOperators(ll::io::Logger& logger) {
         if (!mDB->has(DbOperatorDataKey)) {
             mDB->set(DbOperatorDataKey, "[]"); // empty array
         }
@@ -64,7 +65,7 @@ struct LandRegistry::Impl {
         for (auto& op : ops) {
             auto uuidStr = op.get<std::string>();
             if (!mce::UUID::canParse(uuidStr)) {
-                PLand::getInstance().getSelf().getLogger().warn("Invalid operator UUID: {}", uuidStr);
+                logger.warn("Invalid operator UUID: {}", uuidStr);
             }
             mLandOperators.emplace_back(uuidStr);
         }
@@ -111,7 +112,7 @@ struct LandRegistry::Impl {
 
         mLandIdAllocator = std::make_unique<internal::LandIdAllocator>(safeId); // 初始化ID分配器
     }
-    void _loadLandTemplatePermTable() {
+    void _loadLandTemplatePermTable(ll::io::Logger& logger) {
         if (!mDB->has(DbTemplatePermKey)) {
             auto t = LandPermTable{};
             mDB->set(DbTemplatePermKey, json_util::struct2json(t).dump());
@@ -130,14 +131,12 @@ struct LandRegistry::Impl {
             mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(t);
         } catch (...) {
             mLandTemplatePermTable = std::make_unique<LandTemplatePermTable>(LandPermTable{});
-            PLand::getInstance().getSelf().getLogger().error(
-                "Failed to load template perm table, using default perm table instead"
-            );
+            logger.error("Failed to load template perm table, using default perm table instead");
         }
     }
 
-    void _openDatabaseAndEnsureVersion() {
-        auto&       self    = land::PLand::getInstance().getSelf();
+    void _openDatabaseAndEnsureVersion(PLand& mod) {
+        auto&       self    = mod.getSelf();
         auto&       logger  = self.getLogger();
         auto const& dataDir = self.getDataDir();
         auto const  dbDir   = dataDir / DbDirName;
@@ -247,15 +246,15 @@ struct LandRegistry::Impl {
 
 LandID LandRegistry::_allocateNextId() { return impl->mLandIdAllocator->nextId(); }
 
-LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
-    auto& logger = land::PLand::getInstance().getSelf().getLogger();
+LandRegistry::LandRegistry(PLand& mod) : impl(std::make_unique<Impl>()) {
+    auto& logger = mod.getSelf().getLogger();
 
     logger.trace("打开数据库...");
-    impl->_openDatabaseAndEnsureVersion();
+    impl->_openDatabaseAndEnsureVersion(mod);
 
     auto lock = std::unique_lock<std::shared_mutex>(impl->mMutex);
     logger.info("加载管理员...");
-    impl->_loadOperators();
+    impl->_loadOperators(logger);
     logger.info("已加载 {} 位管理员", impl->mLandOperators.size());
 
     logger.info("加载玩家个人设置...");
@@ -267,7 +266,7 @@ LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
     logger.info("已加载 {} 个领地", impl->mLandCache.size());
 
     logger.info("加载领地默认权限模板...");
-    impl->_loadLandTemplatePermTable();
+    impl->_loadLandTemplatePermTable(logger);
     logger.info("领地默认权限模板加载完成");
 
     logger.info("构建领地空间索引...");
@@ -303,24 +302,21 @@ LandRegistry::LandRegistry() : impl(std::make_unique<Impl>()) {
         logger.info("构建完成，共处理 {} 个领地组", familyTreeRoot.size());
     }
 
-    impl->mThread = std::thread([this]() {
-        while (!impl->mThreadQuit) {
-            std::unique_lock<std::mutex> lk(impl->mThreadMutex);
-            if (impl->mThreadCV.wait_for(lk, std::chrono::minutes(2), [this] { return impl->mThreadQuit.load(); })) {
-                break; // 被 stop 唤醒
+    ll::coro::keepThis([this]() -> ll::coro::CoroTask<> {
+        while (!impl->mCoroAbort) {
+            co_await impl->mInterruptableSleep.sleepFor(std::chrono::minutes{2});
+            if (impl->mCoroAbort) {
+                break;
             }
-            lk.unlock();
-            land::PLand::getInstance().getSelf().getLogger().debug("[Thread] Saving land data...");
-            this->save();
-            land::PLand::getInstance().getSelf().getLogger().debug("[Thread] Land data saved.");
+            save();
         }
-    });
+        co_return;
+    }).launch(mod.getThreadPool());
 }
 
 LandRegistry::~LandRegistry() {
-    impl->mThreadQuit = true;
-    impl->mThreadCV.notify_all(); // 唤醒线程
-    if (impl->mThread.joinable()) impl->mThread.join();
+    impl->mCoroAbort.store(true);
+    impl->mInterruptableSleep.interrupt(true);
 }
 
 

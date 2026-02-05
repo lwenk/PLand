@@ -84,7 +84,7 @@ bool PLand::load() {
 
     mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("PLand-ThreadPool", 2);
 
-    mImpl->mLandRegistry = std::make_unique<land::LandRegistry>();
+    mImpl->mLandRegistry = std::make_unique<land::LandRegistry>(*this);
     EconomySystem::getInstance().initialize();
 
 #ifdef DEBUG
@@ -104,7 +104,7 @@ bool PLand::enable() {
     mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
     mImpl->mTelemetry         = std::make_unique<internal::adapter::Telemetry>();
     if (Config::cfg.internal.telemetry) {
-        mImpl->mTelemetry->launch(*getThreadPool());
+        mImpl->mTelemetry->launch(getThreadPool());
     }
 
     mImpl->mServiceLocator = std::make_unique<service::ServiceLocator>(*this);
@@ -117,7 +117,7 @@ bool PLand::enable() {
             EconomySystem::getInstance().reload();
 
             if (ev.config().internal.telemetry) {
-                mImpl->mTelemetry->launch(*getThreadPool());
+                mImpl->mTelemetry->launch(getThreadPool());
             } else {
                 mImpl->mTelemetry->shutdown();
             }
@@ -181,7 +181,7 @@ LandRegistry&           PLand::getLandRegistry() const { return *mImpl->mLandReg
 DrawHandleManager*      PLand::getDrawHandleManager() const { return mImpl->mDrawHandleManager.get(); }
 internal::SafeTeleport& PLand::getSafeTeleport() const { return *mImpl->mSafeTeleport; }
 
-ll::thread::ThreadPoolExecutor* PLand::getThreadPool() const { return mImpl->mThreadPoolExecutor.get(); }
+ll::thread::ThreadPoolExecutor& PLand::getThreadPool() const { return *mImpl->mThreadPoolExecutor; }
 service::ServiceLocator&        PLand::getServiceLocator() const { return *mImpl->mServiceLocator; }
 
 #ifdef LD_DEVTOOL

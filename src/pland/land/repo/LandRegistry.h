@@ -18,6 +18,7 @@ namespace land {
 
 class Land;
 class LandContext;
+class PLand;
 
 struct PlayerSettings {
     bool showEnterLandTitle{true};     // 是否显示进入领地提示
@@ -36,7 +37,7 @@ class LandRegistry final {
 
 public:
     LD_DISABLE_COPY_AND_MOVE(LandRegistry);
-    explicit LandRegistry();
+    explicit LandRegistry(PLand& mod);
     ~LandRegistry();
 
     LDAPI void save();

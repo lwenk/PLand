@@ -43,7 +43,7 @@ public: /* public */
     LDNDAPI class LandRegistry&      getLandRegistry() const;
     LDNDAPI class DrawHandleManager* getDrawHandleManager() const;
 
-    LDNDAPI ll::thread::ThreadPoolExecutor* getThreadPool() const;
+    LDNDAPI ll::thread::ThreadPoolExecutor& getThreadPool() const;
 
     LDNDAPI service::ServiceLocator& getServiceLocator() const;
 
