@@ -1,4 +1,5 @@
 #include "SelectorManager.h"
+#include "ll/api/event/ListenerBase.h"
 #include "pland/PLand.h"
 #include "pland/infra/Debouncer.h"
 #include "pland/land/Config.h"
@@ -9,8 +10,10 @@
 #include "ll/api/coro/CoroTask.h"
 #include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/event/EventBus.h"
+#include "ll/api/event/player/PlayerDisconnectEvent.h"
 #include "ll/api/event/player/PlayerInteractBlockEvent.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
+
 
 #include "mc/world/actor/player/Player.h"
 
@@ -25,6 +28,8 @@ struct SelectorManager::Impl {
     ll::event::ListenerPtr                                    mListener{nullptr};
     std::shared_ptr<std::atomic<bool>>                        mCoroStop{nullptr};
     std::shared_ptr<ll::coro::InterruptableSleep>             mInterruptableSleep{nullptr};
+
+    ll::event::ListenerPtr mPlayerDisconnectListener;
 };
 
 SelectorManager::SelectorManager() : impl(std::make_unique<Impl>()) {
@@ -69,6 +74,10 @@ SelectorManager::SelectorManager() : impl(std::make_unique<Impl>()) {
         }
     );
 
+    impl->mPlayerDisconnectListener =
+        ll::event::EventBus::getInstance().emplaceListener<ll::event::PlayerDisconnectEvent>(
+            [this](ll::event::PlayerDisconnectEvent const& ev) { this->stopSelection(ev.self()); }
+        );
 
     impl->mCoroStop           = std::make_shared<std::atomic<bool>>(false);
     impl->mInterruptableSleep = std::make_shared<ll::coro::InterruptableSleep>();
@@ -111,6 +120,9 @@ SelectorManager::SelectorManager() : impl(std::make_unique<Impl>()) {
 }
 
 SelectorManager::~SelectorManager() {
+    ll::event::EventBus::getInstance().removeListener(impl->mListener);
+    ll::event::EventBus::getInstance().removeListener(impl->mPlayerDisconnectListener);
+
     impl->mSelectors.clear();
     impl->mCoroStop->store(true);
     impl->mInterruptableSleep->interrupt(true);

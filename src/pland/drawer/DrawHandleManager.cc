@@ -9,9 +9,11 @@
 
 #include "mc/world/actor/player/Player.h"
 
+#include "ll/api/event/player/PlayerDisconnectEvent.h"
+#include <ll/api/event/EventBus.h>
 #include <ll/api/event/ListenerBase.h>
 
-#include <ll/api/event/EventBus.h>
+
 #include <memory>
 
 
@@ -20,6 +22,7 @@ namespace land {
 struct DrawHandleManager::Impl {
     std::unordered_map<mce::UUID, std::unique_ptr<drawer::IDrawerHandle>> mDrawHandles;
     ll::event::ListenerPtr                                                mPlayerDeleteLandListener;
+    ll::event::ListenerPtr                                                mPlayerDisconnectListener;
 
     std::unique_ptr<drawer::IDrawerHandle> _createHandle() const {
         switch (Config::cfg.land.drawHandleBackend) {
@@ -85,9 +88,14 @@ DrawHandleManager::DrawHandleManager() : impl(std::make_unique<Impl>()) {
                 }
             }
         );
+    impl->mPlayerDisconnectListener =
+        ll::event::EventBus::getInstance().emplaceListener<ll::event::PlayerDisconnectEvent>(
+            [this](ll::event::PlayerDisconnectEvent& event) { impl->removeHandle(event.self().getUuid()); }
+        );
 }
 DrawHandleManager::~DrawHandleManager() {
     ll::event::EventBus::getInstance().removeListener(impl->mPlayerDeleteLandListener);
+    ll::event::EventBus::getInstance().removeListener(impl->mPlayerDisconnectListener);
 }
 
 drawer::IDrawerHandle* DrawHandleManager::getOrCreateHandle(Player& player) { return impl->getOrCreateHandle(player); }

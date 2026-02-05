@@ -3,7 +3,6 @@
 #include "pland/internal/hooks/listeners/ListenerHelper.h"
 
 #include "ll/api/event/EventBus.h"
-#include "ll/api/event/player/PlayerDisconnectEvent.h"
 #include "ll/api/event/player/PlayerJoinEvent.h"
 
 #include "pland/Global.h"
@@ -43,18 +42,6 @@ void EventListener::registerLLSessionListeners() {
             }
         }
     }));
-
-    mListenerPtrs.push_back(
-        bus->emplaceListener<ll::event::PlayerDisconnectEvent>([logger](ll::event::PlayerDisconnectEvent& ev) {
-            auto& player = ev.self();
-            if (player.isSimulatedPlayer()) return;
-            logger->debug("Player {} disconnect, remove all resources");
-
-            auto& uuid = player.getUuid();
-            land::PLand::getInstance().getSelectorManager()->stopSelection(uuid);
-            PLand::getInstance().getDrawHandleManager()->removeHandle(player);
-        })
-    );
 }
 
 } // namespace land
