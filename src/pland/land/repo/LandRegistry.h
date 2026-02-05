@@ -81,14 +81,18 @@ public:
 
 public: // 领地查询API
     LDNDAPI std::shared_ptr<Land> getLand(LandID id) const;
+
     LDNDAPI std::vector<std::shared_ptr<Land>> getLands() const;
+
     LDNDAPI std::vector<std::shared_ptr<Land>> getLands(std::vector<LandID> const& ids) const;
+
     LDNDAPI std::vector<std::shared_ptr<Land>> getLands(LandDimid dimid) const;
+
     LDNDAPI std::vector<std::shared_ptr<Land>> getLands(mce::UUID const& uuid, bool includeShared = false) const;
+
     LDNDAPI std::vector<std::shared_ptr<Land>> getLands(mce::UUID const& uuid, LandDimid dimid) const;
+
     LDNDAPI std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>> getLandsByOwner() const;
-    LDNDAPI std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>>
-            getLandsByOwner(LandDimid dimid) const;
 
     LDNDAPI LandPermType getPermType(mce::UUID const& uuid, LandID id = 0, bool includeOperator = true) const;
 

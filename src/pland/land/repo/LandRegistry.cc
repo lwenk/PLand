@@ -37,6 +37,7 @@
 #include <shared_mutex>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -556,20 +557,6 @@ std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>> LandReg
         lands[owner].insert(ptr);
     }
     return lands;
-}
-std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>>
-LandRegistry::getLandsByOwner(LandDimid dimid) const {
-    std::shared_lock lock(impl->mMutex);
-
-    std::unordered_map<mce::UUID, std::unordered_set<std::shared_ptr<Land>>> res;
-    for (const auto& ptr : impl->mLandCache | std::views::values) {
-        if (ptr->getDimensionId() != dimid) {
-            continue;
-        }
-        auto& owner = ptr->getOwner();
-        res[owner].insert(ptr);
-    }
-    return res;
 }
 
 
