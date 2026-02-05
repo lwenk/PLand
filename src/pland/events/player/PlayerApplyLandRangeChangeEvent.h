@@ -16,24 +16,34 @@ class Land;
 namespace land {
 namespace event {
 
-class PlayerChangeLandRangeEvent final : public ll::event::Cancellable<LandEventMixin<ll::event::PlayerEvent>> {
+class IPlayerApplyLandRangeChangeEvent : public LandEventMixin<ll::event::PlayerEvent> {
     LandAABB const&             mNewRange;
     LandResizeSettlement const& mResizeSettlement;
 
 public:
-    explicit PlayerChangeLandRangeEvent(
+    explicit IPlayerApplyLandRangeChangeEvent(
         Player&                     player,
         std::shared_ptr<Land>       land,
         LandAABB const&             newRange,
         LandResizeSettlement const& resizeSettlement
     )
-    : Cancellable(std::move(land), player),
+    : LandEventMixin(std::move(land), player),
       mNewRange(newRange),
       mResizeSettlement(resizeSettlement) {}
 
     LDNDAPI LandAABB const& newRange() const;
 
     LDNDAPI LandResizeSettlement const& resizeSettlement() const;
+};
+
+
+class PlayerApplyLandRangeChangeBeforeEvent final : public ll::event::Cancellable<IPlayerApplyLandRangeChangeEvent> {
+public:
+    using ll::event::Cancellable<IPlayerApplyLandRangeChangeEvent>::Cancellable;
+};
+class PlayerApplyLandRangeChangeAfterEvent final : public IPlayerApplyLandRangeChangeEvent {
+public:
+    using IPlayerApplyLandRangeChangeEvent::IPlayerApplyLandRangeChangeEvent;
 };
 
 } // namespace event

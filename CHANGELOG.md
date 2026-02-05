@@ -28,14 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### 🔔 事件更改
 
-- 新增 `LandResizedEvent` 事件 @engsr6982
-- 新增 `LandRefundFailedEvent` 事件 @engsr6982
-- 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
-- 移除 `PlayerAskCreateLandEvent` 事件 @engsr6982
-- 新增 `PlayerChangeLandNameBeforeEvent`、`PlayerChangeLandNameAfterEvent` 事件 @engsr6982
-- 新增 `PlayerTransferLandBeforeEvent`、`PlayerTransferLandAfterEvent` 事件 @engsr6982
-- 移除 `LandOwnerChangeBeforeEvent`、`LandOwnerChangeAfterEvent` 事件 @engsr6982
-- 新增 `OwnerChangedEvent` 事件 @engsr6982
+- [+] 新增 `LandResizedEvent` 事件 @engsr6982
+- [+] 新增 `LandRefundFailedEvent` 事件 @engsr6982
+- [+] 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
+- [+] 新增 `PlayerChangeLandNameBeforeEvent`、`PlayerChangeLandNameAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerTransferLandBeforeEvent`、`PlayerTransferLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `OwnerChangedEvent` 事件 @engsr6982
+- [+] 新增 `PlayerRequestChangeLandRangeBeforeEvent`、`PlayerRequestChangeLandRangeAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerApplyLandRangeChangeBeforeEvent`、`PlayerApplyLandRangeChangeAfterEvent` 事件 @engsr6982
+- [-] 移除 `PlayerAskCreateLandEvent` 事件 @engsr6982
+- [-] 移除 `LandOwnerChangeBeforeEvent`、`LandOwnerChangeAfterEvent` 事件 @engsr6982
 
 ## [0.17.1] - 2026-01-28
 

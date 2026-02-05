@@ -38,7 +38,6 @@
 #include "pland/utils/McUtils.h"
 
 
-
 #include <cstdint>
 #include <stack>
 #include <string>
@@ -437,15 +436,15 @@ void LandManagerGUI::sendChangeRangeConfirm(Player& player, SharedLand const& pt
             LandManagerGUI::sendMainMenu(self, ptr);
             return;
         }
-
-        auto manager = land::PLand::getInstance().getSelectorManager();
-        if (manager->hasSelector(self.getUuid())) {
-            feedback_utils::sendErrorText(self, "选区开启失败，当前存在未完成的选区任务"_trf(self));
-            return;
+        auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
+        if (auto expected = service.requestChangeRange(self, ptr)) {
+            feedback_utils::sendText(
+                self,
+                "选区功能已开启，使用命令 /pland set 或使用 {} 来选择ab点"_trf(self, Config::cfg.selector.tool)
+            );
+        } else {
+            feedback_utils::sendError(self, expected.error());
         }
-
-        auto selector = std::make_unique<LandResizeSelector>(self, ptr);
-        manager->startSelection(std::move(selector));
     });
 }
 

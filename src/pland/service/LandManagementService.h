@@ -1,9 +1,11 @@
 #pragma once
 #include "ll/api/Expected.h"
 #include "pland/Global.h"
+#include "pland/aabb/LandAABB.h"
 
 #include <mc/deps/core/math/Vec3.h>
 #include <memory>
+#include <optional>
 
 
 namespace land {
@@ -108,7 +110,17 @@ public:
     ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, Player& target);
     ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, mce::UUID const& target);
 
+    ll::Expected<> requestChangeRange(Player& player, std::shared_ptr<Land> const& land);
+
 private:
+    ll::Expected<> _ensureChangeRangelegal(
+        std::shared_ptr<Land> const& land,
+        LandAABB const&              newRange,
+        std::optional<std::string>   localeCode = std::nullopt
+    );
+
+    ll::Expected<> _applyRangeChange(Player& player, std::shared_ptr<Land> const& land, LandAABB const& newRange);
+
     ll::Expected<std::shared_ptr<Land>>
     _payMoneyAndCreateOrdinaryLand(Player& player, OrdinaryLandCreateSelector* selector, int64_t money);
 

@@ -5,11 +5,12 @@
 #include "pland/events/domain/LandResizedEvent.h"
 #include "pland/events/domain/OwnerChangedEvent.h"
 #include "pland/events/economy/LandRefundFailedEvent.h"
+#include "pland/events/player/PlayerApplyLandRangeChangeEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
 #include "pland/events/player/PlayerChangeLandDescEvent.h"
 #include "pland/events/player/PlayerChangeLandNameEvent.h"
-#include "pland/events/player/PlayerChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
+#include "pland/events/player/PlayerRequestChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerRequestCreateLandEvent.h"
 #include "pland/events/player/PlayerTransferLandEvent.h"
 #include "pland/infra/Config.h"
@@ -27,6 +28,7 @@
 #include <ll/api/event/EventBus.h>
 
 #include <mc/world/actor/player/Player.h>
+#include <memory>
 
 namespace land {
 namespace service {
@@ -123,6 +125,7 @@ LandManagementService::buyLand(Player& player, SubLandCreateSelector* selector, 
     ll::event::EventBus::getInstance().publish(event::PlayerBuyLandAfterEvent{player, exp.value(), money});
     return exp.value();
 }
+
 ll::Expected<> LandManagementService::handleChangeRange(
     Player&                     player,
     LandResizeSelector*         selector,
@@ -139,27 +142,27 @@ ll::Expected<> LandManagementService::handleChangeRange(
     auto range = selector->newLandAABB();
     assert(range.has_value());
 
-    auto event = event::PlayerChangeLandRangeEvent{player, land, *range, settlement};
+    auto event = event::PlayerApplyLandRangeChangeBeforeEvent{player, land, *range, settlement};
     ll::event::EventBus::getInstance().publish(event);
     if (event.isCancelled()) {
         return ll::makeStringError("操作失败，请求被取消"_trf(player));
     }
 
-    if (auto res = LandCreateValidator::validateChangeLandRange(impl->mRegistry, land, *range); !res) {
-        if (res.error().isA<LandCreateValidator::ValidateError>()) {
-            auto& error = res.error().as<LandCreateValidator::ValidateError>();
-            return ll::makeStringError(error.translateError(player.getLocaleCode()));
-        }
-        return res;
-    }
-    if (auto res = _processResizeSettlement(player, settlement); !res) {
-        return res;
-    }
-    land->_setAABB(*range);
+    auto expected = _ensureChangeRangelegal(land, *range, player.getLocaleCode());
+    if (!expected) return expected;
+
+    expected = _processResizeSettlement(player, settlement);
+    if (!expected) return expected;
+
+    expected = _applyRangeChange(player, land, *range);
+    if (!expected) return expected;
+
     land->setOriginalBuyPrice(settlement.newTotalPrice);
-    impl->mRegistry.refreshLandRange(land);
     impl->mSelectionService.endSelection(player);
-    ll::event::EventBus::getInstance().publish(event::LandResizedEvent{land, *range});
+
+    ll::event::EventBus::getInstance().publish(
+        event::PlayerApplyLandRangeChangeAfterEvent{player, land, *range, settlement}
+    );
     return {};
 }
 
@@ -293,6 +296,52 @@ LandManagementService::transferLand(Player& player, std::shared_ptr<Land> const&
     return {};
 }
 
+ll::Expected<> LandManagementService::requestChangeRange(Player& player, std::shared_ptr<Land> const& land) {
+    if (!land->isOrdinaryLand()) {
+        return ll::makeStringError("操作失败, 仅支持普通领地调整范围"_trf(player));
+    }
+
+    auto event = event::PlayerRequestChangeLandRangeBeforeEvent{player, land};
+    ll::event::EventBus::getInstance().publish(event);
+    if (event.isCancelled()) {
+        return ll::makeStringError("操作失败，请求被取消"_trf(player));
+    }
+
+    auto selector = std::make_unique<LandResizeSelector>(player, land);
+    auto expected = impl->mSelectionService.beginSelection(player, std::move(selector));
+    if (!expected) {
+        return expected;
+    }
+
+    ll::event::EventBus::getInstance().publish(event::PlayerRequestChangeLandRangeAfterEvent{player, land});
+    return {};
+}
+
+ll::Expected<> LandManagementService::_ensureChangeRangelegal(
+    std::shared_ptr<Land> const& land,
+    LandAABB const&              newRange,
+    std::optional<std::string>   localeCode
+) {
+    if (auto res = LandCreateValidator::validateChangeLandRange(impl->mRegistry, land, newRange); !res) {
+        if (res.error().isA<LandCreateValidator::ValidateError>()) {
+            auto& error = res.error().as<LandCreateValidator::ValidateError>();
+            return ll::makeStringError(error.translateError(localeCode.value_or("zh_CN")));
+        }
+        return res;
+    }
+    return {};
+}
+
+ll::Expected<>
+LandManagementService::_applyRangeChange(Player& player, std::shared_ptr<Land> const& land, LandAABB const& newRange) {
+    if (auto res = _ensureChangeRangelegal(land, newRange, player.getLocaleCode()); !res) {
+        return res;
+    }
+    land->_setAABB(newRange);
+    impl->mRegistry.refreshLandRange(land);
+    ll::event::EventBus::getInstance().publish(event::LandResizedEvent{land, newRange});
+    return {};
+}
 
 ll::Expected<std::shared_ptr<Land>> LandManagementService::_payMoneyAndCreateOrdinaryLand(
     Player&                     player,
