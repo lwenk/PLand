@@ -1,4 +1,4 @@
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "ll/api/Config.h"
 #include "pland/PLand.h"
 #include <filesystem>

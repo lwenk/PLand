@@ -4,7 +4,7 @@
 
 #include "pland/Global.h"
 #include "pland/PLand.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/utils/JsonUtil.h"
 #include "repo/LandContext.h"
 

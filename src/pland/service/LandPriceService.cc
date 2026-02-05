@@ -2,7 +2,7 @@
 
 #include "LandHierarchyService.h"
 #include "pland/economy/PriceCalculate.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/Land.h"
 
 namespace land {

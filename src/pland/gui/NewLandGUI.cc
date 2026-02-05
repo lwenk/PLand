@@ -10,7 +10,7 @@
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/Land.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"

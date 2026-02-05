@@ -19,12 +19,13 @@
 #include "land/internal/SafeTeleport.h"
 #include "pland/economy/EconomySystem.h"
 #include "pland/hooks/EventListener.h"
-#include "pland/infra/Config.h"
 #include "pland/internal/adapter/telemetry/Telemetry.h"
 #include "pland/internal/command/Command.h"
+#include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/ServiceLocator.h"
+
 
 
 #ifdef LD_DEVTOOL

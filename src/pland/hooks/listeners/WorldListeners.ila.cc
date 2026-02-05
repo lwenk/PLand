@@ -21,7 +21,7 @@
 #include "mc/world/phys/AABB.h"
 
 #include "pland/PLand.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/service/LandHierarchyService.h"
 #include "pland/service/ServiceLocator.h"

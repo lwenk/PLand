@@ -7,7 +7,7 @@
 #include "pland/aabb/LandAABB.h"
 #include "pland/drawer/DrawHandleManager.h"
 #include "pland/gui/NewLandGUI.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/utils/FeedbackUtils.h"
 #include "pland/utils/McUtils.h"
 

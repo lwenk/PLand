@@ -1,7 +1,7 @@
 #include "pland/aabb/LandPos.h"
 #include "fmt/format.h"
 #include "mc/world/level/BlockPos.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include <utility>
 
 

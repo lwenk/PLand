@@ -10,7 +10,7 @@
 #include "pland/gui/LandManagerGUI.h"
 #include "pland/gui/LandOperatorManagerGUI.h"
 #include "pland/gui/NewLandGUI.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/LandManagementService.h"

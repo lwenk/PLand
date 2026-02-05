@@ -2,7 +2,7 @@
 #include "pland/hooks/EventListener.h"
 #include "pland/hooks/listeners/ListenerHelper.h"
 #include "pland/hooks/optimize/HashedTypeName.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 
 

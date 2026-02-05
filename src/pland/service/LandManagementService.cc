@@ -16,7 +16,7 @@
 #include "pland/events/player/PlayerRequestChangeLandRangeEvent.h"
 #include "pland/events/player/PlayerRequestCreateLandEvent.h"
 #include "pland/events/player/PlayerTransferLandEvent.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/LandResizeSettlement.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/land/validator/LandCreateValidator.h"

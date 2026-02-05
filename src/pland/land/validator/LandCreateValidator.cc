@@ -1,7 +1,7 @@
 #include "LandCreateValidator.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/service/LandHierarchyService.h"
 #include "pland/utils/FeedbackUtils.h"

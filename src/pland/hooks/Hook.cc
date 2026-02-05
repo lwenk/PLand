@@ -2,9 +2,8 @@
 #include "pland/PLand.h"
 #include "pland/hooks/EventListener.h"
 #include "pland/hooks/listeners/ListenerHelper.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
-
 
 
 #include "ll/api/event/EventBus.h"

@@ -5,7 +5,7 @@
 #include "detail/DefaultParticleHandle.h"
 #include "pland/PLand.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 
 #include "mc/world/actor/player/Player.h"
 

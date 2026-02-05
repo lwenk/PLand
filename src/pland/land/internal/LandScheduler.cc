@@ -2,6 +2,7 @@
 
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
+#include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/ListenerBase.h"
 #include "ll/api/event/player/PlayerDisconnectEvent.h"
@@ -9,8 +10,7 @@
 #include "ll/api/service/Bedrock.h"
 #include "ll/api/service/PlayerInfo.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
-#include "ll/api/coro/InterruptableSleep.h"
-#include "ll/api/event/ListenerBase.h"
+
 
 #include "mc/network/packet/SetTitlePacket.h"
 #include "mc/server/ServerPlayer.h"
@@ -20,11 +20,12 @@
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/events/player/PlayerMoveEvent.h"
-#include "pland/infra/Config.h"
+#include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
+
 
 
 namespace land::internal {
@@ -149,38 +150,39 @@ LandScheduler::LandScheduler() : impl(std::make_unique<Impl>()) {
             std::erase_if(impl->mPlayers, [&ptr](auto* p) { return p == ptr; });
         });
 
-    impl->mPlayerEnterLandListener = bus.emplaceListener<event::PlayerEnterLandEvent>([](event::PlayerEnterLandEvent& ev
-                                                                                      ) {
-        if (!Config::cfg.land.tip.enterTip) {
-            return;
-        }
+    impl->mPlayerEnterLandListener =
+        bus.emplaceListener<event::PlayerEnterLandEvent>([](event::PlayerEnterLandEvent& ev) {
+            if (!Config::cfg.land.tip.enterTip) {
+                return;
+            }
 
-        auto& player   = ev.self();
-        auto& registry = PLand::getInstance().getLandRegistry();
+            auto& player   = ev.self();
+            auto& registry = PLand::getInstance().getLandRegistry();
 
-        if (auto settings = registry.getPlayerSettings(player.getUuid()); settings && !settings->showEnterLandTitle) {
-            return; // 如果玩家设置不显示进入领地提示,则不显示
-        }
+            if (auto settings = registry.getPlayerSettings(player.getUuid());
+                settings && !settings->showEnterLandTitle) {
+                return; // 如果玩家设置不显示进入领地提示,则不显示
+            }
 
-        auto land = registry.getLand(ev.landId());
-        if (!land) {
-            return;
-        }
+            auto land = registry.getLand(ev.landId());
+            if (!land) {
+                return;
+            }
 
-        SetTitlePacket title(SetTitlePacket::TitleType::Title);
-        SetTitlePacket subTitle(SetTitlePacket::TitleType::Subtitle);
+            SetTitlePacket title(SetTitlePacket::TitleType::Title);
+            SetTitlePacket subTitle(SetTitlePacket::TitleType::Subtitle);
 
-        if (land->isOwner(player.getUuid())) {
-            title.mTitleText    = land->getName();
-            subTitle.mTitleText = "欢迎回来"_trf(player);
-        } else {
-            title.mTitleText    = "Welcome to"_trf(player);
-            subTitle.mTitleText = land->getName();
-        }
+            if (land->isOwner(player.getUuid())) {
+                title.mTitleText    = land->getName();
+                subTitle.mTitleText = "欢迎回来"_trf(player);
+            } else {
+                title.mTitleText    = "Welcome to"_trf(player);
+                subTitle.mTitleText = land->getName();
+            }
 
-        title.sendTo(player);
-        subTitle.sendTo(player);
-    });
+            title.sendTo(player);
+            subTitle.sendTo(player);
+        });
 
     ll::coro::keepThis([quit = impl->mQuit, sleep = impl->mEventSchedulingSleep, this]() -> ll::coro::CoroTask<> {
         while (!quit->load()) {
@@ -252,4 +254,4 @@ LandScheduler::~LandScheduler() {
 }
 
 
-} // namespace land
+} // namespace land::internal
