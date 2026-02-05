@@ -48,7 +48,7 @@ public:
         };
     }
 
-    SimpleForm::ButtonCallback makeCallback(WeakLand wLand) {
+    SimpleForm::ButtonCallback makeCallback(std::weak_ptr<Land> wLand) {
         return [wLand, thiz = getThis()](Player& self) {
             auto land = wLand.lock();
             if (thiz && land) {

@@ -1,10 +1,11 @@
 #include "LandEditor.h"
 
 #include "pland/PLand.h"
+#include "pland/land/Land.h"
 
 namespace devtool::viewer {
 
-LandEditor::LandEditor(land::SharedLand land) : CodeEditor(land->toJson().dump(4)), land_(land) {}
+LandEditor::LandEditor(std::shared_ptr<land::Land> land) : CodeEditor(land->toJson().dump(4)), land_(land) {}
 
 void LandEditor::renderMenuElement() {
     CodeEditor::renderMenuElement();

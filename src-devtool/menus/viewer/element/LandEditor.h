@@ -1,18 +1,19 @@
 #pragma once
 #include "components/CodeEditor.h"
+#include <memory>
 
-#include "pland/Global.h"
-#include "pland/land/Land.h"
-
+namespace land {
+class Land;
+}
 namespace devtool::viewer {
 
 class LandEditor : public CodeEditor {
-    land::WeakLand land_;
+    std::weak_ptr<land::Land> land_;
 
     friend class LandCacheViewerWindow;
 
 public:
-    explicit LandEditor(land::SharedLand land);
+    explicit LandEditor(std::shared_ptr<land::Land> land);
 
     void renderMenuElement() override;
 };

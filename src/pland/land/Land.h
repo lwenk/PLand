@@ -24,8 +24,6 @@ class LandManagementService;
 } // namespace service
 
 using SharedLand = std::shared_ptr<Land>; // 共享指针
-using WeakLand   = std::weak_ptr<Land>;   // 弱指针
-
 class Land final : std::enable_shared_from_this<Land> {
 public:
     LD_DISABLE_COPY(Land);
