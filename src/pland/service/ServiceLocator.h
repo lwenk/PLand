@@ -3,19 +3,15 @@
 
 #include <memory>
 
-namespace land::service {
-class LandPriceService;
-}
-namespace land {
-class PLand;
-}
-namespace land::service {
-class LandHierarchyService;
-class LandManagementService;
-}
 
 namespace land {
+class PLand;
 namespace service {
+
+class LandHierarchyService;
+class LandManagementService;
+class LandPriceService;
+class SelectionService;
 
 class ServiceLocator {
     struct Impl;
@@ -32,6 +28,8 @@ public:
     LandHierarchyService& getLandHierarchyService() const;
 
     LandPriceService& getLandPriceService() const;
+
+    SelectionService& getSelectionService() const;
 };
 
 } // namespace service

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 问题修复
 
 - 修复领地最小间距计算错误 @engsr6982
+- 修复领地检查错误信息翻译失败 @engsr6982
 
 ### 🧩 逻辑优化
 

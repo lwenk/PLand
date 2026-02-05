@@ -17,10 +17,10 @@
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/land/validator/LandCreateValidator.h"
 #include "pland/land/validator/StringValidator.h"
-#include "pland/selector/DefaultSelector.h"
-#include "pland/selector/LandResizeSelector.h"
-#include "pland/selector/SelectorManager.h"
-#include "pland/selector/SubLandSelector.h"
+#include "pland/selector/land/LandResizeSelector.h"
+#include "pland/selector/land/OrdinaryLandCreateSelector.h"
+#include "pland/selector/land/SubLandCreateSelector.h"
+#include "pland/service/SelectionService.h"
 
 
 #include "ll/api/Expected.h"
@@ -33,18 +33,18 @@ namespace service {
 
 struct LandManagementService::Impl {
     LandRegistry&         mRegistry;
-    SelectorManager&      mSelectorManager;
+    SelectionService&     mSelectionService;
     LandHierarchyService& mHierarchyService;
     LandPriceService&     mPriceService;
 };
 
 LandManagementService::LandManagementService(
     LandRegistry&         registry,
-    SelectorManager&      selectorManager,
+    SelectionService&     selectionService,
     LandHierarchyService& hierarchyService,
     LandPriceService&     priceService
 )
-: impl(std::make_unique<Impl>(registry, selectorManager, hierarchyService, priceService)) {}
+: impl(std::make_unique<Impl>(registry, selectionService, hierarchyService, priceService)) {}
 LandManagementService::~LandManagementService() {}
 
 
@@ -58,12 +58,8 @@ ll::Expected<> LandManagementService::requestCreateOrdinaryLand(Player& player, 
 
     ll::event::EventBus::getInstance().publish(event::PlayerRequestCreateLandEvent{player, LandType::Ordinary});
 
-    auto selector = std::make_unique<DefaultSelector>(player, is3D);
-    if (!impl->mSelectorManager.startSelection(std::move(selector))) {
-        return ll::makeStringError("选区开启失败，当前存在未完成的选区任务"_trf(player));
-    }
-
-    return {};
+    auto selector = std::make_unique<OrdinaryLandCreateSelector>(player, is3D);
+    return impl->mSelectionService.beginSelection(player, std::move(selector));
 }
 
 ll::Expected<> LandManagementService::requestCreateSubLand(Player& player) {
@@ -89,15 +85,12 @@ ll::Expected<> LandManagementService::requestCreateSubLand(Player& player, std::
 
     ll::event::EventBus::getInstance().publish(event::PlayerRequestCreateLandEvent{player, LandType::Sub});
 
-    auto selector = std::make_unique<SubLandSelector>(player, land);
-    if (!impl->mSelectorManager.startSelection(std::move(selector))) {
-        return ll::makeStringError("选区开启失败，当前存在未完成的选区任务"_trf(player));
-    }
-    return {};
+    auto selector = std::make_unique<SubLandCreateSelector>(player, land);
+    return impl->mSelectionService.beginSelection(player, std::move(selector));
 }
 
 ll::Expected<std::shared_ptr<Land>>
-LandManagementService::buyLand(Player& player, DefaultSelector* selector, int64_t money) {
+LandManagementService::buyLand(Player& player, OrdinaryLandCreateSelector* selector, int64_t money) {
     assert(selector);
     auto event = event::PlayerBuyLandBeforeEvent{player, money, LandType::Ordinary};
     ll::event::EventBus::getInstance().publish(event);
@@ -109,13 +102,13 @@ LandManagementService::buyLand(Player& player, DefaultSelector* selector, int64_
     if (!exp) {
         return exp;
     }
-    impl->mSelectorManager.stopSelection(player);
+    impl->mSelectionService.endSelection(player);
     ll::event::EventBus::getInstance().publish(event::PlayerBuyLandAfterEvent{player, exp.value(), money});
     return exp.value();
 }
 
 ll::Expected<std::shared_ptr<Land>>
-LandManagementService::buyLand(Player& player, SubLandSelector* selector, int64_t money) {
+LandManagementService::buyLand(Player& player, SubLandCreateSelector* selector, int64_t money) {
     assert(selector != nullptr);
     auto event = event::PlayerBuyLandBeforeEvent{player, money, LandType::Sub};
     ll::event::EventBus::getInstance().publish(event);
@@ -126,7 +119,7 @@ LandManagementService::buyLand(Player& player, SubLandSelector* selector, int64_
     if (!exp) {
         return exp;
     }
-    impl->mSelectorManager.stopSelection(player);
+    impl->mSelectionService.endSelection(player);
     ll::event::EventBus::getInstance().publish(event::PlayerBuyLandAfterEvent{player, exp.value(), money});
     return exp.value();
 }
@@ -165,7 +158,7 @@ ll::Expected<> LandManagementService::handleChangeRange(
     land->_setAABB(*range);
     land->setOriginalBuyPrice(settlement.newTotalPrice);
     impl->mRegistry.refreshLandRange(land);
-    impl->mSelectorManager.stopSelection(player);
+    impl->mSelectionService.endSelection(player);
     ll::event::EventBus::getInstance().publish(event::LandResizedEvent{land, *range});
     return {};
 }
@@ -301,8 +294,11 @@ LandManagementService::transferLand(Player& player, std::shared_ptr<Land> const&
 }
 
 
-ll::Expected<std::shared_ptr<Land>>
-LandManagementService::_payMoneyAndCreateOrdinaryLand(Player& player, DefaultSelector* selector, int64_t money) {
+ll::Expected<std::shared_ptr<Land>> LandManagementService::_payMoneyAndCreateOrdinaryLand(
+    Player&                     player,
+    OrdinaryLandCreateSelector* selector,
+    int64_t                     money
+) {
     assert(selector != nullptr);
     auto& economy = EconomySystem::getInstance();
     if (!economy->reduce(player.getUuid(), money)) {
@@ -332,7 +328,7 @@ ll::Expected<> LandManagementService::_addOrdinaryLand(Player& player, std::shar
 }
 
 ll::Expected<std::shared_ptr<Land>>
-LandManagementService::_payMoneyAndCreateSubLand(Player& player, SubLandSelector* selector, int64_t money) {
+LandManagementService::_payMoneyAndCreateSubLand(Player& player, SubLandCreateSelector* selector, int64_t money) {
     assert(selector != nullptr);
     auto& economy = EconomySystem::getInstance();
     if (!economy->reduce(player.getUuid(), money)) {

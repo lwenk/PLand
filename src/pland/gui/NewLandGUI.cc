@@ -14,7 +14,7 @@
 #include "pland/land/Land.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
-#include "pland/selector/SubLandSelector.h"
+#include "pland/selector/land/SubLandCreateSelector.h"
 #include "pland/service/LandManagementService.h"
 #include "pland/service/ServiceLocator.h"
 #include "pland/utils/FeedbackUtils.h"
@@ -69,9 +69,9 @@ void NewLandGUI::sendConfirmPrecinctsYRange(Player& player, std::string const& e
 
     fm.appendLabel("确认选区的Y轴范围\n您可以在此调节Y轴范围，如果不需要修改，请直接点击提交"_trf(player));
 
-    SubLandSelector* subSelector = nullptr;
-    SharedLand       parentLand  = nullptr;
-    if (subSelector = selector->as<SubLandSelector>(); subSelector) {
+    SubLandCreateSelector* subSelector = nullptr;
+    SharedLand             parentLand  = nullptr;
+    if (subSelector = selector->as<SubLandCreateSelector>(); subSelector) {
         if (parentLand = subSelector->getParentLand(); parentLand) {
             auto& aabb = parentLand->getAABB();
             fm.appendLabel(

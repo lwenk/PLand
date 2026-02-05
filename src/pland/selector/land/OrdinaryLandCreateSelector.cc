@@ -1,17 +1,19 @@
 #pragma once
-#include "DefaultSelector.h"
-#include "mc/world/actor/player/Player.h"
-#include "pland/land/Land.h"
-#include "pland/selector/DefaultSelector.h"
-#include "pland/selector/ISelector.h"
+#include "OrdinaryLandCreateSelector.h"
 
+#include "pland/land/Land.h"
+#include "pland/selector/ISelector.h"
+#include "pland/selector/land/OrdinaryLandCreateSelector.h"
+
+#include "mc/world/actor/player/Player.h"
 
 namespace land {
 
 
-DefaultSelector::DefaultSelector(Player& player, bool is3D) : ISelector(player, player.getDimensionId(), is3D) {}
+OrdinaryLandCreateSelector::OrdinaryLandCreateSelector(Player& player, bool is3D)
+: ISelector(player, player.getDimensionId(), is3D) {}
 
-SharedLand DefaultSelector::newLand() const {
+SharedLand OrdinaryLandCreateSelector::newLand() const {
     if (!isPointABSet()) {
         return nullptr;
     }

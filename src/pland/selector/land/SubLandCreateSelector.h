@@ -6,13 +6,13 @@ namespace land {
 
 class Land;
 
-class SubLandSelector final : public ISelector {
+class SubLandCreateSelector final : public ISelector {
     std::weak_ptr<Land> mParentLand;
     drawer::GeoId               mParentRangeDrawId;
 
 public:
-    LDAPI explicit SubLandSelector(Player& player, std::shared_ptr<Land> parent);
-    LDAPI ~SubLandSelector() override;
+    LDAPI explicit SubLandCreateSelector(Player& player, std::shared_ptr<Land> parent);
+    LDAPI ~SubLandCreateSelector() override;
 
     LDNDAPI std::shared_ptr<Land> getParentLand() const;
 

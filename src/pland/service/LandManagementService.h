@@ -9,15 +9,15 @@
 namespace land {
 struct LandResizeSettlement;
 class Land;
-class DefaultSelector;
-class SubLandSelector;
-class SelectorManager;
+class OrdinaryLandCreateSelector;
+class SubLandCreateSelector;
 class LandResizeSelector;
 class LandRegistry;
 } // namespace land
 namespace land::service {
 class LandHierarchyService;
 class LandPriceService;
+class SelectionService;
 } // namespace land::service
 
 namespace land {
@@ -37,7 +37,7 @@ class LandManagementService {
 public:
     LandManagementService(
         LandRegistry&         registry,
-        SelectorManager&      selectorManager,
+        SelectionService&     selectionService,
         LandHierarchyService& hierarchyService,
         LandPriceService&     priceService
     );
@@ -67,7 +67,7 @@ public:
      * @param money 需支付经济
      * @return 领地对象
      */
-    ll::Expected<std::shared_ptr<Land>> buyLand(Player& player, DefaultSelector* selector, int64_t money);
+    ll::Expected<std::shared_ptr<Land>> buyLand(Player& player, OrdinaryLandCreateSelector* selector, int64_t money);
 
     /**
      * 购买子领地
@@ -76,7 +76,7 @@ public:
      * @param money 需要支付的经济
      * @return 子领地对象
      */
-    ll::Expected<std::shared_ptr<Land>> buyLand(Player& player, SubLandSelector* selector, int64_t money);
+    ll::Expected<std::shared_ptr<Land>> buyLand(Player& player, SubLandCreateSelector* selector, int64_t money);
 
     /**
      * 处理领地范围变更
@@ -87,6 +87,12 @@ public:
     ll::Expected<>
     handleChangeRange(Player& player, LandResizeSelector* selector, LandResizeSettlement const& settlement);
 
+    /**
+     * 确保玩家领地数量不超过上限
+     * @param uuid 玩家UUID
+     * @return 是否成功
+     * @note 如果失败，此函数返回 ValidateError
+     */
     ll::Expected<> ensurePlayerLandCountLimit(mce::UUID const& uuid) const;
 
     ll::Expected<> setLandTeleportPos(Player& player, std::shared_ptr<Land> const& land, Vec3 point);
@@ -104,12 +110,12 @@ public:
 
 private:
     ll::Expected<std::shared_ptr<Land>>
-    _payMoneyAndCreateOrdinaryLand(Player& player, DefaultSelector* selector, int64_t money);
+    _payMoneyAndCreateOrdinaryLand(Player& player, OrdinaryLandCreateSelector* selector, int64_t money);
 
     ll::Expected<> _addOrdinaryLand(Player& player, std::shared_ptr<Land> ptr);
 
     ll::Expected<std::shared_ptr<Land>>
-    _payMoneyAndCreateSubLand(Player& player, SubLandSelector* selector, int64_t money);
+    _payMoneyAndCreateSubLand(Player& player, SubLandCreateSelector* selector, int64_t money);
 
     ll::Expected<> _ensureAndAttachSubLand(Player& player, std::shared_ptr<Land> parent, std::shared_ptr<Land> sub);
 

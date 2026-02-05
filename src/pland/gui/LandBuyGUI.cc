@@ -17,10 +17,10 @@
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/land/repo/StorageError.h"
 #include "pland/land/validator/LandCreateValidator.h"
-#include "pland/selector/DefaultSelector.h"
-#include "pland/selector/LandResizeSelector.h"
 #include "pland/selector/SelectorManager.h"
-#include "pland/selector/SubLandSelector.h"
+#include "pland/selector/land/LandResizeSelector.h"
+#include "pland/selector/land/OrdinaryLandCreateSelector.h"
+#include "pland/selector/land/SubLandCreateSelector.h"
 #include "pland/service/LandManagementService.h"
 #include "pland/service/LandPriceService.h"
 #include "pland/service/ServiceLocator.h"
@@ -49,16 +49,16 @@ void LandBuyGUI::impl(Player& player) {
     }
 
 
-    if (auto def = selector->as<DefaultSelector>()) {
+    if (auto def = selector->as<OrdinaryLandCreateSelector>()) {
         impl(player, def);
     } else if (auto re = selector->as<LandResizeSelector>()) {
         impl(player, re);
-    } else if (auto sub = selector->as<SubLandSelector>()) {
+    } else if (auto sub = selector->as<SubLandCreateSelector>()) {
         impl(player, sub);
     }
 }
 
-void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
+void LandBuyGUI::impl(Player& player, OrdinaryLandCreateSelector* selector) {
     bool const is3D  = selector->is3D();
     auto       range = selector->newLandAABB();
     range->fix();
@@ -194,7 +194,7 @@ void LandBuyGUI::impl(Player& player, LandResizeSelector* selector) {
     fm.sendTo(player);
 }
 
-void LandBuyGUI::impl(Player& player, SubLandSelector* selector) {
+void LandBuyGUI::impl(Player& player, SubLandCreateSelector* selector) {
     auto subLandRange = selector->newLandAABB();
     subLandRange->fix();
     auto const volume = subLandRange->getVolume();

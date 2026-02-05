@@ -6,9 +6,9 @@ namespace land {
 
 class Land;
 
-class DefaultSelector final : public ISelector {
+class OrdinaryLandCreateSelector final : public ISelector {
 public:
-    LDAPI explicit DefaultSelector(Player& player, bool is3D);
+    LDAPI explicit OrdinaryLandCreateSelector(Player& player, bool is3D);
 
     LDNDAPI std::shared_ptr<Land> newLand() const;
 };

@@ -1,15 +1,16 @@
-#include "SubLandSelector.h"
-#include "mc/deps/core/math/Color.h"
+#include "SubLandCreateSelector.h"
+
 #include "pland/PLand.h"
 #include "pland/drawer/DrawHandleManager.h"
 #include "pland/land/Land.h"
 #include "pland/selector/ISelector.h"
 
+#include "mc/deps/core/math/Color.h"
 
 namespace land {
 
 
-SubLandSelector::SubLandSelector(Player& player, SharedLand parent)
+SubLandCreateSelector::SubLandCreateSelector(Player& player, SharedLand parent)
 : ISelector(player, parent->getDimensionId(), true) {
     mParentLand        = parent;
     mParentRangeDrawId = PLand::getInstance().getDrawHandleManager()->getOrCreateHandle(player)->draw(
@@ -19,7 +20,7 @@ SubLandSelector::SubLandSelector(Player& player, SharedLand parent)
     );
 }
 
-SubLandSelector::~SubLandSelector() {
+SubLandCreateSelector::~SubLandCreateSelector() {
     auto player = getPlayer();
     if (!player) {
         return;
@@ -30,9 +31,9 @@ SubLandSelector::~SubLandSelector() {
     }
 }
 
-SharedLand SubLandSelector::getParentLand() const { return mParentLand.lock(); }
+SharedLand SubLandCreateSelector::getParentLand() const { return mParentLand.lock(); }
 
-SharedLand SubLandSelector::newSubLand() const {
+SharedLand SubLandCreateSelector::newSubLand() const {
     if (!isPointABSet()) {
         return nullptr;
     }
