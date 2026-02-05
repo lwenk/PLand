@@ -1,6 +1,6 @@
 
-#include "pland/hooks/EventListener.h"
-#include "pland/hooks/listeners/ListenerHelper.h"
+#include "pland/internal/hooks/EventListener.h"
+#include "pland/internal/hooks/listeners/ListenerHelper.h"
 
 #include "ll/api/event/EventBus.h"
 

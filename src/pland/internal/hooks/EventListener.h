@@ -84,8 +84,8 @@ class EventListener {
 public:
     LD_DISABLE_COPY(EventListener);
 
-    LDAPI explicit EventListener();
-    LDAPI ~EventListener();
+    explicit EventListener();
+    ~EventListener();
 };
 
 
