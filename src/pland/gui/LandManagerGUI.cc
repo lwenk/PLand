@@ -1,5 +1,8 @@
 #include "pland/gui/LandManagerGUI.h"
 #include "LandTeleportGUI.h"
+#include "PermTableEditor.h"
+#include "common/OnlinePlayerPicker.h"
+#include "common/SimpleInputForm.h"
 
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
@@ -11,9 +14,9 @@
 #include "mc/world/level/Level.h"
 
 #include "pland/PLand.h"
-#include "pland/gui/CommonUtilGUI.h"
-#include "pland/gui/common/EditLandPermTableUtilGUI.h"
+#include "pland/gui/common/OnlinePlayerPicker.h"
 #include "pland/gui/form/BackSimpleForm.h"
+#include "pland/gui/utils/BackUtils.h"
 #include "pland/land/Config.h"
 #include "pland/land/Land.h"
 #include "pland/land/repo/LandRegistry.h"
@@ -134,7 +137,7 @@ void LandManagerGUI::sendMainMenu(Player& player, std::shared_ptr<Land> land) {
 }
 
 void LandManagerGUI::sendEditLandPermGUI(Player& player, std::shared_ptr<Land> const& ptr) {
-    EditLandPermTableUtilGUI::sendTo(player, ptr->getPermTable(), [ptr](Player& self, LandPermTable newTable) {
+    gui::PermTableEditor::sendTo(player, ptr->getPermTable(), [ptr](Player& self, LandPermTable newTable) {
         ptr->setPermTable(newTable);
         feedback_utils::sendText(self, "权限表已更新"_trl(self.getLocaleCode()));
     });
@@ -272,7 +275,7 @@ void LandManagerGUI::confirmMixDelete(Player& player, std::shared_ptr<Land> cons
 void LandManagerGUI::sendEditLandNameGUI(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
-    EditStringUtilGUI::sendTo(
+    gui::SimpleInputForm::sendTo(
         player,
         "修改领地名称"_trl(localeCode),
         "请输入新的领地名称"_trl(localeCode),
@@ -290,7 +293,7 @@ void LandManagerGUI::sendEditLandNameGUI(Player& player, std::shared_ptr<Land> c
 void LandManagerGUI::sendEditLandDescGUI(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
-    EditStringUtilGUI::sendTo(
+    gui::SimpleInputForm::sendTo(
         player,
         "修改领地描述"_trl(localeCode),
         "请输入新的领地描述"_trl(localeCode),
@@ -328,9 +331,13 @@ void LandManagerGUI::sendTransferLandGUI(Player& player, std::shared_ptr<Land> c
     fm.sendTo(player);
 }
 void LandManagerGUI::_sendTransferLandToOnlinePlayer(Player& player, const std::shared_ptr<Land>& ptr) {
-    ChooseOnlinePlayerUtilGUI::sendTo(player, [ptr](Player& self, Player& target) {
-        _confirmTransferLand(self, ptr, target.getUuid(), target.getRealName());
-    });
+    gui::OnlinePlayerPicker::sendTo(
+        player,
+        [ptr](Player& self, Player& target) {
+            _confirmTransferLand(self, ptr, target.getUuid(), target.getRealName());
+        },
+        gui::back_utils::wrapCallback<sendTransferLandGUI>(ptr)
+    );
 }
 void LandManagerGUI::_sendTransferLandToOfflinePlayer(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
@@ -492,10 +499,10 @@ void LandManagerGUI::sendChangeMember(Player& player, std::shared_ptr<Land> ptr)
     fm.sendTo(player);
 }
 void LandManagerGUI::_sendAddOnlineMember(Player& player, std::shared_ptr<Land> ptr) {
-    ChooseOnlinePlayerUtilGUI::sendTo(
+    gui::OnlinePlayerPicker::sendTo(
         player,
         [ptr](Player& self, Player& target) { _confirmAddMember(self, ptr, target.getUuid(), target.getRealName()); },
-        BackSimpleForm<>::makeCallback<sendChangeMember>(ptr)
+        gui::back_utils::wrapCallback<sendChangeMember>(ptr)
     );
 }
 void LandManagerGUI::_sendAddOfflineMember(Player& player, std::shared_ptr<Land> ptr) {

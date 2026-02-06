@@ -3,8 +3,6 @@
 #include "NewLandGUI.h"
 #include "PlayerSettingGUI.h"
 #include "pland/PLand.h"
-#include "pland/gui/CommonUtilGui.h"
-#include "pland/gui/LandManagerGUI.h"
 #include "pland/gui/LandTeleportGUI.h"
 #include "pland/gui/NewLandGUI.h"
 #include "pland/gui/common/ChooseLandAdvancedUtilGUI.h"
