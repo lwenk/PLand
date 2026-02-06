@@ -1,8 +1,10 @@
 #pragma once
 #include "BidirectionalMap.h"
+#include "ChunkEncoder.h"
+
 #include "pland/Global.h"
 
-#include <unordered_map>
+#include "absl/container/flat_hash_map.h"
 
 namespace land {
 class Land;
@@ -19,7 +21,12 @@ namespace land::internal {
  */
 class LandDimensionChunkMap {
 public:
-    using Map = std::unordered_map<LandDimid, BidirectionalMap<ChunkID, LandID>>;
+    using TypedBidirectionalMap = BidirectionalMap<ChunkID, LandID>; // 区块 --> 领地
+
+    using DimensionMap = absl::flat_hash_map<LandDimid, TypedBidirectionalMap>;
+
+    using ChunkSet = TypedBidirectionalMap::KeysSet;
+    using LandSet  = TypedBidirectionalMap::ValuesSet;
 
 public:
     LandDimensionChunkMap();
@@ -42,12 +49,12 @@ public:
     /**
      * @brief 查询某个区块下所有的领地
      */
-    [[nodiscard]] std::unordered_set<LandID> const* queryLand(LandDimid dimId, ChunkID chunkId) const;
+    [[nodiscard]] LandSet const* queryLand(LandDimid dimId, ChunkID chunkId) const;
 
     /**
      * @brief 查询某个领地下所有的区块
      */
-    [[nodiscard]] std::unordered_set<ChunkID> const* queryChunk(LandDimid dimId, LandID landId) const;
+    [[nodiscard]] ChunkSet const* queryChunk(LandDimid dimId, LandID landId) const;
 
     void addLand(std::shared_ptr<Land> const& land);
 
@@ -56,7 +63,7 @@ public:
     void refreshRange(std::shared_ptr<Land> const& land);
 
 private:
-    Map mMap;
+    DimensionMap mMap;
 };
 
 } // namespace land::internal

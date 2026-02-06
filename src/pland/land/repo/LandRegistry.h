@@ -108,9 +108,6 @@ public: // 领地查询API
     LDNDAPI std::vector<std::shared_ptr<Land>> getLandsWhere(CustomFilter const& filter) const;
 
 public:
-    LDAPI static ChunkID             EncodeChunkID(int x, int z);
-    LDAPI static std::pair<int, int> DecodeChunkID(ChunkID id);
-
     static constexpr auto DbDirName              = "db";              // 数据库目录名
     static constexpr auto DbVersionKey           = "__version__";     // 数据库版本键
     static constexpr auto DbOperatorDataKey      = "operators";       // 操作员数据键

@@ -1,13 +1,15 @@
 #include "LandRegistry.h"
 #include "StorageError.h"
 #include "TransactionContext.h"
+#include "internal/LandDimensionChunkMap.h"
+#include "internal/LandIdAllocator.h"
+#include "internal/LandMigrator.h"
+
 #include "pland/Global.h"
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
 #include "pland/land/Land.h"
 #include "pland/land/LandTemplatePermTable.h"
-#include "pland/land/internal/LandDimensionChunkMap.h"
-#include "pland/land/internal/LandIdAllocator.h"
 #include "pland/land/repo/LandContext.h"
 #include "pland/land/validator/LandCreateValidator.h"
 #include "pland/utils/JsonUtil.h"
@@ -16,7 +18,6 @@
 #include "ll/api/coro/CoroTask.h"
 #include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/data/KeyValueDB.h"
-#include "ll/api/i18n/I18n.h"
 #include "ll/api/thread/ThreadPoolExecutor.h"
 
 #include "mc/platform/UUID.h"
@@ -25,8 +26,9 @@
 
 #include "nlohmann/json_fwd.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include "fmt/core.h"
-#include "internal/LandMigrator.h"
 
 #include <algorithm>
 #include <atomic>
@@ -46,14 +48,14 @@
 namespace land {
 
 struct LandRegistry::Impl {
-    std::unique_ptr<ll::data::KeyValueDB>             mDB;                             // 领地数据库
-    std::vector<mce::UUID>                            mLandOperators;                  // 领地操作员
-    std::unordered_map<mce::UUID, PlayerSettings>     mPlayerSettings;                 // 玩家设置
-    std::unordered_map<LandID, std::shared_ptr<Land>> mLandCache;                      // 领地缓存
-    mutable std::shared_mutex                         mMutex;                          // 读写锁
-    std::unique_ptr<internal::LandIdAllocator>        mLandIdAllocator{nullptr};       // 领地ID分配器
-    internal::LandDimensionChunkMap                   mDimensionChunkMap;              // 维度区块映射
-    std::unique_ptr<LandTemplatePermTable>            mLandTemplatePermTable{nullptr}; // 领地模板权限表
+    std::unique_ptr<ll::data::KeyValueDB>              mDB;                             // 领地数据库
+    std::vector<mce::UUID>                             mLandOperators;                  // 领地操作员
+    std::unordered_map<mce::UUID, PlayerSettings>      mPlayerSettings;                 // 玩家设置
+    absl::flat_hash_map<LandID, std::shared_ptr<Land>> mLandCache;                      // 领地缓存
+    mutable std::shared_mutex                          mMutex;                          // 读写锁
+    std::unique_ptr<internal::LandIdAllocator>         mLandIdAllocator{nullptr};       // 领地ID分配器
+    internal::LandDimensionChunkMap                    mDimensionChunkMap;              // 维度区块映射
+    std::unique_ptr<LandTemplatePermTable>             mLandTemplatePermTable{nullptr}; // 领地模板权限表
 
     ll::coro::InterruptableSleep mInterruptableSleep; // 中断等待
     std::atomic_bool             mCoroAbort{false};   // 协程中断标志
@@ -577,7 +579,7 @@ std::shared_ptr<Land> LandRegistry::getLandAt(BlockPos const& pos, LandDimid dim
     std::shared_lock<std::shared_mutex>       lock(impl->mMutex);
     std::unordered_set<std::shared_ptr<Land>> result;
 
-    auto landsIds = impl->mDimensionChunkMap.queryLand(dimid, EncodeChunkID(pos.x >> 4, pos.z >> 4));
+    auto landsIds = impl->mDimensionChunkMap.queryLand(dimid, internal::ChunkEncoder::encode(pos.x >> 4, pos.z >> 4));
     if (!landsIds) {
         return nullptr;
     }
@@ -618,7 +620,7 @@ LandRegistry::getLandAt(BlockPos const& center, int radius, LandDimid dimid) con
         return {};
     }
 
-    std::unordered_set<ChunkID>               visitedChunks; // 记录已访问的区块
+    std::unordered_set<internal::ChunkID>     visitedChunks; // 记录已访问的区块
     std::unordered_set<std::shared_ptr<Land>> lands;
 
     int minChunkX = (center.x - radius) >> 4;
@@ -628,7 +630,7 @@ LandRegistry::getLandAt(BlockPos const& center, int radius, LandDimid dimid) con
 
     for (int x = minChunkX; x <= maxChunkX; ++x) {
         for (int z = minChunkZ; z <= maxChunkZ; ++z) {
-            ChunkID chunkId = EncodeChunkID(x, z);
+            internal::ChunkID chunkId = internal::ChunkEncoder::encode(x, z);
             if (visitedChunks.find(chunkId) != visitedChunks.end()) {
                 continue; // 如果区块已经访问过，则跳过
             }
@@ -658,7 +660,7 @@ LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid di
         return {};
     }
 
-    std::unordered_set<ChunkID>               visitedChunks;
+    std::unordered_set<internal::ChunkID>     visitedChunks;
     std::unordered_set<std::shared_ptr<Land>> lands;
 
     int minChunkX = std::min(pos1.x, pos2.x) >> 4;
@@ -668,7 +670,7 @@ LandRegistry::getLandAt(BlockPos const& pos1, BlockPos const& pos2, LandDimid di
 
     for (int x = minChunkX; x <= maxChunkX; ++x) {
         for (int z = minChunkZ; z <= maxChunkZ; ++z) {
-            ChunkID chunkId = EncodeChunkID(x, z);
+            internal::ChunkID chunkId = internal::ChunkEncoder::encode(x, z);
             if (visitedChunks.find(chunkId) != visitedChunks.end()) {
                 continue;
             }
@@ -704,29 +706,4 @@ std::vector<std::shared_ptr<Land>> LandRegistry::getLandsWhere(CustomFilter cons
 }
 
 
-} // namespace land
-
-
-namespace land {
-ChunkID LandRegistry::EncodeChunkID(int x, int z) {
-    auto ux = static_cast<uint64_t>(std::abs(x));
-    auto uz = static_cast<uint64_t>(std::abs(z));
-
-    uint64_t signBits = 0;
-    if (x >= 0) signBits |= (1ULL << 63);
-    if (z >= 0) signBits |= (1ULL << 62);
-    return signBits | (ux << 31) | (uz & 0x7FFFFFFF);
-    // Memory layout:
-    // [signBits][x][z] (signBits: 2 bits, x: 31 bits, z: 31 bits)
-}
-std::pair<int, int> LandRegistry::DecodeChunkID(ChunkID id) {
-    bool xPositive = (id & (1ULL << 63)) != 0;
-    bool zPositive = (id & (1ULL << 62)) != 0;
-
-    int x = static_cast<int>((id >> 31) & 0x7FFFFFFF);
-    int z = static_cast<int>(id & 0x7FFFFFFF);
-    if (!xPositive) x = -x;
-    if (!zPositive) z = -z;
-    return {x, z};
-}
 } // namespace land
