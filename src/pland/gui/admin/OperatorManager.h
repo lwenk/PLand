@@ -7,16 +7,15 @@ class UUID;
 }
 
 namespace land {
-
 class Land;
-
+namespace gui {
 
 /**
  * @brief 领地操作员GUI
  */
-class LandOperatorManagerGUI {
+class OperatorManager {
 public:
-    LandOperatorManagerGUI() = delete;
+    OperatorManager() = delete;
 
     LDAPI static void sendMainMenu(Player& player);
 
@@ -28,4 +27,5 @@ public:
 };
 
 
+} // namespace gui
 } // namespace land

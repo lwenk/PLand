@@ -7,7 +7,6 @@
 #include "pland/gui/LandBuyGUI.h"
 #include "pland/gui/LandMainMenuGUI.h"
 #include "pland/gui/LandManagerGUI.h"
-#include "pland/gui/LandOperatorManagerGUI.h"
 #include "pland/gui/NewLandGUI.h"
 #include "pland/land/Config.h"
 #include "pland/land/Land.h"
@@ -38,6 +37,7 @@
 #include "mc/world/actor/agent/agent_commands/Command.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/level/BlockPos.h"
+#include "pland/gui/admin/OperatorManager.h"
 
 #include <memory>
 #include <sstream>
@@ -69,7 +69,7 @@ static auto const Root = [](CommandOrigin const& ori, CommandOutput& out) {
 static auto const Mgr = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
-    LandOperatorManagerGUI::sendMainMenu(player);
+    gui::OperatorManager::sendMainMenu(player);
 };
 
 

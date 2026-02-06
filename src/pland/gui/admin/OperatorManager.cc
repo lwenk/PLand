@@ -1,7 +1,7 @@
-#include "LandOperatorManagerGUI.h"
-#include "LandManagerGUI.h"
-#include "PermTableEditor.h"
+#include "OperatorManager.h"
 #include "pland/PLand.h"
+#include "pland/gui/LandManagerGUI.h"
+#include "pland/gui/PermTableEditor.h"
 #include "pland/gui/common/ChooseLandAdvancedUtilGUI.h"
 #include "pland/gui/form/BackSimpleForm.h"
 #include "pland/land/Land.h"
@@ -12,10 +12,10 @@
 
 #include "ll/api/service/PlayerInfo.h"
 
-namespace land {
+namespace land::gui {
 
 
-void LandOperatorManagerGUI::sendMainMenu(Player& player) {
+void OperatorManager::sendMainMenu(Player& player) {
     auto localeCode = player.getLocaleCode();
 
     if (!PLand::getInstance().getLandRegistry().isOperator(player.getUuid())) {
@@ -58,10 +58,10 @@ void LandOperatorManagerGUI::sendMainMenu(Player& player) {
 }
 
 
-void LandOperatorManagerGUI::sendChoosePlayerFromDb(Player& player, ChoosePlayerCallback callback) {
+void OperatorManager::sendChoosePlayerFromDb(Player& player, ChoosePlayerCallback callback) {
     auto localeCode = player.getLocaleCode();
 
-    auto fm = BackSimpleForm<>::make<LandOperatorManagerGUI::sendMainMenu>();
+    auto fm = BackSimpleForm<>::make<OperatorManager::sendMainMenu>();
     fm.setTitle("[PLand] | 玩家列表"_trl(localeCode));
     fm.setContent("请选择您要管理的玩家"_trl(localeCode));
 
@@ -86,11 +86,11 @@ void LandOperatorManagerGUI::sendChoosePlayerFromDb(Player& player, ChoosePlayer
 }
 
 
-void LandOperatorManagerGUI::sendChooseLandGUI(Player& player, mce::UUID const& targetPlayer) {
+void OperatorManager::sendChooseLandGUI(Player& player, mce::UUID const& targetPlayer) {
     sendChooseLandAdvancedGUI(player, PLand::getInstance().getLandRegistry().getLands(targetPlayer));
 }
 
-void LandOperatorManagerGUI::sendChooseLandAdvancedGUI(Player& player, std::vector<std::shared_ptr<Land>> lands) {
+void OperatorManager::sendChooseLandAdvancedGUI(Player& player, std::vector<std::shared_ptr<Land>> lands) {
     ChooseLandAdvancedUtilGUI::sendTo(
         player,
         lands,
@@ -100,4 +100,4 @@ void LandOperatorManagerGUI::sendChooseLandAdvancedGUI(Player& player, std::vect
 }
 
 
-} // namespace land
+} // namespace land::gui
