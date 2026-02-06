@@ -2,10 +2,9 @@
 #include "LandManagerGUI.h"
 #include "NewLandGUI.h"
 #include "PlayerSettingGUI.h"
+#include "common/SimpleLandPicker.h"
 #include "pland/PLand.h"
 #include "pland/gui/LandTeleportGUI.h"
-#include "pland/gui/NewLandGUI.h"
-#include "pland/gui/common/AdvancedLandPicker.h"
 #include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "utils/BackUtils.h"
@@ -28,7 +27,7 @@ void LandMainMenuGUI::sendTo(Player& player) {
     });
 
     fm.appendButton("管理领地"_trl(localeCode), "textures/ui/icon_spring", "path", [](Player& pl) {
-        gui::AdvancedLandPicker::sendTo(
+        SimpleLandPicker::sendTo(
             pl,
             PLand::getInstance().getLandRegistry().getLands(pl.getUuid()),
             LandManagerGUI::sendMainMenu,
@@ -51,4 +50,4 @@ void LandMainMenuGUI::sendTo(Player& player) {
 }
 
 
-} // namespace land
+} // namespace land::gui
