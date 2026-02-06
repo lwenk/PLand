@@ -8,7 +8,7 @@
 
 #include "ll/api/form/CustomForm.h"
 
-namespace land {
+namespace land::gui {
 using namespace ll::form;
 
 void PlayerSettingGUI::sendTo(Player& player) {
@@ -33,4 +33,4 @@ void PlayerSettingGUI::sendTo(Player& player) {
 }
 
 
-} // namespace land
+} // namespace land::gui

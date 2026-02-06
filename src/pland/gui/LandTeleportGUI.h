@@ -7,6 +7,8 @@ namespace land {
 
 class Land;
 
+namespace gui {
+
 class LandTeleportGUI {
 public:
     LandTeleportGUI() = delete;
@@ -16,5 +18,5 @@ public:
     LDAPI static void impl(Player& player, std::shared_ptr<Land> land);
 };
 
-
+} // namespace gui
 } // namespace land

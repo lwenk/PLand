@@ -27,7 +27,7 @@
 using namespace ll::form;
 
 
-namespace land {
+namespace land::gui {
 
 
 void NewLandGUI::sendChooseLandDim(Player& player) {

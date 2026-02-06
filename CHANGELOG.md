@@ -25,9 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 领地管理GUI 新增 **创建子领地** 按钮 @engsr6982
 - 移除对 **iLand** 领地数据转换支持 @engsr6982
-- 重构代码，清理屎山，引入 Service、pImpl 模式 @engsr6982
+- [#166] 重构代码，清理屎山，引入 Service、pImpl 模式 @engsr6982
 - 移除 `pland set language` 命令 @engsr6982
 - 调整项目工程结构 @engsr6982
+- [#144] 改进领地表单系统 @engsr6982
 
 #### 🔔 事件更改
 

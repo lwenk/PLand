@@ -10,6 +10,8 @@ namespace land {
 
 class Land;
 
+namespace gui {
+
 class LandManagerGUI {
 public:
     LandManagerGUI() = delete;
@@ -48,5 +50,5 @@ public:
     LDAPI static void _confirmRemoveMember(Player& player, std::shared_ptr<Land> ptr, mce::UUID members);    // 移除成员
 };
 
-
+} // namespace gui
 } // namespace land

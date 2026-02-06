@@ -62,7 +62,7 @@ namespace Lambda {
 static auto const Root = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
-    LandMainMenuGUI::sendTo(player);
+    gui::LandMainMenuGUI::sendTo(player);
 };
 
 
@@ -145,7 +145,7 @@ static auto const New = [](CommandOrigin const& ori, CommandOutput& out, NewPara
 
     switch (param.type) {
     case NewType::Default: {
-        NewLandGUI::sendChooseLandDim(player);
+        gui::NewLandGUI::sendChooseLandDim(player);
         break;
     }
 
@@ -205,7 +205,7 @@ static auto const Cancel = [](CommandOrigin const& ori, CommandOutput& out) {
 static auto const Buy = [](CommandOrigin const& ori, CommandOutput& out) {
     CHECK_TYPE(ori, out, CommandOriginType::Player);
     auto& player = *static_cast<Player*>(ori.getEntity());
-    LandBuyGUI::sendTo(player);
+    gui::LandBuyGUI::sendTo(player);
 };
 
 static auto const Reload = [](CommandOrigin const& ori, CommandOutput& out) {
@@ -297,7 +297,7 @@ static auto const This = [](CommandOrigin const& ori, CommandOutput& out) {
         return;
     }
 
-    LandManagerGUI::sendMainMenu(player, land);
+    gui::LandManagerGUI::sendMainMenu(player, land);
 };
 
 }; // namespace Lambda

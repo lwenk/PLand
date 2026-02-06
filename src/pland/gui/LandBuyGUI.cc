@@ -25,7 +25,7 @@
 #include <string>
 
 
-namespace land {
+namespace land::gui {
 
 void LandBuyGUI::sendTo(Player& player) {
     auto localeCode = player.getLocaleCode();
@@ -259,4 +259,4 @@ void LandBuyGUI::_impl(Player& player, SubLandCreateSelector* selector) {
     fm.sendTo(player);
 }
 
-} // namespace land
+} // namespace land::gui

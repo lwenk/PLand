@@ -9,6 +9,8 @@ class OrdinaryLandCreateSelector;
 class LandResizeSelector;
 class SubLandCreateSelector;
 
+namespace gui {
+
 class LandBuyGUI {
 public:
     /**
@@ -32,4 +34,5 @@ public:
     static void _impl(Player& player, SubLandCreateSelector* selector);
 };
 
+} // namespace gui
 } // namespace land

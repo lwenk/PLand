@@ -1,4 +1,6 @@
 #pragma once
+#include "pland/Global.h"
+
 #include <functional>
 #include <memory>
 
@@ -13,7 +15,7 @@ class AdvancedLandPicker {
 
 public:
     using Callback = std::function<void(Player&, std::shared_ptr<Land> land)>;
-    static void sendTo(
+    LDAPI static void sendTo(
         Player&                              player,
         std::vector<std::shared_ptr<Land>>   data,
         Callback                             callback,

@@ -9,7 +9,7 @@
 #include "utils/BackUtils.h"
 
 
-namespace land {
+namespace land::gui {
 
 
 void LandTeleportGUI::sendTo(Player& player) {

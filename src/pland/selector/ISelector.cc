@@ -176,7 +176,7 @@ void ISelector::onPointABSet() {
     }
 
     checkAndSwapY();
-    NewLandGUI::sendConfirmPrecinctsYRange(*player);
+    gui::NewLandGUI::sendConfirmPrecinctsYRange(*player);
 }
 
 void ISelector::onPointConfirmed() {

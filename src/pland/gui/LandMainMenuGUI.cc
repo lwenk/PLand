@@ -13,7 +13,7 @@
 #include <ll/api/form/SimpleForm.h>
 
 
-namespace land {
+namespace land::gui {
 
 
 void LandMainMenuGUI::sendTo(Player& player) {

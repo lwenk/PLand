@@ -1,4 +1,6 @@
 #pragma once
+#include "pland/Global.h"
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -22,19 +24,19 @@ public:
 
     using ButtonCallback = std::function<void(Player& player)>;
 
-    explicit PaginatedForm(Options options = Options{});
-    ~PaginatedForm();
+    LDAPI explicit PaginatedForm(Options options = Options{});
+    LDAPI ~PaginatedForm();
 
-    PaginatedForm& setTitle(std::string title);
+    LDAPI PaginatedForm& setTitle(std::string title);
 
-    PaginatedForm& setContent(std::string content);
+    LDAPI PaginatedForm& setContent(std::string content);
 
-    PaginatedForm&
+    LDAPI PaginatedForm&
     appendButton(std::string text, std::string imageData, std::string imageType, ButtonCallback callback = {});
 
-    PaginatedForm& appendButton(std::string text, ButtonCallback callback = {});
+    LDAPI PaginatedForm& appendButton(std::string text, ButtonCallback callback = {});
 
-    void sendTo(Player& player);
+    LDAPI void sendTo(Player& player);
 };
 
 } // namespace gui

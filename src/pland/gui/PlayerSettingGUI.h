@@ -3,7 +3,7 @@
 
 class Player;
 
-namespace land {
+namespace land ::gui {
 
 
 class PlayerSettingGUI {
@@ -14,4 +14,4 @@ public:
 };
 
 
-} // namespace land
+} // namespace land::gui
