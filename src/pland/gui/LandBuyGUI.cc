@@ -5,7 +5,6 @@
 #include "pland/PLand.h"
 #include "pland/aabb/LandAABB.h"
 #include "pland/economy/EconomySystem.h"
-#include "pland/gui/form/BackSimpleForm.h"
 #include "pland/land/Config.h"
 #include "pland/land/Land.h"
 #include "pland/land/LandResizeSettlement.h"
@@ -22,6 +21,7 @@
 
 
 #include <climits>
+#include <ll/api/form/SimpleForm.h>
 #include <string>
 
 
@@ -89,7 +89,7 @@ void LandBuyGUI::_impl(Player& player, OrdinaryLandCreateSelector* selector) {
         }
     }
 
-    auto fm = BackSimpleForm<>::make();
+    auto fm = ll::form::SimpleForm{};
     fm.setTitle("[PLand] | 购买领地"_trl(localeCode));
     fm.setContent(content);
     fm.appendButton(
@@ -156,7 +156,7 @@ void LandBuyGUI::_impl(Player& player, LandResizeSelector* selector) {
         }
     }
 
-    auto fm = BackSimpleForm<>::make();
+    auto fm = ll::form::SimpleForm{};
     fm.setTitle("[PLand] | 购买领地 & 重新选区"_trl(localeCode));
     fm.setContent(content);
     fm.appendButton(
@@ -235,7 +235,7 @@ void LandBuyGUI::_impl(Player& player, SubLandCreateSelector* selector) {
         }
     }
 
-    auto fm = BackSimpleForm<>::make();
+    auto fm = ll::form::SimpleForm{};
     fm.setTitle("[PLand] | 购买领地 & 子领地"_trl(localeCode));
     fm.setContent(content);
     fm.appendButton(

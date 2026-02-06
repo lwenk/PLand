@@ -1,23 +1,23 @@
 #include "LandTeleportGUI.h"
 #include "pland/PLand.h"
 #include "pland/gui/LandMainMenuGUI.h"
-#include "pland/gui/common/ChooseLandAdvancedUtilGUI.h"
-#include "pland/gui/form/BackSimpleForm.h"
+#include "pland/gui/common/AdvancedLandPicker.h"
 #include "pland/land/Land.h"
 #include "pland/land/internal/SafeTeleport.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/utils/McUtils.h"
+#include "utils/BackUtils.h"
 
 
 namespace land {
 
 
 void LandTeleportGUI::sendTo(Player& player) {
-    ChooseLandAdvancedUtilGUI::sendTo(
+    gui::AdvancedLandPicker::sendTo(
         player,
         PLand::getInstance().getLandRegistry().getLands(player.getUuid(), true),
         impl,
-        BackSimpleForm<>::makeCallback<sendTo>()
+        gui::back_utils::wrapCallback<sendTo>()
     );
 }
 

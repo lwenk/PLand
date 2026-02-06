@@ -15,7 +15,6 @@
 
 #include "pland/PLand.h"
 #include "pland/gui/common/OnlinePlayerPicker.h"
-#include "pland/gui/form/BackSimpleForm.h"
 #include "pland/gui/utils/BackUtils.h"
 #include "pland/land/Config.h"
 #include "pland/land/Land.h"
@@ -193,7 +192,8 @@ void LandManagerGUI::confirmSimpleDelete(Player& player, std::shared_ptr<Land> c
 }
 
 void LandManagerGUI::confirmParentDelete(Player& player, std::shared_ptr<Land> const& ptr) {
-    auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
+    auto fm = SimpleForm{};
+    gui::back_utils::injectBackButton<sendMainMenu>(fm, ptr);
 
     auto localeCode = player.getLocaleCode();
     fm.setTitle("[PLand] | 删除领地 & 父领地"_trl(localeCode));
@@ -235,7 +235,9 @@ void LandManagerGUI::confirmParentDelete(Player& player, std::shared_ptr<Land> c
 void LandManagerGUI::confirmMixDelete(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
-    auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
+    auto fm = SimpleForm{};
+    gui::back_utils::injectBackButton<sendMainMenu>(fm, ptr);
+
     fm.setTitle("[PLand] | 删除领地 & 混合领地"_trl(localeCode));
     fm.setContent(
         "您当前操作的的是混合领地\n当前领地下有 {} 个子领地\n您确定要删除领地吗?"_trl(
@@ -311,9 +313,10 @@ void LandManagerGUI::sendEditLandDescGUI(Player& player, std::shared_ptr<Land> c
 void LandManagerGUI::sendTransferLandGUI(Player& player, std::shared_ptr<Land> const& ptr) {
     auto localeCode = player.getLocaleCode();
 
-    auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
-    fm.setTitle("[PLand] | 转让领地"_trl(localeCode));
+    auto fm = SimpleForm{};
+    gui::back_utils::injectBackButton<sendMainMenu>(fm, ptr);
 
+    fm.setTitle("[PLand] | 转让领地"_trl(localeCode));
     fm.appendButton(
         "转让给在线玩家"_trl(localeCode),
         "textures/ui/sidebar_icons/my_characters",
@@ -478,7 +481,8 @@ void LandManagerGUI::sendChangeRangeConfirm(Player& player, std::shared_ptr<Land
 
 
 void LandManagerGUI::sendChangeMember(Player& player, std::shared_ptr<Land> ptr) {
-    auto fm = BackSimpleForm<>::make<LandManagerGUI::sendMainMenu>(ptr);
+    auto fm = SimpleForm{};
+    gui::back_utils::injectBackButton<sendMainMenu>(fm, ptr);
 
     auto localeCode = player.getLocaleCode();
     fm.appendButton("添加在线成员"_trl(localeCode), "textures/ui/color_plus", "path", [ptr](Player& self) {

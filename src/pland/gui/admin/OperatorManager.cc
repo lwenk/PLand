@@ -2,8 +2,7 @@
 #include "pland/PLand.h"
 #include "pland/gui/LandManagerGUI.h"
 #include "pland/gui/PermTableEditor.h"
-#include "pland/gui/common/ChooseLandAdvancedUtilGUI.h"
-#include "pland/gui/form/BackSimpleForm.h"
+#include "pland/gui/common/AdvancedLandPicker.h"
 #include "pland/land/Land.h"
 #include "pland/land/LandTemplatePermTable.h"
 #include "pland/land/repo/LandContext.h"
@@ -11,6 +10,9 @@
 #include "pland/utils/FeedbackUtils.h"
 
 #include "ll/api/service/PlayerInfo.h"
+#include "pland/gui/utils/BackUtils.h"
+
+#include <ll/api/form/SimpleForm.h>
 
 namespace land::gui {
 
@@ -23,7 +25,7 @@ void OperatorManager::sendMainMenu(Player& player) {
         return;
     }
 
-    auto fm = BackSimpleForm<>::make();
+    auto fm = ll::form::SimpleForm{};
 
     fm.setTitle("[PLand] | 领地管理"_trl(localeCode));
     fm.setContent("请选择您要进行的操作"_trl(localeCode));
@@ -61,7 +63,9 @@ void OperatorManager::sendMainMenu(Player& player) {
 void OperatorManager::sendChoosePlayerFromDb(Player& player, ChoosePlayerCallback callback) {
     auto localeCode = player.getLocaleCode();
 
-    auto fm = BackSimpleForm<>::make<OperatorManager::sendMainMenu>();
+    auto fm = ll::form::SimpleForm{};
+    back_utils::injectBackButton<OperatorManager::sendMainMenu>(fm);
+
     fm.setTitle("[PLand] | 玩家列表"_trl(localeCode));
     fm.setContent("请选择您要管理的玩家"_trl(localeCode));
 
@@ -91,11 +95,11 @@ void OperatorManager::sendChooseLandGUI(Player& player, mce::UUID const& targetP
 }
 
 void OperatorManager::sendChooseLandAdvancedGUI(Player& player, std::vector<std::shared_ptr<Land>> lands) {
-    ChooseLandAdvancedUtilGUI::sendTo(
+    AdvancedLandPicker::sendTo(
         player,
         lands,
         [](Player& self, std::shared_ptr<Land> ptr) { LandManagerGUI::sendMainMenu(self, ptr); },
-        BackSimpleForm<>::makeCallback<sendMainMenu>()
+        back_utils::wrapCallback<sendMainMenu>()
     );
 }
 
