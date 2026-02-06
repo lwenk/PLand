@@ -3,6 +3,7 @@
 
 #include <ll/api/form/SimpleForm.h>
 
+#include <ll/api/form/CustomForm.h>
 #include <string>
 
 namespace land {
@@ -57,9 +58,7 @@ struct PaginatedForm::Impl : std::enable_shared_from_this<Impl> {
                 "选择页"_trl(localeCode),
                 "textures/ui/mashup_PaintBrush",
                 "path",
-                [data = shared_from_this()](Player& player) {
-                    // TODO
-                }
+                [data = shared_from_this()](Player& player) { data->sendChoosePageNumber(player); }
             );
         }
         form.appendButton(
@@ -116,6 +115,32 @@ struct PaginatedForm::Impl : std::enable_shared_from_this<Impl> {
         _buildPageButton(form, page);
         form.appendDivider();
         _buildBottomControlButtons(form, localeCode);
+    }
+
+    void sendChoosePageNumber(Player& player) {
+        auto localeCode = player.getLocaleCode();
+
+        ll::form::CustomForm fm{"[PLand] | 分页 | 页码选择"_trl(localeCode)};
+        fm.appendSlider(
+            "page",
+            "共 {} 页，请选择页码："_trl(localeCode, mTotalPages),
+            1,
+            mTotalPages,
+            1.0,
+            mCurrentPage
+        );
+        fm.setSubmitButton("跳转"_trl(localeCode));
+        fm.sendTo(
+            player,
+            [data = shared_from_this(
+             )](Player& player, ll::form::CustomFormResult const& result, ll::form::FormCancelReason) {
+                if (!result) {
+                    return;
+                }
+                auto page = static_cast<int>(std::get<double>(result->at("page")));
+                data->sendSpecificPage(player, page);
+            }
+        );
     }
 
     void sendSpecificPage(Player& player, int page) {
