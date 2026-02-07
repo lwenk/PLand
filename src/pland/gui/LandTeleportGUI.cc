@@ -17,7 +17,7 @@ void LandTeleportGUI::sendTo(Player& player) {
         player,
         PLand::getInstance().getLandRegistry().getLands(player.getUuid(), true),
         impl,
-        gui::back_utils::wrapCallback<sendTo>()
+        gui::back_utils::wrapCallback<LandMainMenuGUI::sendTo>()
     );
 }
 
