@@ -9,7 +9,6 @@
 #include "pland/events/economy/LandRefundFailedEvent.h"
 #include "pland/events/player/PlayerApplyLandRangeChangeEvent.h"
 #include "pland/events/player/PlayerBuyLandEvent.h"
-#include "pland/events/player/PlayerChangeLandDescEvent.h"
 #include "pland/events/player/PlayerChangeLandMemberEvent.h"
 #include "pland/events/player/PlayerChangeLandNameEvent.h"
 #include "pland/events/player/PlayerDeleteLandEvent.h"
@@ -261,31 +260,6 @@ ll::Expected<> LandManagementService::setLandName(Player& player, std::shared_pt
     ll::event::EventBus::getInstance().publish(event::PlayerChangeLandNameAfterEvent{player, land, name});
     return {};
 }
-ll::Expected<>
-LandManagementService::setLandDescription(Player& player, std::shared_ptr<Land> const& land, std::string description) {
-    auto const& rule = Config::cfg.land.textRules.description;
-
-    auto result = StringValidator::validate(
-        description,
-        "领地描述"_trl(player.getLocaleCode()),
-        rule.minLen,
-        rule.maxLen,
-        rule.allowNewline,
-        player.getLocaleCode()
-    );
-    if (!result) return result;
-
-    auto event = event::PlayerChangeLandDescBeforeEvent{player, land, description};
-    ll::event::EventBus::getInstance().publish(event);
-    if (event.isCancelled()) {
-        return ll::makeStringError("操作失败，请求被取消"_trl(player.getLocaleCode()));
-    }
-
-    land->setDescribe(description);
-
-    ll::event::EventBus::getInstance().publish(event::PlayerChangeLandDescAfterEvent{player, land, description});
-    return {};
-}
 
 ll::Expected<> LandManagementService::changeOwner(std::shared_ptr<Land> const& land, mce::UUID const& newOwner) {
     auto oldOwner = land->getOwner();
@@ -419,9 +393,8 @@ ll::Expected<> LandManagementService::_ensureChangeRangelegal(
     if (auto res = LandCreateValidator::validateChangeLandRange(impl->mRegistry, land, newRange); !res) {
         if (res.error().isA<LandCreateValidator::ValidateError>()) {
             auto& error = res.error().as<LandCreateValidator::ValidateError>();
-            return ll::makeStringError(
-                error.translateError(localeCode.value_or(ll::i18n::getDefaultLocaleCode()).data())
-            );
+            return ll::makeStringError(error.translateError(localeCode.value_or(ll::i18n::getDefaultLocaleCode()).data()
+            ));
         }
         return res;
     }

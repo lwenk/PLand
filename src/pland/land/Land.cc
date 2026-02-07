@@ -105,12 +105,6 @@ void               Land::setName(std::string const& name) {
     impl->mDirtyCounter.increment();
 }
 
-std::string const& Land::getDescribe() const { return impl->mContext.mLandDescribe; }
-void               Land::setDescribe(std::string const& describe) {
-    impl->mContext.mLandDescribe = std::string(describe);
-    impl->mDirtyCounter.increment();
-}
-
 int  Land::getOriginalBuyPrice() const { return impl->mContext.mOriginalBuyPrice; }
 void Land::setOriginalBuyPrice(int price) {
     impl->mContext.mOriginalBuyPrice = price;

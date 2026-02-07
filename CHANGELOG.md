@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 领地管理 GUI 新增 **创建子领地** 按钮 @engsr6982
 - 移除 `pland set language` 命令 @engsr6982
 - 移除对 **iLand** 领地数据转换支持 @engsr6982
+- 移除领地描述相关配置与编辑入口（该功能无实际使用场景）#181 @engsr6982
 
 ### 🛠️ 开发者相关
 

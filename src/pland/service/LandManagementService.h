@@ -110,9 +110,6 @@ public:
 
     LDNDAPI ll::Expected<> setLandName(Player& player, std::shared_ptr<Land> const& land, std::string name);
 
-    LDNDAPI ll::Expected<>
-            setLandDescription(Player& player, std::shared_ptr<Land> const& land, std::string description);
-
     LDNDAPI ll::Expected<> changeOwner(std::shared_ptr<Land> const& land, mce::UUID const& newOwner);
 
     LDNDAPI ll::Expected<> transferLand(Player& player, std::shared_ptr<Land> const& land, Player& target);

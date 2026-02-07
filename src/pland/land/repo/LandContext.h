@@ -100,7 +100,7 @@ struct LandPermTable {
 
 // ! 注意：如果 LandContext 有更改，则必须递增 LandSchemaVersion，否则导致加载异常
 // 对于字段变动、重命名，请注册对应的 migrator 转换数据
-constexpr int LandSchemaVersion = 25;
+constexpr int LandSchemaVersion = 26;
 struct LandContext {
     int                      version{LandSchemaVersion};            // 版本号
     LandAABB                 mPos{};                                // 领地对角坐标
@@ -112,7 +112,6 @@ struct LandContext {
     std::string              mLandOwner{};                          // 领地主人(默认UUID,其余情况看mOwnerDataIsXUID)
     std::vector<std::string> mLandMembers{};                        // 领地成员
     std::string              mLandName{"Unnamed territories"_tr()}; // 领地名称
-    std::string              mLandDescribe{"No description"_tr()};  // 领地描述
     int                      mOriginalBuyPrice{0};                  // 原始购买价格
     [[deprecated]] bool      mIsConvertedLand{false};               // 是否为转换后的领地(其它插件创建的领地)
     [[deprecated]] bool      mOwnerDataIsXUID{false}; // 领地主人数据是否为XUID (如果为true，则主人上线自动转换为UUID)

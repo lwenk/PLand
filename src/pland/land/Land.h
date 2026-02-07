@@ -82,10 +82,6 @@ public:
 
     LDAPI void setName(std::string const& name);
 
-    LDNDAPI std::string const& getDescribe() const;
-
-    LDAPI void setDescribe(std::string const& describe);
-
     LDNDAPI int getOriginalBuyPrice() const;
 
     LDAPI void setOriginalBuyPrice(int price);

@@ -83,14 +83,6 @@ struct Config {
                 size_t maxLen{32};          // 最大长度
                 bool   allowNewline{false}; // 是否允许换行
             } name;
-
-            /* 领地描述 */
-            struct {
-                size_t minLen{0};
-                size_t maxLen{256};
-                bool   allowNewline{true};
-            } description;
-
         } textRules; // 文本规则
     } land;
 

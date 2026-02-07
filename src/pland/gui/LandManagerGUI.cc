@@ -84,9 +84,6 @@ void LandManagerGUI::sendMainMenu(Player& player, std::shared_ptr<Land> land) {
     fm.appendButton("修改领地名称"_trl(localeCode), "textures/ui/book_edit_default", "path", [land](Player& pl) {
         sendEditLandNameGUI(pl, land);
     });
-    fm.appendButton("修改领地描述"_trl(localeCode), "textures/ui/book_edit_default", "path", [land](Player& pl) {
-        sendEditLandDescGUI(pl, land);
-    });
 
     // 开启了领地传送功能，或者玩家是领地管理员
     if (Config::cfg.land.landTp || PLand::getInstance().getLandRegistry().isOperator(player.getUuid())) {
@@ -286,24 +283,6 @@ void LandManagerGUI::sendEditLandNameGUI(Player& player, std::shared_ptr<Land> c
             auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
             if (auto expected = service.setLandName(pl, ptr, result)) {
                 feedback_utils::sendText(pl, "领地名称已更新!"_trl(pl.getLocaleCode(), result));
-            } else {
-                feedback_utils::sendError(pl, expected.error());
-            }
-        }
-    );
-}
-void LandManagerGUI::sendEditLandDescGUI(Player& player, std::shared_ptr<Land> const& ptr) {
-    auto localeCode = player.getLocaleCode();
-
-    gui::SimpleInputForm::sendTo(
-        player,
-        "修改领地描述"_trl(localeCode),
-        "请输入新的领地描述"_trl(localeCode),
-        ptr->getDescribe(),
-        [ptr](Player& pl, std::string result) {
-            auto& service = PLand::getInstance().getServiceLocator().getLandManagementService();
-            if (auto expected = service.setLandDescription(pl, ptr, std::move(result))) {
-                feedback_utils::sendText(pl, "领地描述已更新!"_trl(pl.getLocaleCode()));
             } else {
                 feedback_utils::sendError(pl, expected.error());
             }
