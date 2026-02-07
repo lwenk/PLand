@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 新增领地 **名称**、**描述** 可配置检查 @engsr6982
 - DevTool 新增领地树可视化 @engsr6982
 - [#129] 管理玩家表单支持分页和搜索 @engsr6982
+- 管理表单支持按ID查找领地 @engsr6982
 
 ### 🐛 问题修复
 

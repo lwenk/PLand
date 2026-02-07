@@ -38,15 +38,15 @@ void LandManagerGUI::sendMainMenu(Player& player, std::shared_ptr<Land> land) {
     auto fm = SimpleForm{};
 
     auto localeCode = player.getLocaleCode();
-    fm.setTitle(("[PLand] | 领地管理 [{}]"_trl(localeCode, land->getId())));
+    fm.setTitle(("[PLand] | 领地管理 [ID:{}]"_trl(localeCode, land->getId())));
 
     auto& service = PLand::getInstance().getServiceLocator().getLandHierarchyService();
 
     std::string subContent;
     if (land->isParentLand()) {
-        subContent = "下属子领地: {}"_trl(localeCode, land->getSubLandIDs().size());
+        subContent = "下属子领地数量: {}"_trl(localeCode, land->getSubLandIDs().size());
     } else if (land->isMixLand()) {
-        subContent = "下属子领地: {}\n父领地ID: {}\n父领地名称: {}"_trl(
+        subContent = "下属子领地数量: {}\n父领地ID: {}\n父领地名称: {}"_trl(
             localeCode,
             land->getSubLandIDs().size(),
             service.getParent(land)->getId(),

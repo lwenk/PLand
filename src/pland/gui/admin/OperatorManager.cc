@@ -12,6 +12,7 @@
 #include "pland/utils/FeedbackUtils.h"
 
 #include "ll/api/service/PlayerInfo.h"
+#include "pland/gui/common/SimpleInputForm.h"
 #include "pland/gui/utils/BackUtils.h"
 
 #include <ll/api/form/SimpleForm.h>
@@ -44,7 +45,7 @@ void OperatorManager::sendMainMenu(Player& player) {
         LandOwnerPicker::sendTo(self, static_cast<void (*)(Player&, mce::UUID)>(&sendAdvancedLandPicker), sendMainMenu);
     });
     fm.appendButton("管理指定领地"_trl(localeCode), "textures/ui/magnifyingGlass", "path", [](Player& self) {
-        sendAdvancedLandPicker(self, PLand::getInstance().getLandRegistry().getLands());
+        sendLandSelectModeMenu(self);
     });
     fm.appendButton("编辑默认权限"_trl(localeCode), "textures/ui/icon_map", "path", [](Player& self) {
         gui::PermTableEditor::sendTo(
@@ -58,6 +59,45 @@ void OperatorManager::sendMainMenu(Player& player) {
     });
 
     fm.sendTo(player);
+}
+void OperatorManager::sendLandSelectModeMenu(Player& player) {
+    auto localeCode = player.getLocaleCode();
+
+    ll::form::SimpleForm fm;
+    fm.setTitle("[PLand] | 管理指定领地 | 选择方式"_trl(localeCode));
+    fm.appendButton(
+        "浏览全部领地"_trl(localeCode),
+        "textures/ui/achievements_pause_menu_icon",
+        "path",
+        [](Player& self) { sendAdvancedLandPicker(self, PLand::getInstance().getLandRegistry().getLands()); }
+    );
+    fm.appendButton("按领地 ID 查找"_trl(localeCode), "textures/ui/magnifyingGlass", "path", [](Player& self) {
+        sendLandIdSearchForm(self);
+    });
+    back_utils::injectBackButton<sendMainMenu>(fm);
+    fm.sendTo(player);
+}
+void OperatorManager::sendLandIdSearchForm(Player& player) {
+    auto localeCode = player.getLocaleCode();
+    SimpleInputForm::sendTo(
+        player,
+        "[PLand] | 管理指定领地 | 按领地 ID 查找"_trl(localeCode),
+        "请输入领地 ID"_trl(localeCode),
+        "",
+        [](Player& self, std::string input) {
+            auto localeCode = self.getLocaleCode();
+            try {
+                LandID id = std::stoll(input);
+                if (auto land = PLand::getInstance().getLandRegistry().getLand(id)) {
+                    LandManagerGUI::sendMainMenu(self, land);
+                } else {
+                    feedback_utils::sendErrorText(self, "未找到领地 ID 为 {} 的领地"_trl(localeCode, input));
+                }
+            } catch (...) {
+                feedback_utils::sendErrorText(self, "解析失败，非法的领地ID"_trl(localeCode));
+            }
+        }
+    );
 }
 
 void OperatorManager::sendAdvancedLandPicker(Player& player, mce::UUID targetPlayer) {
