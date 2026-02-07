@@ -1,4 +1,6 @@
 #include "OperatorManager.h"
+
+#include "LandOwnerPicker.h"
 #include "pland/PLand.h"
 #include "pland/gui/LandManagerGUI.h"
 #include "pland/gui/PermTableEditor.h"
@@ -39,11 +41,10 @@ void OperatorManager::sendMainMenu(Player& player) {
         LandManagerGUI::sendMainMenu(self, lands);
     });
     fm.appendButton("管理玩家领地"_trl(localeCode), "textures/ui/FriendsIcon", "path", [](Player& self) {
-        sendChoosePlayerFromDb(self, static_cast<void (*)(Player&, mce::UUID const&)>(sendChooseLandGUI));
+        LandOwnerPicker::sendTo(self, static_cast<void (*)(Player&, mce::UUID)>(&sendAdvancedLandPicker), sendMainMenu);
     });
     fm.appendButton("管理指定领地"_trl(localeCode), "textures/ui/magnifyingGlass", "path", [](Player& self) {
-        // sendChooseLandGUI(self, PLand::getInstance().getLandRegistry().getLands());
-        sendChooseLandAdvancedGUI(self, PLand::getInstance().getLandRegistry().getLands());
+        sendAdvancedLandPicker(self, PLand::getInstance().getLandRegistry().getLands());
     });
     fm.appendButton("编辑默认权限"_trl(localeCode), "textures/ui/icon_map", "path", [](Player& self) {
         gui::PermTableEditor::sendTo(
@@ -59,42 +60,11 @@ void OperatorManager::sendMainMenu(Player& player) {
     fm.sendTo(player);
 }
 
-
-void OperatorManager::sendChoosePlayerFromDb(Player& player, ChoosePlayerCallback callback) {
-    auto localeCode = player.getLocaleCode();
-
-    auto fm = ll::form::SimpleForm{};
-    back_utils::injectBackButton<OperatorManager::sendMainMenu>(fm);
-
-    fm.setTitle("[PLand] | 玩家列表"_trl(localeCode));
-    fm.setContent("请选择您要管理的玩家"_trl(localeCode));
-
-    auto const& infos = ll::service::PlayerInfo::getInstance();
-    auto const  lands = PLand::getInstance().getLandRegistry().getLands();
-
-    std::unordered_set<mce::UUID> filtered; // 防止重复
-    for (auto const& ptr : lands) {
-        auto& owner = ptr->getOwner();
-        if (filtered.contains(owner)) {
-            continue;
-        }
-        filtered.insert(owner);
-        auto info = infos.fromUuid(owner);
-
-        fm.appendButton(info.has_value() ? info->name : owner.asString(), [ptr, callback](Player& self) {
-            callback(self, ptr->getOwner());
-        });
-    }
-
-    fm.sendTo(player);
+void OperatorManager::sendAdvancedLandPicker(Player& player, mce::UUID targetPlayer) {
+    sendAdvancedLandPicker(player, PLand::getInstance().getLandRegistry().getLands(targetPlayer));
 }
 
-
-void OperatorManager::sendChooseLandGUI(Player& player, mce::UUID const& targetPlayer) {
-    sendChooseLandAdvancedGUI(player, PLand::getInstance().getLandRegistry().getLands(targetPlayer));
-}
-
-void OperatorManager::sendChooseLandAdvancedGUI(Player& player, std::vector<std::shared_ptr<Land>> lands) {
+void OperatorManager::sendAdvancedLandPicker(Player& player, std::vector<std::shared_ptr<Land>> lands) {
     AdvancedLandPicker::sendTo(
         player,
         lands,
