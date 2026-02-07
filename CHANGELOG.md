@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 新增领地 **名称**、**描述** 可配置检查 @engsr6982
 - DevTool 新增领地树可视化 @engsr6982
-- [#129] 管理玩家表单支持分页和搜索 @engsr6982
-- 管理表单支持按ID查找领地 @engsr6982
+- 管理 GUI：
+    - 管理玩家表单支持分页和搜索（#129）@engsr6982
+    - 支持按领地 ID 查找领地 @engsr6982
 
 ### 🐛 问题修复
 
@@ -25,12 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🧹 其他改动
 
-- 领地管理GUI 新增 **创建子领地** 按钮 @engsr6982
-- 移除对 **iLand** 领地数据转换支持 @engsr6982
-- [#166] 重构代码，清理屎山，引入 Service、pImpl 模式 @engsr6982
+- 领地管理 GUI 新增 **创建子领地** 按钮 @engsr6982
 - 移除 `pland set language` 命令 @engsr6982
+- 移除对 **iLand** 领地数据转换支持 @engsr6982
+
+### 🛠️ 开发者相关
+
+- 重构代码，清理历史代码，引入 Service、pImpl 模式 (#166) @engsr6982
 - 调整项目工程结构 @engsr6982
-- [#144] 改进领地表单系统 @engsr6982
+- 改进内置领地表单系统 (#144) @engsr6982
 
 #### 🔔 事件更改
 
