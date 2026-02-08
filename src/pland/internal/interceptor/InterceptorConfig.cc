@@ -1,0 +1,164 @@
+#include "InterceptorConfig.h"
+
+#include "pland/land/repo/LandContext.h"
+#include "pland/reflect/TypeName.h"
+
+#include "ll/api/Config.h"
+
+namespace land::internal::interceptor {
+
+
+void InterceptorConfig::load(std::filesystem::path configDir) {
+    auto path = configDir / FileName;
+    if (!std::filesystem::exists(path) || !ll::config::loadConfig(cfg, path)) {
+        save(configDir);
+    }
+}
+
+void InterceptorConfig::save(std::filesystem::path configDir) {
+    auto path = configDir / FileName;
+    ll::config::saveConfig(cfg, path);
+}
+
+decltype(InterceptorConfig::cfg) InterceptorConfig::cfg = [] {
+    InterceptorConfig config;
+
+    auto allowPlace   = reflect::getTemplateInnerLeafName<&RolePerms::allowPlace>().data();
+    auto useBoneMeal  = reflect::getTemplateInnerLeafName<&RolePerms::useBoneMeal>().data();
+    config.rules.item = {
+        {       "minecraft:skull",  allowPlace}, // 头颅
+        {      "minecraft:banner",  allowPlace}, // 旗帜
+        {"minecraft:glow_ink_sac",  allowPlace}, // 灯光染料
+        { "minecraft:end_crystal",  allowPlace}, // 末影水晶
+        {   "minecraft:ender_eye",  allowPlace}, // 末影之眼
+        { "minecraft:armor_stand",  allowPlace}, // 盔甲架
+        {   "minecraft:bone_meal", useBoneMeal}, // 骨粉
+    };
+
+    auto useContainer        = reflect::getTemplateInnerLeafName<&RolePerms::useContainer>().data();
+    auto useCampfire         = reflect::getTemplateInnerLeafName<&RolePerms::useCampfire>().data();
+    auto useComposter        = reflect::getTemplateInnerLeafName<&RolePerms::useComposter>().data();
+    auto useNoteBlock        = reflect::getTemplateInnerLeafName<&RolePerms::useNoteBlock>().data();
+    auto useJukebox          = reflect::getTemplateInnerLeafName<&RolePerms::useJukebox>().data();
+    auto useBell             = reflect::getTemplateInnerLeafName<&RolePerms::useBell>().data();
+    auto useDaylightDetector = reflect::getTemplateInnerLeafName<&RolePerms::useDaylightDetector>().data();
+    auto useLectern          = reflect::getTemplateInnerLeafName<&RolePerms::useLectern>().data();
+    auto useCauldron         = reflect::getTemplateInnerLeafName<&RolePerms::useCauldron>().data();
+    auto useRespawnAnchor    = reflect::getTemplateInnerLeafName<&RolePerms::useRespawnAnchor>().data();
+    auto editFlowerPot       = reflect::getTemplateInnerLeafName<&RolePerms::editFlowerPot>().data();
+    auto allowDestroy        = reflect::getTemplateInnerLeafName<&RolePerms::allowDestroy>().data();
+    auto useWorkstation      = reflect::getTemplateInnerLeafName<&RolePerms::useWorkstation>().data();
+    auto useBeacon           = reflect::getTemplateInnerLeafName<&RolePerms::useBeacon>().data();
+    auto useCake             = reflect::getTemplateInnerLeafName<&RolePerms::useCake>().data();
+    auto useComparator       = reflect::getTemplateInnerLeafName<&RolePerms::useComparator>().data();
+    auto useRepeater         = reflect::getTemplateInnerLeafName<&RolePerms::useRepeater>().data();
+    auto useBeeNest          = reflect::getTemplateInnerLeafName<&RolePerms::useBeeNest>().data();
+    config.rules.block       = {
+        /*特殊方块关联*/
+        {                     "minecraft:chest",        useContainer}, // 箱子
+        {             "minecraft:trapped_chest",        useContainer}, // 漏斗箱
+        {                  "minecraft:campfire",         useCampfire}, // 营火
+        {             "minecraft:soul_campfire",         useCampfire}, // 灵魂营火
+        {                 "minecraft:composter",        useComposter}, // 堆肥桶
+        {                 "minecraft:noteblock",        useNoteBlock}, // 音符盒
+        {                   "minecraft:jukebox",          useJukebox}, // 唱片机
+        {                      "minecraft:bell",             useBell}, // 钟
+        {"minecraft:daylight_detector_inverted", useDaylightDetector}, // 反转阳光探测器
+        {         "minecraft:daylight_detector", useDaylightDetector}, // 阳光探测器
+        {                   "minecraft:lectern",          useLectern}, // 讲台
+        {                  "minecraft:cauldron",         useCauldron}, // 炼药锅
+        {            "minecraft:respawn_anchor",    useRespawnAnchor}, // 重生锚
+        {                "minecraft:flower_pot",       editFlowerPot}, // 花盆
+        {          "minecraft:sweet_berry_bush",        allowDestroy}, // 甜莓丛
+        /*功能类方块关联*/
+        {         "minecraft:cartography_table",      useWorkstation}, // 制图台
+        {            "minecraft:smithing_table",      useWorkstation}, // 锻造台
+        {             "minecraft:brewing_stand",      useWorkstation}, // 酿造台
+        {                     "minecraft:anvil",      useWorkstation}, // 铁砧
+        {                "minecraft:grindstone",      useWorkstation}, // 砂轮
+        {          "minecraft:enchanting_table",      useWorkstation}, // 附魔台
+        {                      "minecraft:loom",      useWorkstation}, // 织布机
+        {         "minecraft:stonecutter_block",      useWorkstation}, // 切石机
+        {                   "minecraft:crafter",      useWorkstation}, // 合成器
+        {        "minecraft:chiseled_bookshelf",        useContainer}, // 雕纹书架
+        {                    "minecraft:barrel",        useContainer}, // 木桶/存储桶
+        {                    "minecraft:hopper",        useContainer}, // 漏斗
+        {                   "minecraft:dropper",        useContainer}, // 投掷器
+        {                 "minecraft:dispenser",        useContainer}, // 发射器
+        {                     "minecraft:vault",        useContainer}, // 宝库
+        {                    "minecraft:beacon",           useBeacon}, // 信标
+        {                      "minecraft:cake",             useCake}, // 蛋糕
+        {      "minecraft:unpowered_comparator",       useComparator}, // 红石比较器（未充能）
+        {        "minecraft:powered_comparator",       useComparator}, // 红石比较器（充能）
+        {        "minecraft:unpowered_repeater",         useRepeater}, // 红石中继器（未充能）
+        {          "minecraft:powered_repeater",         useRepeater}, // 红石中继器（充能）
+        {                  "minecraft:bee_nest",          useBeeNest}, // 蜂巢
+        {                   "minecraft:beehive",          useBeeNest}, // 蜂箱
+    };
+
+    config.rules.mob.allowHostileDamage = {
+        "minecraft:zombie",            // 僵尸
+        "minecraft:skeleton",          // 骷髅
+        "minecraft:creeper",           // 苦力怕
+        "minecraft:spider",            // 蜘蛛
+        "minecraft:enderman",          // 末影人
+        "minecraft:witch",             // 女巫
+        "minecraft:blaze",             // 烈焰人
+        "minecraft:ghast",             // 恶魂
+        "minecraft:magma_cube",        // 岩浆怪
+        "minecraft:silverfish",        // 银鱼
+        "minecraft:slime",             // 史莱姆
+        "minecraft:guardian",          // 守卫者
+        "minecraft:elder_guardian",    // 长老守卫者
+        "minecraft:wither_skeleton",   // 凋零骷髅
+        "minecraft:stray",             // 流浪者
+        "minecraft:husk",              // 干尸
+        "minecraft:zombie_villager",   // 僵尸村民
+        "minecraft:drowned",           // 溺尸
+        "minecraft:phantom",           // 幻翼
+        "minecraft:pillager",          // 掠夺者
+        "minecraft:vindicator",        // 守卫者
+        "minecraft:ravager",           // 劫掠兽
+        "minecraft:evocation_illager", // 召唤师
+        "minecraft:vex",               // 幽灵
+        "minecraft:shulker",           // 潜影贝
+        "minecraft:endermite",         // 末影螨
+        "minecraft:cave_spider",       // 洞穴蜘蛛
+        "minecraft:zoglin",            // 僵尸疣猪兽
+        "minecraft:piglin_brute",      // 野猪人暴徒
+        "minecraft:hoglin",            // 疣猪兽
+        "minecraft:wither",            // 凋零
+        "minecraft:ender_dragon",      // 末影龙
+    };
+    config.rules.mob.allowFriendlyDamage = {
+        "minecraft:cow",       // 牛
+        "minecraft:pig",       // 猪
+        "minecraft:sheep",     // 羊
+        "minecraft:chicken",   // 鸡
+        "minecraft:rabbit",    // 兔子
+        "minecraft:mooshroom", // 蘑菇牛
+        "minecraft:horse",     // 马
+        "minecraft:donkey",    // 驴
+        "minecraft:mule",      // 骡
+        "minecraft:ocelot",    // 猫
+        "minecraft:bat",       // 蝙蝠
+        "minecraft:sniffer",   // 探索者
+        "minecraft:camel",     // 骆驼
+        "minecraft:armadillo", // 犰狳
+    };
+    config.rules.mob.allowSpecialEntityDamage = {
+        "minecraft:painting",               // 画
+        "minecraft:hopper_minecart",        // 漏斗矿车
+        "minecraft:chest_boat",             // 箱船
+        "minecraft:leash_knot",             // 拴绳结
+        "minecraft:armor_stand",            // 盔甲架
+        "minecraft:minecart",               // 矿车
+        "minecraft:command_block_minecart", // 指令方块矿车
+        "minecraft:boat",                   // 船
+        "minecraft:ender_crystal",          // 末影水晶
+    };
+    return config;
+}();
+
+
+} // namespace land::internal::interceptor

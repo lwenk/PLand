@@ -91,7 +91,7 @@ struct Config {
         std::string alias{"木棍"};           // 别名
     } selector;
 
-    struct {
+    [[deprecated]] struct {
         bool PlayerDestroyBlockEvent{true};                   // 玩家破坏方块
         bool PlayerPlacingBlockEvent{true};                   // 玩家放置方块
         bool PlayerInteractBlockEvent{true};                  // 玩家交互方块
@@ -127,7 +127,7 @@ struct Config {
         bool DragonEggBlockTeleportBeforeEvent{true};         // 龙蛋传送
         bool PlayerUseItemEvent{true};                        // 玩家使用物品
     } listeners;
-    struct {
+    [[deprecated]] struct {
         bool registerMobHurtHook{true};             // 注册生物受伤Hook
         bool registerFishingHookHitHook{true};      // 注册钓鱼竿Hook
         bool registerLayEggGoalHook{true};          // 注册产卵AI目标Hook
@@ -135,72 +135,11 @@ struct Config {
         bool registerChestBlockActorOpenHook{true}; // 注册箱子打开Hook
     } hooks;
 
-    struct {
+    [[deprecated]] struct {
         struct {
-            std::unordered_set<std::string> hostileMobTypeNames{
-                // 敌对生物
-                "minecraft:zombie",
-                "minecraft:skeleton",
-                "minecraft:creeper",
-                "minecraft:spider",
-                "minecraft:enderman",
-                "minecraft:witch",
-                "minecraft:blaze",
-                "minecraft:ghast",
-                "minecraft:magma_cube",
-                "minecraft:silverfish",
-                "minecraft:slime",
-                "minecraft:guardian",
-                "minecraft:elder_guardian",
-                "minecraft:wither_skeleton",
-                "minecraft:stray",
-                "minecraft:husk",
-                "minecraft:zombie_villager",
-                "minecraft:drowned",
-                "minecraft:phantom",
-                "minecraft:pillager",
-                "minecraft:vindicator",
-                "minecraft:ravager",
-                "minecraft:evocation_illager",
-                "minecraft:vex",
-                "minecraft:shulker",
-                "minecraft:endermite",
-                "minecraft:cave_spider",
-                "minecraft:zoglin",
-                "minecraft:piglin_brute",
-                "minecraft:hoglin",
-                "minecraft:wither",
-                "minecraft:ender_dragon"
-            };
-            std::unordered_set<std::string> specialMobTypeNames{
-                // 特殊生物
-                "minecraft:painting",
-                "minecraft:hopper_minecart",
-                "minecraft:chest_boat",
-                "minecraft:leash_knot",
-                "minecraft:armor_stand",
-                "minecraft:minecart",
-                "minecraft:command_block_minecart",
-                "minecraft:boat",
-                "minecraft:ender_crystal",
-            };
-            std::unordered_set<std::string> passiveMobTypeNames{
-                // 友好生物
-                "minecraft:cow",
-                "minecraft:pig",
-                "minecraft:sheep",
-                "minecraft:chicken",
-                "minecraft:rabbit",
-                "minecraft:mooshroom",
-                "minecraft:horse",
-                "minecraft:donkey",
-                "minecraft:mule",
-                "minecraft:ocelot",
-                "minecraft:bat",
-                "minecraft:sniffer",
-                "minecraft:camel",
-                "minecraft:armadillo"
-            };
+            std::unordered_set<std::string> hostileMobTypeNames{};
+            std::unordered_set<std::string> specialMobTypeNames{};
+            std::unordered_set<std::string> passiveMobTypeNames{};
             std::unordered_set<std::string> customSpecialMobTypeNames; // Addon生物类型名称
         } mob;
 
