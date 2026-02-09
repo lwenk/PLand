@@ -2,6 +2,8 @@
 #include "pland/internal/interceptor/InterceptorConfig.h"
 #include "pland/internal/interceptor/helper/EventTrace.h"
 #include "pland/internal/interceptor/helper/InterceptorHelper.h"
+#include "pland/service/LandHierarchyService.h"
+#include "pland/service/ServiceLocator.h"
 
 #include "ll/api/event/EventBus.h"
 
@@ -28,7 +30,7 @@ void EventInterceptor::setupIlaWorldListeners() {
     auto  registry = &PLand::getInstance().getLandRegistry();
     auto  bus      = &ll::event::EventBus::getInstance();
 
-    /*registerListenerIf(config.ExplosionBeforeEvent, [bus, registry]() {
+    registerListenerIf(config.ExplosionBeforeEvent, [bus, registry]() {
         return bus->emplaceListener<ila::mc::ExplosionBeforeEvent>([registry](ila::mc::ExplosionBeforeEvent& ev) {
             TRACE_THIS_EVENT(ila::mc::ExplosionBeforeEvent);
 
@@ -36,117 +38,95 @@ void EventInterceptor::setupIlaWorldListeners() {
             auto& blockSource = explosion.mRegion;
             auto  centerPos   = BlockPos{explosion.mPos};
             auto  radius      = explosion.mRadius;
+            auto  dimid       = blockSource.getDimensionId();
 
-            TRACE_ADD_MESSAGE("centerPos={}, radius={}", centerPos.toString(), radius);
+            TRACE_LOG("centerPos={}, radius={}", centerPos.toString(), radius);
 
-            auto& delegate = getDelegate();
-            auto  decision = delegate.preCheck(blockSource, centerPos);
-            TRACE_STEP_PRE_CHECK(decision);
-            if (applyDecision(decision, ev)) {
-                return;
+            auto centerLand = registry->getLandAt(centerPos, dimid);
+            if (!hasEnvironmentPermission<&EnvironmentPerms::allowExplode>(centerLand)) {
+                ev.cancel();
+                TRACE_LOG("center land does not allow explode");
+                return; // 爆炸中心所在领地的权限具有决定性
             }
 
-            // 爆炸中心点具有最高决策权
-            if (auto centerTable = delegate.getPermTable(blockSource, centerPos)) {
-                if (applyDecision(centerTable->environment.allowExplode, ev)) return;
-            }
-
-            auto aabb = AABB{};
-            {
-                float expandRadius = radius + 1.0f;
-
-                aabb.min.x = centerPos.x - expandRadius;
-                aabb.min.y = centerPos.y - expandRadius;
-                aabb.min.z = centerPos.z - expandRadius;
-                aabb.max.x = centerPos.x + expandRadius;
-                aabb.max.y = centerPos.y + expandRadius;
-                aabb.max.z = centerPos.z + expandRadius;
-            }
-            // 矩阵查询可能受影响的区域
-            bool needFineCheck = false;
-            auto iter          = delegate.queryMatrix(blockSource, aabb);
-            for (auto const& tab : iter) {
-                if (!tab.environment.allowExplode) {
-                    // 矩阵中存在禁止爆炸的权限源，
-                    // 需要进入受影响方块的精细判定
-                    // ev.cancel();
-                    // return;
-                    needFineCheck = true;
-                    break;
-                }
-            }
-
-            // 精细判定受影响的方块集
-            // TODO: 进行性能测试验证精细判定的性能影响在可控范围内
-            auto& affected = explosion.mAffectedBlocks.get();
-            if (needFineCheck) {
-                static constexpr size_t MAX_AFFECTED_BLOCKS = 32;
-                if (affected.size() <= MAX_AFFECTED_BLOCKS) {
-                    auto iter = affected.begin();
-                    while (iter != affected.end()) {
-                        auto tab = delegate.getPermTable(blockSource, *iter);
-                        if (tab && !tab->environment.allowExplode) {
-                            iter = affected.erase(iter); // 剔除禁止爆炸的区域
-                            continue;
+            auto touchedLands = registry->getLandAt(centerPos, (int)(radius + 1.0), dimid);
+            if (centerLand) {
+                // 如果中心领地允许爆炸，检查是否影响到其他禁止爆炸的、不相关的领地。
+                auto& service    = PLand::getInstance().getServiceLocator().getLandHierarchyService();
+                auto  centerRoot = service.getRoot(centerLand);
+                for (auto const& touchedLand : touchedLands) {
+                    if (service.getRoot(touchedLand) != centerRoot) {
+                        if (!hasEnvironmentPermission<&EnvironmentPerms::allowExplode>(touchedLand)) {
+                            TRACE_LOG("touched land does not allow explode");
+                            ev.cancel();
+                            return;
                         }
-                        ++iter;
                     }
-                } else {
-                    ev.cancel(); // 受影响的方块过多，考虑性能不进行精细判定
-                    return;
+                }
+            } else {
+                // 情况：爆炸发生在领地外。
+                // 如果影响到任何禁止爆炸的领地，则取消。
+                for (auto const& touchedLand : touchedLands) {
+                    if (!hasEnvironmentPermission<&EnvironmentPerms::allowExplode>(touchedLand)) {
+                        TRACE_LOG("external land does not allow explode");
+                        ev.cancel();
+                        return;
+                    }
                 }
             }
-
-            applyDecision(delegate.postPolicy(blockSource, centerPos), ev);
         });
     });
 
     registerListenerIf(config.FarmDecayBeforeEvent, [bus, registry]() {
         return bus->emplaceListener<ila::mc::FarmDecayBeforeEvent>([registry](ila::mc::FarmDecayBeforeEvent& ev) {
-            TRACE_THIS_EVENT(ila::mc::FarmDecayBeforeEvent)
+            TRACE_THIS_EVENT(ila::mc::FarmDecayBeforeEvent);
 
-            auto& blockPos    = ev.pos();
-            auto& blockSource = ev.blockSource();
+            auto& blockPos = ev.pos();
 
-            TRACE_ADD_MESSAGE("pos={}", blockPos.toString());
+            TRACE_LOG("pos={}", blockPos.toString());
 
-            auto& delegate = getDelegate();
-            auto  decision = delegate.preCheck(blockSource, blockPos);
-            TRACE_STEP_PRE_CHECK(decision);
-            if (applyDecision(decision, ev)) {
-                return;
+            auto land = registry->getLandAt(blockPos, ev.blockSource().getDimensionId());
+            if (!hasEnvironmentPermission<&EnvironmentPerms::allowFarmDecay>(land)) {
+                ev.cancel();
             }
-
-            if (auto centerTable = delegate.getPermTable(blockSource, blockPos)) {
-                if (applyDecision(centerTable->environment.allowFarmDecay, ev)) return;
-            }
-
-            applyDecision(delegate.postPolicy(blockSource, blockPos), ev);
         });
     });
 
     registerListenerIf(config.PistonPushBeforeEvent, [bus, registry]() {
         return bus->emplaceListener<ila::mc::PistonPushBeforeEvent>([registry](ila::mc::PistonPushBeforeEvent& ev) {
-            auto& pistonPos   = ev.pistonPos();
-            auto& pushPos     = ev.pushPos();
-            auto& blockSource = ev.blockSource();
+            auto& pistonPos = ev.pistonPos();
+            auto& pushPos   = ev.pushPos();
 
-            auto& delegate = getDelegate();
-            if (applyDecision(delegate.preCheck(blockSource, pistonPos), ev)) return;
-            if (applyDecision(delegate.preCheck(blockSource, pushPos), ev)) return;
+            auto dimid      = ev.blockSource().getDimensionId();
+            auto pistonLand = registry->getLandAt(pistonPos, dimid);
+            auto pushLand   = registry->getLandAt(pushPos, dimid);
 
             // 由于活塞事件复杂，需要处理4种可能的情况
-            // 导致无法量化统一处理，故交给上层决定
             // 内 => 内 / 外 => 内 / 内 => 外 / 外 => 外
-            auto decision =
-                delegate
-                    .handlePistonAction(blockSource, pistonPos, pushPos, &EnvironmentPerms::allowPistonPushOnBoundary);
-            if (applyDecision(decision, ev)) {
+
+            // 内 => 内
+            if (pistonLand && pushLand) {
+                if (pistonLand == pushLand) {
+                    return; // 内 => 内
+                }
+                bool pistonAllow = hasEnvironmentPermission<&EnvironmentPerms::allowPistonPushOnBoundary>(pistonLand);
+                bool pushAllow   = hasEnvironmentPermission<&EnvironmentPerms::allowPistonPushOnBoundary>(pushLand);
+                if (pistonAllow && pushAllow) {
+                    return; // 内A => 内B（跨领地）
+                }
+                ev.cancel();
                 return;
             }
 
-            if (applyDecision(delegate.postPolicy(blockSource, pistonPos), ev)) return;
-            if (applyDecision(delegate.postPolicy(blockSource, pushPos), ev)) return;
+            // 外 => 内
+            if (!pistonLand && pushLand) {
+                bool pushAllow = hasEnvironmentPermission<&EnvironmentPerms::allowPistonPushOnBoundary>(pushLand);
+                if (!pushAllow
+                    && (pushLand->getAABB().isOnOuterBoundary(pistonPos)
+                        || pushLand->getAABB().isOnInnerBoundary(pushPos))) {
+                    ev.cancel(); // 外 => 内
+                }
+            }
         });
     });
 
@@ -156,14 +136,10 @@ void EventInterceptor::setupIlaWorldListeners() {
                 auto& blockSource = ev.blockSource();
                 auto& blockPos    = ev.pos();
 
-                auto& delegate = getDelegate();
-                if (applyDecision(delegate.preCheck(blockSource, blockPos), ev)) return;
-
-                if (auto table = delegate.getPermTable(blockSource, blockPos)) {
-                    if (applyDecision(table->environment.allowRedstoneUpdate, ev)) return;
+                auto land = registry->getLandAt(blockPos, blockSource.getDimensionId());
+                if (!hasEnvironmentPermission<&EnvironmentPerms::allowRedstoneUpdate>(land)) {
+                    ev.cancel();
                 }
-
-                applyDecision(delegate.postPolicy(blockSource, blockPos), ev);
             }
         );
     });
@@ -173,38 +149,33 @@ void EventInterceptor::setupIlaWorldListeners() {
             auto& blockSource = ev.blockSource();
             auto& blockPos    = ev.pos();
 
-            auto& delegate = getDelegate();
-            if (applyDecision(delegate.preCheck(blockSource, blockPos), ev)) return;
-
-            auto decision = delegate.handleBlockFall(blockSource, blockPos, &permc::EnvironmentPerms::allowBlockFall);
-            if (applyDecision(decision, ev)) return;
-
-            applyDecision(delegate.postPolicy(blockSource, blockPos), ev);
+            auto land = registry->getLandAt(blockPos, blockSource.getDimensionId());
+            if (land && land->getAABB().isAboveLand(blockPos)
+                && !hasEnvironmentPermission<&EnvironmentPerms::allowBlockFall>(land)) {
+                ev.cancel();
+            }
         });
     });
 
     registerListenerIf(config.WitherDestroyBeforeEvent, [bus, registry]() {
         return bus->emplaceListener<ila::mc::WitherDestroyBeforeEvent>(
             [registry](ila::mc::WitherDestroyBeforeEvent& ev) {
-                TRACE_THIS_EVENT(ila::mc::WitherDestroyBeforeEvent)
+                TRACE_THIS_EVENT(ila::mc::WitherDestroyBeforeEvent);
 
-                auto& blockSource = ev.blockSource();
-                auto& aabb        = ev.box();
+                auto& aabb = ev.box();
 
-                TRACE_ADD_MESSAGE("aabb={}", aabb.toString());
+                TRACE_LOG("aabb={}", aabb.toString());
 
-                auto& delegate = getDelegate();
-                if (applyDecision(delegate.preCheck(blockSource, aabb), ev)) return;
+                static constexpr float Offset = 1.0f; // 由于闭区间判定以及浮点数精度，需要额外偏移1个单位
 
-                auto iter = delegate.queryMatrix(blockSource, aabb);
-                for (auto& table : iter) {
-                    bool result = table.environment.allowWitherDestroy;
-                    if (!result) {
-                        if (applyDecision(result, ev)) return;
+                auto lands =
+                    registry->getLandAt(aabb.min - Offset, aabb.max + Offset, ev.blockSource().getDimensionId());
+                for (auto const& p : lands) {
+                    if (!hasEnvironmentPermission<&EnvironmentPerms::allowWitherDestroy>(p)) {
+                        ev.cancel();
+                        break;
                     }
                 }
-
-                applyDecision(delegate.postPolicy(blockSource, aabb), ev);
             }
         );
     });
@@ -217,21 +188,15 @@ void EventInterceptor::setupIlaWorldListeners() {
             int   rz          = ev.zRadius();
 
             auto minPos = Vec3(blockPos.x - rx, blockPos.y - 1, blockPos.z - rz);
-            auto maxPos = Vec3(blockPos.x + rx + 1, blockPos.y + 2, blockPos.z + rz + 1);
-            AABB box(minPos, maxPos);
+            auto maxPos = Vec3(blockPos.x + rx, blockPos.y + 1, blockPos.z + rz);
 
-            auto& delegate = getDelegate();
-            if (applyDecision(delegate.preCheck(blockSource, box), ev)) return;
-
-            auto iter = delegate.queryMatrix(blockSource, box);
-            for (auto& table : iter) {
-                bool result = table.environment.allowMossGrowth;
-                if (!result) {
-                    if (applyDecision(result, ev)) return;
+            auto lds = registry->getLandAt(minPos, maxPos, blockSource.getDimensionId());
+            for (auto const& land : lds) {
+                if (!hasEnvironmentPermission<&EnvironmentPerms::allowMossGrowth>(land)) {
+                    ev.cancel();
+                    return;
                 }
             }
-
-            applyDecision(delegate.postPolicy(blockSource, box), ev);
         });
     });
 
@@ -241,13 +206,11 @@ void EventInterceptor::setupIlaWorldListeners() {
             auto& fromPos     = ev.flowFromPos(); // 源头 (水流来的方向)
             auto& toPos       = ev.pos();         // 目标 (水流要去的地方)
 
-            auto& delegate = getDelegate();
-            if (applyDecision(delegate.preCheck(blockSource, toPos), ev)) return;
-
-            auto decision = delegate.handleSpread(blockSource, fromPos, toPos, &EnvironmentPerms::allowLiquidFlow);
-            if (applyDecision(decision, ev)) return;
-
-            applyDecision(delegate.postPolicy(blockSource, toPos), ev);
+            auto landTo = registry->getLandAt(toPos, blockSource.getDimensionId());
+            if (landTo && !hasEnvironmentPermission<&EnvironmentPerms::allowLiquidFlow>(landTo)
+                && landTo->getAABB().isOnOuterBoundary(fromPos) && landTo->getAABB().isOnInnerBoundary(toPos)) {
+                ev.cancel();
+            }
         });
     });
 
@@ -257,14 +220,10 @@ void EventInterceptor::setupIlaWorldListeners() {
                 auto& blockSource = ev.blockSource();
                 auto& blockPos    = ev.pos();
 
-                auto& delegate = getDelegate();
-                if (applyDecision(delegate.preCheck(blockSource, blockPos), ev)) return;
-
-                if (auto table = delegate.getPermTable(blockSource, blockPos)) {
-                    if (applyDecision(table->environment.allowDragonEggTeleport, ev)) return;
+                auto land = registry->getLandAt(blockPos, blockSource.getDimensionId());
+                if (!hasEnvironmentPermission<&EnvironmentPerms::allowDragonEggTeleport>(land)) {
+                    ev.cancel();
                 }
-
-                applyDecision(delegate.postPolicy(blockSource, blockPos), ev);
             }
         );
     });
@@ -275,14 +234,10 @@ void EventInterceptor::setupIlaWorldListeners() {
                 auto& blockSource = ev.blockSource();
                 auto& blockPos    = ev.pos();
 
-                auto& delegate = getDelegate();
-                if (applyDecision(delegate.preCheck(blockSource, blockPos), ev)) return;
-
-                if (auto table = delegate.getPermTable(blockSource, blockPos)) {
-                    if (applyDecision(table->environment.allowSculkBlockGrowth, ev)) return;
+                auto land = registry->getLandAt(blockPos, blockSource.getDimensionId());
+                if (!hasEnvironmentPermission<&EnvironmentPerms::allowSculkBlockGrowth>(land)) {
+                    ev.cancel();
                 }
-
-                applyDecision(delegate.postPolicy(blockSource, blockPos), ev);
             }
         );
     });
@@ -293,15 +248,15 @@ void EventInterceptor::setupIlaWorldListeners() {
             auto& fromPos     = ev.selfPos();
             auto& toPos       = ev.targetPos();
 
-            auto& delegate = getDelegate();
-            if (applyDecision(delegate.preCheck(blockSource, toPos), ev)) return;
+            auto sou = registry->getLandAt(fromPos, blockSource.getDimensionId());
+            auto tar = registry->getLandAt(toPos, blockSource.getDimensionId());
 
-            auto decision = delegate.handleSpread(blockSource, fromPos, toPos, &EnvironmentPerms::allowSculkSpread);
-            if (applyDecision(decision, ev)) return;
-
-            applyDecision(delegate.postPolicy(blockSource, toPos), ev);
+            if (!hasEnvironmentPermission<&EnvironmentPerms::allowSculkSpread>(sou)
+                || !hasEnvironmentPermission<&EnvironmentPerms::allowSculkSpread>(tar)) {
+                ev.cancel();
+            }
         });
-    });*/
+    });
 }
 
 } // namespace land::internal::interceptor
