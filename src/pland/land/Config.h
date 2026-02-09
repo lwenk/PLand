@@ -1,10 +1,9 @@
 #pragma once
-#include "ll/api/io/LogLevel.h"
 #include "pland/Global.h"
 #include "pland/aabb/LandAABB.h"
 #include "pland/drawer/DrawerType.h"
 #include "pland/economy/EconomySystem.h"
-#include <cstddef>
+
 #include <unordered_set>
 #include <vector>
 
@@ -19,8 +18,7 @@ struct ForbiddenRange {
 };
 
 struct Config {
-    int              version{31};
-    ll::io::LogLevel logLevel{ll::io::LogLevel::Info};
+    int version{32};
 
     EconomyConfig economy;
 
@@ -91,65 +89,6 @@ struct Config {
         std::string alias{"木棍"};           // 别名
     } selector;
 
-    [[deprecated]] struct {
-        bool PlayerDestroyBlockEvent{true};                   // 玩家破坏方块
-        bool PlayerPlacingBlockEvent{true};                   // 玩家放置方块
-        bool PlayerInteractBlockEvent{true};                  // 玩家交互方块
-        bool FireSpreadEvent{true};                           // 火焰蔓延
-        bool PlayerAttackEvent{true};                         // 玩家攻击
-        bool PlayerPickUpItemEvent{true};                     // 玩家拾取物品
-        bool PlayerAttackBlockBeforeEvent{true};              // 玩家攻击方块
-        bool ArmorStandSwapItemBeforeEvent{true};             // 盔甲架交换物品
-        bool PlayerDropItemBeforeEvent{true};                 // 玩家丢弃物品
-        bool ActorRideBeforeEvent{true};                      // 实体骑乘
-        bool ExplosionBeforeEvent{true};                      // 爆炸
-        bool FarmDecayBeforeEvent{true};                      // 农田退化
-        bool ActorHurtEvent{true};                            // 实体受伤
-        bool MobHurtEffectBeforeEvent{true};                  // 生物受伤效果
-        bool PistonPushBeforeEvent{true};                     // 活塞推动
-        bool PlayerOperatedItemFrameBeforeEvent{true};        // 玩家操作物品展示框
-        bool ActorTriggerPressurePlateBeforeEvent{true};      // 实体触发压力板
-        bool ProjectileCreateBeforeEvent{true};               // 投掷物创建
-        bool RedstoneUpdateBeforeEvent{true};                 // 红石更新
-        bool WitherDestroyBeforeEvent{true};                  // 凋零破坏
-        bool MossGrowthBeforeEvent{true};                     // 苔藓生长
-        bool LiquidFlowBeforeEvent{true};                     // 液体尝试流动
-        bool SculkBlockGrowthBeforeEvent{true};               // 幽匿方块生长
-        bool SculkSpreadBeforeEvent{true};                    // 幽匿蔓延
-        bool PlayerEditSignBeforeEvent{true};                 // 玩家编辑告示牌
-        bool SpawnedMobEvent{true};                           // 生物生成
-        bool SculkCatalystAbsorbExperienceBeforeEvent{false}; // 幽匿催化体吸收经验
-        bool PlayerInteractEntityBeforeEvent{true};           // 玩家交互实体
-        bool BlockFallBeforeEvent{true};                      // 方块下落
-        bool ActorDestroyBlockEvent{true};                    // 实体破坏方块
-        bool MobPlaceBlockBeforeEvent{true};                  // 末影人放下方块
-        bool MobTakeBlockBeforeEvent{true};                   // 末影人拿走方块
-        bool DragonEggBlockTeleportBeforeEvent{true};         // 龙蛋传送
-        bool PlayerUseItemEvent{true};                        // 玩家使用物品
-    } listeners;
-    [[deprecated]] struct {
-        bool registerMobHurtHook{true};             // 注册生物受伤Hook
-        bool registerFishingHookHitHook{true};      // 注册钓鱼竿Hook
-        bool registerLayEggGoalHook{true};          // 注册产卵AI目标Hook
-        bool registerFireBlockBurnHook{true};       // 注册火焰蔓延Hook
-        bool registerChestBlockActorOpenHook{true}; // 注册箱子打开Hook
-    } hooks;
-
-    [[deprecated]] struct {
-        struct {
-            std::unordered_set<std::string> hostileMobTypeNames{};
-            std::unordered_set<std::string> specialMobTypeNames{};
-            std::unordered_set<std::string> passiveMobTypeNames{};
-            std::unordered_set<std::string> customSpecialMobTypeNames; // Addon生物类型名称
-        } mob;
-
-        struct {
-            std::unordered_map<std::string, std::string> itemSpecific;
-            std::unordered_map<std::string, std::string> blockSpecific;
-            std::unordered_map<std::string, std::string> blockFunctional;
-        } permissionMaps;
-    } protection;
-
     struct {
         bool telemetry{true}; // 遥测（匿名数据统计）
         bool devTools{false}; // 开发工具
@@ -158,8 +97,11 @@ struct Config {
 
     // Functions
     LDAPI static Config cfg;
-    LDAPI static bool   tryLoad();
-    LDAPI static bool   trySave();
+
+    inline static constexpr std::string_view FileName = "Config.json";
+
+    LDAPI static bool tryLoad();
+    LDAPI static bool trySave();
 
     LDAPI static bool ensureDimensionAllowed(int dimensionId);
     LDAPI static bool ensureSubLandFeatureEnabled();

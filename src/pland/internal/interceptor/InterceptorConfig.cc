@@ -4,6 +4,8 @@
 #include "pland/reflect/TypeName.h"
 
 #include "ll/api/Config.h"
+#include "ll/api/io/FileUtils.h"
+#include "pland/utils/JsonUtil.h"
 
 namespace land::internal::interceptor {
 
@@ -18,6 +20,89 @@ void InterceptorConfig::load(std::filesystem::path configDir) {
 void InterceptorConfig::save(std::filesystem::path configDir) {
     auto path = configDir / FileName;
     ll::config::saveConfig(cfg, path);
+}
+
+void InterceptorConfig::tryMigrate(std::filesystem::path configDir) {
+    auto path = configDir / "Config.json";
+    if (!std::filesystem::exists(path)) {
+        return;
+    }
+    auto data = ll::file_utils::readFile(path);
+    if (!data.has_value()) {
+        return;
+    }
+    auto json = nlohmann::json::parse(*data);
+    if (json.contains("version") && json["version"].get<int>() >= 32) {
+        return;
+    }
+    ll::file_utils::writeFile(configDir / "Config.json.bak", *data);
+
+    if (json.contains("listeners")) {
+        auto& listeners                                  = json["listeners"];
+        cfg.listeners.PlayerDestroyBlockEvent            = listeners["PlayerDestroyBlockEvent"].get<bool>();
+        cfg.listeners.PlayerPlacingBlockEvent            = listeners["PlayerPlacingBlockEvent"].get<bool>();
+        cfg.listeners.PlayerInteractBlockEvent           = listeners["PlayerInteractBlockEvent"].get<bool>();
+        cfg.listeners.FireSpreadEvent                    = listeners["FireSpreadEvent"].get<bool>();
+        cfg.listeners.PlayerAttackEvent                  = listeners["PlayerAttackEvent"].get<bool>();
+        cfg.listeners.PlayerPickUpItemEvent              = listeners["PlayerPickUpItemEvent"].get<bool>();
+        cfg.listeners.ArmorStandSwapItemBeforeEvent      = listeners["ArmorStandSwapItemBeforeEvent"].get<bool>();
+        cfg.listeners.PlayerDropItemBeforeEvent          = listeners["PlayerDropItemBeforeEvent"].get<bool>();
+        cfg.listeners.ActorRideBeforeEvent               = listeners["ActorRideBeforeEvent"].get<bool>();
+        cfg.listeners.ExplosionBeforeEvent               = listeners["ExplosionBeforeEvent"].get<bool>();
+        cfg.listeners.FarmDecayBeforeEvent               = listeners["FarmDecayBeforeEvent"].get<bool>();
+        cfg.listeners.ActorHurtEvent                     = listeners["ActorHurtEvent"].get<bool>();
+        cfg.listeners.MobHurtEffectBeforeEvent           = listeners["MobHurtEffectBeforeEvent"].get<bool>();
+        cfg.listeners.PistonPushBeforeEvent              = listeners["PistonPushBeforeEvent"].get<bool>();
+        cfg.listeners.PlayerOperatedItemFrameBeforeEvent = listeners["PlayerOperatedItemFrameBeforeEvent"].get<bool>();
+        cfg.listeners.ActorTriggerPressurePlateBeforeEvent =
+            listeners["ActorTriggerPressurePlateBeforeEvent"].get<bool>();
+        cfg.listeners.ProjectileCreateBeforeEvent       = listeners["ProjectileCreateBeforeEvent"].get<bool>();
+        cfg.listeners.RedstoneUpdateBeforeEvent         = listeners["RedstoneUpdateBeforeEvent"].get<bool>();
+        cfg.listeners.WitherDestroyBeforeEvent          = listeners["WitherDestroyBeforeEvent"].get<bool>();
+        cfg.listeners.MossGrowthBeforeEvent             = listeners["MossGrowthBeforeEvent"].get<bool>();
+        cfg.listeners.LiquidFlowBeforeEvent             = listeners["LiquidFlowBeforeEvent"].get<bool>();
+        cfg.listeners.SculkBlockGrowthBeforeEvent       = listeners["SculkBlockGrowthBeforeEvent"].get<bool>();
+        cfg.listeners.SculkSpreadBeforeEvent            = listeners["SculkSpreadBeforeEvent"].get<bool>();
+        cfg.listeners.PlayerEditSignBeforeEvent         = listeners["PlayerEditSignBeforeEvent"].get<bool>();
+        cfg.listeners.SpawnedMobEvent                   = listeners["SpawnedMobEvent"].get<bool>();
+        cfg.listeners.PlayerInteractEntityBeforeEvent   = listeners["PlayerInteractEntityBeforeEvent"].get<bool>();
+        cfg.listeners.BlockFallBeforeEvent              = listeners["BlockFallBeforeEvent"].get<bool>();
+        cfg.listeners.ActorDestroyBlockEvent            = listeners["ActorDestroyBlockEvent"].get<bool>();
+        cfg.listeners.MobPlaceBlockBeforeEvent          = listeners["MobPlaceBlockBeforeEvent"].get<bool>();
+        cfg.listeners.MobTakeBlockBeforeEvent           = listeners["MobTakeBlockBeforeEvent"].get<bool>();
+        cfg.listeners.DragonEggBlockTeleportBeforeEvent = listeners["DragonEggBlockTeleportBeforeEvent"].get<bool>();
+        json.erase("listeners");
+    }
+    if (json.contains("hooks")) {
+        auto& hooks                       = json["hooks"];
+        cfg.hooks.MobHurtHook             = hooks["registerMobHurtHook"].get<bool>();
+        cfg.hooks.FishingHookHitHook      = hooks["registerFishingHookHitHook"].get<bool>();
+        cfg.hooks.LayEggGoalHook          = hooks["registerLayEggGoalHook"].get<bool>();
+        cfg.hooks.FireBlockBurnHook       = hooks["registerFireBlockBurnHook"].get<bool>();
+        cfg.hooks.ChestBlockActorOpenHook = hooks["registerChestBlockActorOpenHook"].get<bool>();
+        json.erase("hooks");
+    }
+    if (json.contains("protection")) {
+        auto& protection = json["protection"];
+        if (protection.contains("mob")) {
+            auto& mob = protection["mob"];
+            json_util::json2structWithDiffPatch(mob["hostileMobTypeNames"], cfg.rules.mob.allowHostileDamage);
+            json_util::json2structWithDiffPatch(mob["passiveMobTypeNames"], cfg.rules.mob.allowFriendlyDamage);
+            json_util::json2structWithDiffPatch(mob["specialMobTypeNames"], cfg.rules.mob.allowSpecialEntityDamage);
+            json_util::json2structWithDiffPatch(
+                mob["customSpecialMobTypeNames"],
+                cfg.rules.mob.allowSpecialEntityDamage
+            );
+        }
+        if (protection.contains("permissionMaps")) {
+            auto& permissionMaps = protection["permissionMaps"];
+            json_util::json2structWithDiffPatch(permissionMaps["itemSpecific"], cfg.rules.item);
+            json_util::json2structWithDiffPatch(permissionMaps["blockSpecific"], cfg.rules.block);
+            json_util::json2structWithDiffPatch(permissionMaps["blockFunctional"], cfg.rules.block);
+        }
+        json.erase("protection");
+    }
+    ll::file_utils::writeFile(path, json.dump(4));
 }
 
 decltype(InterceptorConfig::cfg) InterceptorConfig::cfg = [] {

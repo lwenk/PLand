@@ -80,9 +80,10 @@ bool PLand::load() {
         res.error().log(logger);
     }
 
+    internal::interceptor::InterceptorConfig::tryMigrate(getSelf().getConfigDir());
+
     Config::tryLoad();
     internal::interceptor::InterceptorConfig::load(getSelf().getConfigDir());
-    logger.setLevel(Config::cfg.logLevel);
 
     mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("PLand-ThreadPool", 2);
 

@@ -71,6 +71,8 @@ struct InterceptorConfig {
 
     static void load(std::filesystem::path configDir);
     static void save(std::filesystem::path configDir);
+
+    static void tryMigrate(std::filesystem::path configDir);
 };
 
 

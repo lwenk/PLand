@@ -1,17 +1,17 @@
 #include "pland/land/Config.h"
-#include "ll/api/Config.h"
 #include "pland/PLand.h"
+
+#include "ll/api/Config.h"
+
 #include <filesystem>
 #include <string>
-
 
 namespace land {
 
 namespace fs = std::filesystem;
-#define CONFIG_FILE "Config.json"
 
 bool Config::tryLoad() {
-    auto dir = land::PLand::getInstance().getSelf().getConfigDir() / CONFIG_FILE;
+    auto dir = land::PLand::getInstance().getSelf().getConfigDir() / FileName;
 
     if (!std::filesystem::exists(dir)) {
         trySave();
@@ -23,7 +23,7 @@ bool Config::tryLoad() {
 }
 
 bool Config::trySave() {
-    auto dir = land::PLand::getInstance().getSelf().getConfigDir() / CONFIG_FILE;
+    auto dir = land::PLand::getInstance().getSelf().getConfigDir() / FileName;
 
     bool status = ll::config::saveConfig(cfg, dir);
 
