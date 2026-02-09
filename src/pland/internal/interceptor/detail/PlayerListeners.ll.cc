@@ -104,13 +104,12 @@ void EventInterceptor::setupLLPlayerListeners() {
                     } else if (vftable == FlintAndSteelItem::$vftable()) {
                         if (hasMemberOrGuestPermission<&RolePerms::useFlintAndSteel>(land, uuid)) return;
                     }
-                    // TODO: fix
                     // fallback
-                    // if (auto entry = PermMapping::get().lookup<RolePerms::Entry>(ev.item().getTypeName(), table)) {
-                    //     if (applyRoleInterceptor(role, *entry, ev)) {
-                    //         return;
-                    //     }
-                    // }
+                    if (auto pointer = InterceptorConfig::lookupDynamicRule(ev.item().getTypeName())) {
+                        if (_hasMemberOrGuestPermission(land, uuid, pointer)) {
+                            return;
+                        }
+                    }
                 }
                 if (auto block = ev.block()) {
                     auto&  legacyBlock = block->getBlockType();
@@ -139,14 +138,12 @@ void EventInterceptor::setupLLPlayerListeners() {
                     } else if (vftable == BedBlock::$vftable()) {
                         if (hasMemberOrGuestPermission<&RolePerms::useBed>(land, uuid)) return;
                     }
-                    // TODO: fix
                     // fallback
-                    // if (auto entry = PermMapping::get().lookup<RolePerms::Entry>(block->getTypeName().data(), table))
-                    // {
-                    //     if (applyRoleInterceptor(role, *entry, ev)) {
-                    //         return;
-                    //     }
-                    // }
+                    if (auto pointer = InterceptorConfig::lookupDynamicRule(block->getTypeName().data())) {
+                        if (_hasMemberOrGuestPermission(land, uuid, pointer)) {
+                            return;
+                        }
+                    }
                 }
                 ev.cancel();
             }

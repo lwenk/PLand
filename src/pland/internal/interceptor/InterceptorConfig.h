@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "pland/land/repo/LandContext.h"
+
 #include <mc/deps/core/string/HashedString.h>
 
 namespace land::internal::interceptor {
@@ -71,6 +73,9 @@ struct InterceptorConfig {
 
     static void load(std::filesystem::path configDir);
     static void save(std::filesystem::path configDir);
+
+    static void _buildDynamicRuleMap();
+    static RolePerms::Entry RolePerms::* lookupDynamicRule(HashedString const& typeName);
 
     static void tryMigrate(std::filesystem::path configDir);
 };

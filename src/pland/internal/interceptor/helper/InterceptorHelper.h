@@ -59,6 +59,24 @@ inline bool hasMemberOrGuestPermission(std::shared_ptr<Land> const& land, mce::U
     if (isMember && entry.member) return true;
     return entry.guest;
 }
+inline bool _hasMemberOrGuestPermission(
+    std::shared_ptr<Land> const& land,
+    mce::UUID const&             uuid,
+    RolePerms::Entry RolePerms::* pointer
+) {
+    assert(pointer);
+    TRACE_ADD_SCOPE("_hasMemberOrGuestPermission");
+    TRACE_LOG("land={}", land ? land->getName() : "nullptr");
+    if (!land) return true; // 领地不存在 => 放行
+
+    auto& ptable = land->getPermTable();
+    auto  entry  = ptable.role.*pointer;
+    TRACE_LOG("unknown: member={}, guest={}", entry.member, entry.guest);
+    bool isMember = land->isMember(uuid);
+    TRACE_LOG("isMember={}", isMember);
+    if (isMember && entry.member) return true;
+    return entry.guest;
+}
 
 
 /**

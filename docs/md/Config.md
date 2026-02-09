@@ -250,7 +250,8 @@
 此部分用于配置特定物品或方块交互所需的权限。这允许服主自定义哪些物品/方块在领地内可以被非成员使用。
 
 - `rules.item`: 定义了使用特定**物品**时所需的权限。键是物品的命名空间 ID，值是权限名称。
-- `rules.block`: 定义了与特定**方块**交互时所需的权限（通常是简单交互，如使用床、工作台、熔炉等）。键是方块的命名空间 ID，值是权限名称。
+- `rules.block`: 定义了与特定**方块**交互时所需的权限（通常是简单交互，如使用床、工作台、熔炉等）。键是方块的命名空间
+  ID，值是权限名称。
 
 默认配置中包含了大部分原版物品和方块的权限设置，您可以根据需要进行修改、添加或删除。
 
@@ -258,7 +259,57 @@
 
 以下是所有可用于 `rules.item` 和 `rules.block` 的权限名称字符串：
 
-[//]: # (TODO: 待补充)
+| 权限字段                       | 注释                                          |
+|----------------------------|---------------------------------------------|
+| `allowDestroy`             | 允许破坏方块                                      |
+| `allowPlace`               | 允许放置方块                                      |
+| `useBucket`                | 允许使用桶(水/岩浆/...)                             |
+| `useAxe`                   | 允许使用斧头                                      |
+| `useHoe`                   | 允许使用锄头                                      |
+| `useShovel`                | 允许使用铲子                                      |
+| `placeBoat`                | 允许放置船                                       |
+| `placeMinecart`            | 允许放置矿车                                      |
+| `useButton`                | 允许使用按钮                                      |
+| `useDoor`                  | 允许使用门                                       |
+| `useFenceGate`             | 允许使用栅栏门                                     |
+| `allowInteractEntity`      | 允许与实体交互                                     |
+| `useTrapdoor`              | 允许使用活板门                                     |
+| `editSign`                 | 允许编辑告示牌                                     |
+| `useLever`                 | 允许使用拉杆                                      |
+| `useFurnaces`              | 允许使用所有熔炉类方块（熔炉/高炉/烟熏炉）                      |
+| `allowPlayerPickupItem`    | 允许玩家拾取物品                                    |
+| `allowRideTrans`           | 允许骑乘运输工具（矿车/船）                              |
+| `allowRideEntity`          | 允许骑乘实体                                      |
+| `usePressurePlate`         | 触发压力板                                       |
+| `allowFishingRodAndHook`   | 允许使用钓鱼竿和鱼钩                                  |
+| `allowProjectileCreate`    | 允许弹射物创建                                     |
+| `useArmorStand`            | 允许使用盔甲架                                     |
+| `allowDropItem`            | 允许丢弃物品                                      |
+| `useItemFrame`             | 允许操作物品展示框                                   |
+| `useFlintAndSteel`         | 使用打火石                                       |
+| `useBeacon`                | 使用信标                                        |
+| `useBed`                   | 使用床                                         |
+| `allowPvP`                 | 允许PvP                                       |
+| `allowHostileDamage`       | 敌对生物受到伤害                                    |
+| `allowFriendlyDamage`      | 友好生物受到伤害                                    |
+| `allowSpecialEntityDamage` | 特殊生物受到伤害                                    |
+| `useContainer`             | 允许使用容器(箱子/木桶/潜影盒/发射器/投掷器/漏斗/雕纹书架/试炼宝库/...)  |
+| `useWorkstation`           | 工作站类(工作台/铁砧/附魔台/酿造台/锻造台/砂轮/织布机/切石机/制图台/合成器) |
+| `useBell`                  | 使用钟                                         |
+| `useCampfire`              | 使用营火                                        |
+| `useComposter`             | 使用堆肥桶                                       |
+| `useDaylightDetector`      | 使用阳光探测器                                     |
+| `useJukebox`               | 使用唱片机                                       |
+| `useNoteBlock`             | 使用音符盒                                       |
+| `useCake`                  | 吃蛋糕                                         |
+| `useComparator`            | 使用红石比较器                                     |
+| `useRepeater`              | 使用红石中继器                                     |
+| `useLectern`               | 使用讲台                                        |
+| `useCauldron`              | 使用炼药锅                                       |
+| `useRespawnAnchor`         | 使用重生锚                                       |
+| `useBoneMeal`              | 使用骨粉                                        |
+| `useBeeNest`               | 使用蜂巢(蜂箱)                                    |
+| `editFlowerPot`            | 编辑花盆                                        |
 
 **示例**：
 默认情况下，`minecraft:flint_and_steel`（打火石）需要 `useFlintAndSteel` 权限。如果您想让它需要 `allowPlace` 权限，您可以这样修改：

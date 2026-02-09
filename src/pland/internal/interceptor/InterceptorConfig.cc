@@ -5,7 +5,10 @@
 
 #include "ll/api/Config.h"
 #include "ll/api/io/FileUtils.h"
+#include "pland/PLand.h"
 #include "pland/utils/JsonUtil.h"
+
+#include <absl/container/flat_hash_map.h>
 
 namespace land::internal::interceptor {
 
@@ -15,11 +18,95 @@ void InterceptorConfig::load(std::filesystem::path configDir) {
     if (!std::filesystem::exists(path) || !ll::config::loadConfig(cfg, path)) {
         save(configDir);
     }
+    _buildDynamicRuleMap();
 }
 
 void InterceptorConfig::save(std::filesystem::path configDir) {
     auto path = configDir / FileName;
     ll::config::saveConfig(cfg, path);
+}
+
+absl::flat_hash_map<HashedString, RolePerms::Entry RolePerms::*> DynamicRuleMap = {};
+
+void InterceptorConfig::_buildDynamicRuleMap() {
+#define DECL_PERM_FIELD(T) {reflect::getTemplateInnerLeafName<&T>(), &T}
+    static absl::flat_hash_map<std::string_view, RolePerms::Entry RolePerms::*> const PermStr2MemberPointer = {
+        DECL_PERM_FIELD(RolePerms::allowDestroy),
+        DECL_PERM_FIELD(RolePerms::allowPlace),
+        DECL_PERM_FIELD(RolePerms::useBucket),
+        DECL_PERM_FIELD(RolePerms::useAxe),
+        DECL_PERM_FIELD(RolePerms::useHoe),
+        DECL_PERM_FIELD(RolePerms::useShovel),
+        DECL_PERM_FIELD(RolePerms::placeBoat),
+        DECL_PERM_FIELD(RolePerms::placeMinecart),
+        DECL_PERM_FIELD(RolePerms::useButton),
+        DECL_PERM_FIELD(RolePerms::useDoor),
+        DECL_PERM_FIELD(RolePerms::useFenceGate),
+        DECL_PERM_FIELD(RolePerms::allowInteractEntity),
+        DECL_PERM_FIELD(RolePerms::useTrapdoor),
+        DECL_PERM_FIELD(RolePerms::editSign),
+        DECL_PERM_FIELD(RolePerms::useLever),
+        DECL_PERM_FIELD(RolePerms::useFurnaces),
+        DECL_PERM_FIELD(RolePerms::allowPlayerPickupItem),
+        DECL_PERM_FIELD(RolePerms::allowRideTrans),
+        DECL_PERM_FIELD(RolePerms::allowRideEntity),
+        DECL_PERM_FIELD(RolePerms::usePressurePlate),
+        DECL_PERM_FIELD(RolePerms::allowFishingRodAndHook),
+        DECL_PERM_FIELD(RolePerms::allowProjectileCreate),
+        DECL_PERM_FIELD(RolePerms::useArmorStand),
+        DECL_PERM_FIELD(RolePerms::allowDropItem),
+        DECL_PERM_FIELD(RolePerms::useItemFrame),
+        DECL_PERM_FIELD(RolePerms::useFlintAndSteel),
+        DECL_PERM_FIELD(RolePerms::useBeacon),
+        DECL_PERM_FIELD(RolePerms::useBed),
+        DECL_PERM_FIELD(RolePerms::allowPvP),
+        DECL_PERM_FIELD(RolePerms::allowHostileDamage),
+        DECL_PERM_FIELD(RolePerms::allowFriendlyDamage),
+        DECL_PERM_FIELD(RolePerms::allowSpecialEntityDamage),
+        DECL_PERM_FIELD(RolePerms::useContainer),
+        DECL_PERM_FIELD(RolePerms::useWorkstation),
+        DECL_PERM_FIELD(RolePerms::useBell),
+        DECL_PERM_FIELD(RolePerms::useCampfire),
+        DECL_PERM_FIELD(RolePerms::useComposter),
+        DECL_PERM_FIELD(RolePerms::useDaylightDetector),
+        DECL_PERM_FIELD(RolePerms::useJukebox),
+        DECL_PERM_FIELD(RolePerms::useNoteBlock),
+        DECL_PERM_FIELD(RolePerms::useCake),
+        DECL_PERM_FIELD(RolePerms::useComparator),
+        DECL_PERM_FIELD(RolePerms::useRepeater),
+        DECL_PERM_FIELD(RolePerms::useLectern),
+        DECL_PERM_FIELD(RolePerms::useCauldron),
+        DECL_PERM_FIELD(RolePerms::useRespawnAnchor),
+        DECL_PERM_FIELD(RolePerms::useBoneMeal),
+        DECL_PERM_FIELD(RolePerms::useBeeNest),
+        DECL_PERM_FIELD(RolePerms::editFlowerPot),
+    };
+    DynamicRuleMap.clear();
+
+    auto& logger = PLand::getInstance().getSelf().getLogger();
+    for (auto& [typeName, perm] : cfg.rules.item) {
+        auto iter = PermStr2MemberPointer.find(perm);
+        if (iter != PermStr2MemberPointer.end()) {
+            DynamicRuleMap.emplace(typeName, iter->second);
+        } else {
+            logger.warn("Unknown item permission: {} ({}: {})", perm, typeName, perm);
+        }
+    }
+    for (auto& [typeName, perm] : cfg.rules.block) {
+        auto iter = PermStr2MemberPointer.find(perm);
+        if (iter != PermStr2MemberPointer.end()) {
+            DynamicRuleMap.emplace(typeName, iter->second);
+        } else {
+            logger.warn("Unknown block permission: {} ({}: {})", perm, typeName, perm);
+        }
+    }
+}
+RolePerms::Entry RolePerms::* InterceptorConfig::lookupDynamicRule(HashedString const& typeName) {
+    auto iter = DynamicRuleMap.find(typeName);
+    if (iter != DynamicRuleMap.end()) {
+        return iter->second;
+    }
+    return nullptr;
 }
 
 void InterceptorConfig::tryMigrate(std::filesystem::path configDir) {
