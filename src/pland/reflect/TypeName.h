@@ -9,8 +9,8 @@ namespace land::reflect {
  * @return funcName<Target>
  */
 consteval std::string_view extractFunctionSignature(std::string_view sig) {
-    // 找到参数列表的起始位置 '('
-    const size_t params_start = sig.find('(');
+    // 查找最后一个 '('
+    const size_t params_start = sig.rfind('(');
     if (params_start == std::string_view::npos) return {};
 
     // 从 '(' 向前倒序扫描，找到函数名的起点
@@ -50,17 +50,24 @@ consteval std::string_view extractFunctionSignature(std::string_view sig) {
  * @return 模板参数内容 (Target)
  */
 consteval std::string_view extractTemplateInner(std::string_view sig) {
-    // 找到函数参数列表的起始位置 '('
-    const size_t params_start = sig.find('(');
+    // 使用 rfind 查找最后一个 '(', 锁定函数参数列表的起始位置
+    // 避开 (shared_ptr<T>) 或 void(*)(int) 等造成的干扰
+    const size_t params_start = sig.rfind('(');
     if (params_start == std::string_view::npos || params_start == 0) return {};
 
     // 检查 '(' 前面是否是模板结束符 '>'
     // MSVC 格式: func<arg>(params)
     // 如果不是 '>'，说明不是模板函数实例化
-    if (sig[params_start - 1] != '>') return {};
+    size_t end_bracket = params_start - 1;
+    while (end_bracket > 0 && sig[end_bracket] == ' ') {
+        end_bracket--;
+    }
+
+    // 如果参数表前不是 '>'，说明这不是一个模板实例化函数
+    if (sig[end_bracket] != '>') return {};
 
     // 从 '>' 开始向左倒序扫描，寻找匹配的 '<'
-    size_t cursor = params_start - 1;
+    size_t cursor = end_bracket;
     int    depth  = 0;
 
     // 循环直到字符串开头
@@ -72,16 +79,16 @@ consteval std::string_view extractTemplateInner(std::string_view sig) {
             depth--;
             // 当深度归零时，说明找到了最外层对应的 '<'
             if (depth == 0) {
-                // 起始位置：cursor + 1 (跳过 '<')
-                // 结束位置：params_start - 1 (不包含 '>')
-                // 长度：(params_start - 1) - (cursor + 1)
-                return sig.substr(cursor + 1, (params_start - 1) - (cursor + 1));
+                // 内容起始：cursor + 1
+                // 内容长度：end_bracket - (cursor + 1)
+                // 注意：这里使用 end_bracket 而不是 params_start - 1，以防中间有空格
+                return sig.substr(cursor + 1, end_bracket - (cursor + 1));
             }
         }
         if (cursor == 0) break;
         --cursor;
     }
-    return {}; // 未找到匹配的模板括号
+    return {};
 }
 
 /**
@@ -115,5 +122,15 @@ template <auto T>
 consteval std::string_view getTemplateInnerLeafName() {
     return extractTemplateInnerLeafName(__FUNCSIG__);
 }
+
+namespace checker {
+
+inline static constexpr std::string_view psig =
+    "class std::basic_string_view<char,struct std::char_traits<char> > __cdecl "
+    "land::reflect::getTemplateInnerLeafName<&land::RolePerms::allowPlace>(void)";
+inline static constexpr std::string_view psig_result = extractTemplateInnerLeafName(psig);
+static_assert(psig_result == "allowPlace");
+
+} // namespace checker
 
 } // namespace land::reflect

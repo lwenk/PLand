@@ -23,8 +23,9 @@ void InterceptorConfig::save(std::filesystem::path configDir) {
 decltype(InterceptorConfig::cfg) InterceptorConfig::cfg = [] {
     InterceptorConfig config;
 
-    auto allowPlace   = reflect::getTemplateInnerLeafName<&RolePerms::allowPlace>().data();
-    auto useBoneMeal  = reflect::getTemplateInnerLeafName<&RolePerms::useBoneMeal>().data();
+    // std::string_view 显示转为 std::string, 避免 std::string_view::data 转换导致截止错误
+    auto allowPlace   = std::string{reflect::getTemplateInnerLeafName<&RolePerms::allowPlace>()};
+    auto useBoneMeal  = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useBoneMeal>()};
     config.rules.item = {
         {       "minecraft:skull",  allowPlace}, // 头颅
         {      "minecraft:banner",  allowPlace}, // 旗帜
@@ -35,24 +36,24 @@ decltype(InterceptorConfig::cfg) InterceptorConfig::cfg = [] {
         {   "minecraft:bone_meal", useBoneMeal}, // 骨粉
     };
 
-    auto useContainer        = reflect::getTemplateInnerLeafName<&RolePerms::useContainer>().data();
-    auto useCampfire         = reflect::getTemplateInnerLeafName<&RolePerms::useCampfire>().data();
-    auto useComposter        = reflect::getTemplateInnerLeafName<&RolePerms::useComposter>().data();
-    auto useNoteBlock        = reflect::getTemplateInnerLeafName<&RolePerms::useNoteBlock>().data();
-    auto useJukebox          = reflect::getTemplateInnerLeafName<&RolePerms::useJukebox>().data();
-    auto useBell             = reflect::getTemplateInnerLeafName<&RolePerms::useBell>().data();
-    auto useDaylightDetector = reflect::getTemplateInnerLeafName<&RolePerms::useDaylightDetector>().data();
-    auto useLectern          = reflect::getTemplateInnerLeafName<&RolePerms::useLectern>().data();
-    auto useCauldron         = reflect::getTemplateInnerLeafName<&RolePerms::useCauldron>().data();
-    auto useRespawnAnchor    = reflect::getTemplateInnerLeafName<&RolePerms::useRespawnAnchor>().data();
-    auto editFlowerPot       = reflect::getTemplateInnerLeafName<&RolePerms::editFlowerPot>().data();
-    auto allowDestroy        = reflect::getTemplateInnerLeafName<&RolePerms::allowDestroy>().data();
-    auto useWorkstation      = reflect::getTemplateInnerLeafName<&RolePerms::useWorkstation>().data();
-    auto useBeacon           = reflect::getTemplateInnerLeafName<&RolePerms::useBeacon>().data();
-    auto useCake             = reflect::getTemplateInnerLeafName<&RolePerms::useCake>().data();
-    auto useComparator       = reflect::getTemplateInnerLeafName<&RolePerms::useComparator>().data();
-    auto useRepeater         = reflect::getTemplateInnerLeafName<&RolePerms::useRepeater>().data();
-    auto useBeeNest          = reflect::getTemplateInnerLeafName<&RolePerms::useBeeNest>().data();
+    auto useContainer        = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useContainer>()};
+    auto useCampfire         = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useCampfire>()};
+    auto useComposter        = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useComposter>()};
+    auto useNoteBlock        = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useNoteBlock>()};
+    auto useJukebox          = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useJukebox>()};
+    auto useBell             = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useBell>()};
+    auto useDaylightDetector = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useDaylightDetector>()};
+    auto useLectern          = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useLectern>()};
+    auto useCauldron         = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useCauldron>()};
+    auto useRespawnAnchor    = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useRespawnAnchor>()};
+    auto editFlowerPot       = std::string{reflect::getTemplateInnerLeafName<&RolePerms::editFlowerPot>()};
+    auto allowDestroy        = std::string{reflect::getTemplateInnerLeafName<&RolePerms::allowDestroy>()};
+    auto useWorkstation      = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useWorkstation>()};
+    auto useBeacon           = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useBeacon>()};
+    auto useCake             = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useCake>()};
+    auto useComparator       = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useComparator>()};
+    auto useRepeater         = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useRepeater>()};
+    auto useBeeNest          = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useBeeNest>()};
     config.rules.block       = {
         /*特殊方块关联*/
         {                     "minecraft:chest",        useContainer}, // 箱子
