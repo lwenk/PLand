@@ -15,6 +15,7 @@
 
 #include "drawer/DrawHandleManager.h"
 #include "events/domain/ConfigReloadEvent.h"
+#include "internal/interceptor/InterceptorConfig.h"
 #include "land/internal/LandScheduler.h"
 #include "land/internal/SafeTeleport.h"
 #include "pland/economy/EconomySystem.h"
@@ -80,6 +81,7 @@ bool PLand::load() {
     }
 
     Config::tryLoad();
+    internal::interceptor::InterceptorConfig::load(getSelf().getConfigDir());
     logger.setLevel(Config::cfg.logLevel);
 
     mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("PLand-ThreadPool", 2);
@@ -111,6 +113,7 @@ bool PLand::enable() {
 
     mImpl->mConfigReloadListener = ll::event::EventBus::getInstance().emplaceListener<events::ConfigReloadEvent>(
         [this](events::ConfigReloadEvent& ev [[maybe_unused]]) {
+            internal::interceptor::InterceptorConfig::load(getSelf().getConfigDir());
             mImpl->mEventListener.reset();
             mImpl->mEventListener = std::make_unique<internal::interceptor::EventInterceptor>();
 
