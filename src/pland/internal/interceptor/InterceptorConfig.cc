@@ -1,12 +1,13 @@
 #include "InterceptorConfig.h"
 
+#include "pland/PLand.h"
+#include "pland/internal/interceptor/helper/EventTrace.h"
 #include "pland/land/repo/LandContext.h"
 #include "pland/reflect/TypeName.h"
+#include "pland/utils/JsonUtil.h"
 
 #include "ll/api/Config.h"
 #include "ll/api/io/FileUtils.h"
-#include "pland/PLand.h"
-#include "pland/utils/JsonUtil.h"
 
 #include <absl/container/flat_hash_map.h>
 
@@ -102,10 +103,31 @@ void InterceptorConfig::_buildDynamicRuleMap() {
     }
 }
 RolePerms::Entry RolePerms::* InterceptorConfig::lookupDynamicRule(HashedString const& typeName) {
+    TRACE_ADD_SCOPE("lookupDynamicRule");
+    TRACE_LOG("lookup typename: {}", typeName.c_str());
     auto iter = DynamicRuleMap.find(typeName);
     if (iter != DynamicRuleMap.end()) {
+#ifdef DEBUG
+        if (cfg.rules.item.contains(typeName)) {
+            TRACE_LOG(
+                "In the {} table, find the permissions {} mapped to {}",
+                "item",
+                typeName.c_str(),
+                cfg.rules.item[typeName]
+            );
+        }
+        if (cfg.rules.block.contains(typeName)) {
+            TRACE_LOG(
+                "In the {} table, find the permissions {} mapped to {}",
+                "block",
+                typeName.c_str(),
+                cfg.rules.block[typeName]
+            );
+        }
+#endif
         return iter->second;
     }
+    TRACE_LOG("Not found");
     return nullptr;
 }
 
