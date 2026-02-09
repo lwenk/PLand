@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> ⚠️ 本次版本为权限系统重构版本，存在破坏性变更
+> - 旧版领地权限数据与新版本完全不兼容
+> - 插件会在启动时自动执行数据迁移
+> - 由于权限模型发生变化，迁移后的权限可能与旧版行为不完全一致
+
 ### ✨ 新增功能
 
 - 新增领地 **名称**、**描述** 可配置检查 @engsr6982
@@ -14,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 管理 GUI：
     - 管理玩家表单支持分页和搜索（#129）@engsr6982
     - 支持按领地 ID 查找领地 @engsr6982
+- 权限系统:
+    - 区分环境权限与角色权限 #170 @engsr6982
+    - 成员支持独立权限配置 #170 @engsr6982
 
 ### 🐛 问题修复
 
@@ -39,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### 🔔 事件更改
 
-> 本次版本重构了领地事件体系，旧事件已全部移除，不再提供兼容与迁移映射。  
+> ⚠️ 本次版本重构了领地事件体系，旧事件已全部移除，不再提供兼容与迁移映射。  
 > 请基于以下新增事件重新接入监听逻辑。
 
 - [-] 移除 `LandEvent.h` 内所有事件 @engsr6982
@@ -57,6 +65,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [+] 新增 `PlayerRequestChangeLandRangeBeforeEvent`, `PlayerRequestChangeLandRangeAfterEvent` 事件 @engsr6982
 - [+] 新增 `PlayerTransferLandBeforeEvent`, `PlayerTransferLandAfterEvent` 事件 @engsr6982
 - [+] 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
+
+#### 💾 领地数据权限字段变更
+
+> 以下 v25 字段在 v27 中不再独立存在：
+
+- `allowActorDestroy` & `allowEndermanLeaveBlock` -> 合并为 `environment.allowMobGrief`。
+- `allowSpecialDamage` & `allowCustomSpecialDamage` -> 合并为 `role.allowSpecialEntityDamage`。
+- `useFurnace`, `useBlastFurnace`, `useSmoker` -> 合并为 `role.useFurnaces`。
+- `allowOpenChest`, `useBarrel`, `useShulkerBox` 等8项 -> 合并为 `role.useContainer`。
+- `useCraftingTable`, `useAnvil` 等10项 -> 合并为 `role.useWorkstation`。
+- `allowAxePeeled` -> 重命名为 `role.useAxe`。
+- `allowPickupItem` -> 重命名为 `role.allowPlayerPickupItem`。
+- `allowAttackDragonEgg` -> 重命名为 `environment.allowDragonEggTeleport`。
 
 ## [0.17.1] - 2026-01-28
 
