@@ -30,7 +30,7 @@ bool Config::tryLoad() {
     if (auto exp = migrator.migrate(json, SchemaVersion); !exp) {
         throw std::runtime_error{exp.error().message()};
     }
-    json_util::json2structWithVersionPatch(json, cfg);
+    json_util::json2structWithVersionPatch(json, cfg, true);
     return true;
 }
 
