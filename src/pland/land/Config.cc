@@ -3,6 +3,9 @@
 
 #include "ll/api/Config.h"
 
+#include "internal/ConfigMigrator.h"
+#include "pland/utils/JsonUtil.h"
+
 #include <filesystem>
 #include <string>
 
@@ -11,15 +14,24 @@ namespace land {
 namespace fs = std::filesystem;
 
 bool Config::tryLoad() {
-    auto dir = land::PLand::getInstance().getSelf().getConfigDir() / FileName;
+    auto path = land::PLand::getInstance().getSelf().getConfigDir() / FileName;
 
-    if (!std::filesystem::exists(dir)) {
+    if (!std::filesystem::exists(path)) {
         trySave();
+        return true;
     }
+    auto data = ll::file_utils::readFile(path);
+    if (!data) {
+        return false;
+    }
+    auto json = nlohmann::json::parse(*data);
 
-    bool status = ll::config::loadConfig(Config::cfg, dir);
-
-    return status ? status : trySave();
+    auto& migrator = internal::ConfigMigrator::getInstance();
+    if (auto exp = migrator.migrate(json, SchemaVersion); !exp) {
+        throw std::runtime_error{exp.error().message()};
+    }
+    json_util::json2structWithVersionPatch(json, cfg);
+    return true;
 }
 
 bool Config::trySave() {

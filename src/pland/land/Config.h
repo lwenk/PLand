@@ -18,7 +18,9 @@ struct ForbiddenRange {
 };
 
 struct Config {
-    int version{32};
+    inline static constexpr int SchemaVersion = 32;
+
+    int version{SchemaVersion};
 
     EconomyConfig economy;
 
