@@ -54,7 +54,8 @@ void OperatorManager::sendMainMenu(Player& player) {
             [](Player& self, LandPermTable newTable) {
                 PLand::getInstance().getLandRegistry().getLandTemplatePermTable().set(newTable);
                 feedback_utils::sendText(self, "权限表已更新"_trl(self.getLocaleCode()));
-            }
+            },
+            sendMainMenu
         );
     });
 

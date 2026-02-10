@@ -133,10 +133,15 @@ void LandManagerGUI::sendMainMenu(Player& player, std::shared_ptr<Land> land) {
 }
 
 void LandManagerGUI::sendEditLandPermGUI(Player& player, std::shared_ptr<Land> const& ptr) {
-    gui::PermTableEditor::sendTo(player, ptr->getPermTable(), [ptr](Player& self, LandPermTable newTable) {
-        ptr->setPermTable(newTable);
-        feedback_utils::sendText(self, "权限表已更新"_trl(self.getLocaleCode()));
-    });
+    gui::PermTableEditor::sendTo(
+        player,
+        ptr->getPermTable(),
+        [ptr](Player& self, LandPermTable newTable) {
+            ptr->setPermTable(newTable);
+            feedback_utils::sendText(self, "权限表已更新"_trl(self.getLocaleCode()));
+        },
+        back_utils::wrapCallback<sendMainMenu>(ptr)
+    );
 }
 
 
@@ -577,4 +582,4 @@ void LandManagerGUI::_confirmRemoveMember(Player& player, std::shared_ptr<Land> 
 }
 
 
-} // namespace land
+} // namespace land::gui

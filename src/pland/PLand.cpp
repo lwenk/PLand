@@ -15,12 +15,13 @@
 
 #include "drawer/DrawHandleManager.h"
 #include "events/domain/ConfigReloadEvent.h"
+#include "internal/interceptor/InterceptorConfig.h"
 #include "land/internal/LandScheduler.h"
 #include "land/internal/SafeTeleport.h"
 #include "pland/economy/EconomySystem.h"
 #include "pland/internal/adapter/telemetry/Telemetry.h"
 #include "pland/internal/command/Command.h"
-#include "pland/internal/hooks/EventListener.h"
+#include "pland/internal/interceptor/EventInterceptor.h"
 #include "pland/land/Config.h"
 #include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
@@ -35,15 +36,15 @@ namespace land {
 
 
 struct PLand::Impl {
-    ll::mod::NativeMod&                             mSelf;
-    std::unique_ptr<ll::thread::ThreadPoolExecutor> mThreadPoolExecutor{nullptr};
-    std::unique_ptr<LandRegistry>                   mLandRegistry{nullptr};
-    std::unique_ptr<internal::LandScheduler>        mLandScheduler{nullptr};
-    std::unique_ptr<EventListener>                  mEventListener{nullptr};
-    std::unique_ptr<internal::SafeTeleport>         mSafeTeleport{nullptr};
-    std::unique_ptr<SelectorManager>                mSelectorManager{nullptr};
-    std::unique_ptr<DrawHandleManager>              mDrawHandleManager{nullptr};
-    std::unique_ptr<internal::adapter::Telemetry>   mTelemetry{nullptr};
+    ll::mod::NativeMod&                                      mSelf;
+    std::unique_ptr<ll::thread::ThreadPoolExecutor>          mThreadPoolExecutor{nullptr};
+    std::unique_ptr<LandRegistry>                            mLandRegistry{nullptr};
+    std::unique_ptr<internal::LandScheduler>                 mLandScheduler{nullptr};
+    std::unique_ptr<internal::interceptor::EventInterceptor> mEventListener{nullptr};
+    std::unique_ptr<internal::SafeTeleport>                  mSafeTeleport{nullptr};
+    std::unique_ptr<SelectorManager>                         mSelectorManager{nullptr};
+    std::unique_ptr<DrawHandleManager>                       mDrawHandleManager{nullptr};
+    std::unique_ptr<internal::adapter::Telemetry>            mTelemetry{nullptr};
 
     ll::event::ListenerPtr mConfigReloadListener{nullptr};
 
@@ -79,13 +80,22 @@ bool PLand::load() {
         res.error().log(logger);
     }
 
+    internal::interceptor::InterceptorConfig::tryMigrate(getSelf().getConfigDir());
+
     Config::tryLoad();
-    logger.setLevel(Config::cfg.logLevel);
+    internal::interceptor::InterceptorConfig::load(getSelf().getConfigDir());
 
     mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("PLand-ThreadPool", 2);
 
-    mImpl->mLandRegistry = std::make_unique<land::LandRegistry>(*this);
-    EconomySystem::getInstance().initialize();
+    try {
+        mImpl->mLandRegistry = std::make_unique<land::LandRegistry>(*this);
+
+        EconomySystem::getInstance().initialize();
+    } catch (std::exception const& exception) {
+        logger.error(exception.what());
+        mImpl->mThreadPoolExecutor->destroy(); // fix deadlock
+        return false;
+    }
 
 #ifdef DEBUG
     logger.warn("Debug Mode");
@@ -98,7 +108,7 @@ bool PLand::load() {
 bool PLand::enable() {
     internal::LandCommand::setup();
     mImpl->mLandScheduler     = std::make_unique<internal::LandScheduler>();
-    mImpl->mEventListener     = std::make_unique<EventListener>();
+    mImpl->mEventListener     = std::make_unique<internal::interceptor::EventInterceptor>();
     mImpl->mSafeTeleport      = std::make_unique<internal::SafeTeleport>();
     mImpl->mSelectorManager   = std::make_unique<SelectorManager>();
     mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
@@ -111,8 +121,9 @@ bool PLand::enable() {
 
     mImpl->mConfigReloadListener = ll::event::EventBus::getInstance().emplaceListener<events::ConfigReloadEvent>(
         [this](events::ConfigReloadEvent& ev [[maybe_unused]]) {
+            internal::interceptor::InterceptorConfig::load(getSelf().getConfigDir());
             mImpl->mEventListener.reset();
-            mImpl->mEventListener = std::make_unique<EventListener>();
+            mImpl->mEventListener = std::make_unique<internal::interceptor::EventInterceptor>();
 
             EconomySystem::getInstance().reload();
 

@@ -1,0 +1,202 @@
+#include "pland/internal/interceptor/EventInterceptor.h"
+#include "pland/internal/interceptor/InterceptorConfig.h"
+#include "pland/internal/interceptor/helper/EventTrace.h"
+#include "pland/internal/interceptor/helper/InterceptorHelper.h"
+
+#include "ll/api/event/player/PlayerAttackEvent.h"
+#include "ll/api/event/player/PlayerDestroyBlockEvent.h"
+#include "ll/api/event/player/PlayerInteractBlockEvent.h"
+#include "ll/api/event/player/PlayerPickUpItemEvent.h"
+#include "ll/api/event/player/PlayerPlaceBlockEvent.h"
+#include <ll/api/event/EventBus.h>
+
+#include "mc/deps/core/string/HashedString.h"
+#include "mc/world/actor/player/Player.h"
+#include "mc/world/item/BucketItem.h"
+#include "mc/world/item/FishingRodItem.h"
+#include "mc/world/item/FlintAndSteelItem.h"
+#include "mc/world/item/HatchetItem.h"
+#include "mc/world/item/HoeItem.h"
+#include "mc/world/item/HorseArmorItem.h"
+#include "mc/world/item/Item.h"
+#include "mc/world/item/ItemTag.h"
+#include "mc/world/item/ShovelItem.h"
+#include "mc/world/level/block/BeaconBlock.h"
+#include "mc/world/level/block/BedBlock.h"
+#include "mc/world/level/block/BlastFurnaceBlock.h"
+#include "mc/world/level/block/FurnaceBlock.h"
+#include "mc/world/level/block/HangingSignBlock.h"
+#include "mc/world/level/block/ShulkerBoxBlock.h"
+#include "mc/world/level/block/SmokerBlock.h"
+#include "pland/internal/interceptor/helper/VanillaItemTags.h"
+
+
+namespace land::internal::interceptor {
+
+void EventInterceptor::setupLLPlayerListeners() {
+    auto& config   = InterceptorConfig::cfg.listeners;
+    auto  registry = &PLand::getInstance().getLandRegistry();
+    auto  bus      = &ll::event::EventBus::getInstance();
+
+    registerListenerIf(config.PlayerDestroyBlockEvent, [bus, registry]() {
+        return bus->emplaceListener<ll::event::PlayerDestroyBlockEvent>(
+            [registry](ll::event::PlayerDestroyBlockEvent& ev) {
+                TRACE_THIS_EVENT(ll::event::PlayerDestroyBlockEvent);
+
+                auto& player = ev.self();
+                auto& pos    = ev.pos();
+                TRACE_LOG("player={}, pos={}", player.getRealName(), pos.toString());
+
+                auto land = registry->getLandAt(pos, player.getDimensionId());
+                if (!hasRolePermission<&RolePerms::allowDestroy>(land, player.getUuid())) {
+                    ev.cancel();
+                }
+            }
+        );
+    });
+
+    registerListenerIf(config.PlayerPlacingBlockEvent, [bus, registry]() {
+        return bus->emplaceListener<ll::event::PlayerPlacingBlockEvent>(
+            [registry](ll::event::PlayerPlacingBlockEvent& ev) {
+                TRACE_THIS_EVENT(ll::event::PlayerPlacingBlockEvent);
+
+                auto& player = ev.self();
+                auto  pos    = ev.pos().relative(ev.face(), 1);
+                TRACE_LOG("player={}, pos={}", player.getRealName(), pos.toString());
+
+                auto land = registry->getLandAt(pos, player.getDimensionId());
+                if (!hasRolePermission<&RolePerms::allowPlace>(land, player.getUuid())) {
+                    ev.cancel();
+                }
+            }
+        );
+    });
+
+
+    registerListenerIf(config.PlayerInteractBlockEvent, [bus, registry]() {
+        return bus->emplaceListener<ll::event::PlayerInteractBlockEvent>(
+            [registry](ll::event::PlayerInteractBlockEvent& ev) {
+                TRACE_THIS_EVENT(ll::event::PlayerInteractBlockEvent);
+
+                auto& player = ev.self();
+                auto& uuid   = player.getUuid();
+                auto& pos    = ev.blockPos();
+
+                TRACE_LOG("player={}, pos={}, item={}", player.getRealName(), pos.toString(), ev.item().getTypeName());
+
+                auto land = registry->getLandAt(pos, player.getDimensionId());
+                if (hasPrivilege(land, uuid)) return;
+
+                if (auto item = ev.item().getItem()) {
+                    void** vftable = *reinterpret_cast<void** const*>(item);
+                    if (vftable == BucketItem::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useBucket>(land, uuid)) return;
+                    } else if (vftable == HatchetItem::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useAxe>(land, uuid)) return;
+                    } else if (vftable == HoeItem::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useHoe>(land, uuid)) return;
+                    } else if (vftable == ShovelItem::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useShovel>(land, uuid)) return;
+                    } else if (item->hasTag(VanillaItemTags::Boats) || item->hasTag(VanillaItemTags::Boat)) {
+                        if (hasMemberOrGuestPermission<&RolePerms::placeBoat>(land, uuid)) return;
+                    } else if (item->hasTag(VanillaItemTags::Minecart)) {
+                        if (hasMemberOrGuestPermission<&RolePerms::placeMinecart>(land, uuid)) return;
+                    } else if (vftable == FlintAndSteelItem::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useFlintAndSteel>(land, uuid)) return;
+                    }
+                    // fallback
+                    if (auto pointer = InterceptorConfig::lookupDynamicRule(ev.item().getTypeName())) {
+                        if (_hasMemberOrGuestPermission(land, uuid, pointer)) {
+                            return;
+                        }
+                    }
+                }
+                if (auto block = ev.block()) {
+                    auto&  legacyBlock = block->getBlockType();
+                    void** vftable     = *reinterpret_cast<void** const*>(&legacyBlock);
+                    if (legacyBlock.isButtonBlock()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useButton>(land, uuid)) return;
+                    } else if (legacyBlock.isDoorBlock()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useDoor>(land, uuid)) return;
+                    } else if (legacyBlock.isFenceGateBlock()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useFenceGate>(land, uuid)) return;
+                    } else if (legacyBlock.isFenceBlock()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::allowInteractEntity>(land, uuid)) return;
+                    } else if (legacyBlock.mIsTrapdoor) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useTrapdoor>(land, uuid)) return;
+                    } else if (vftable == ShulkerBoxBlock::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useContainer>(land, uuid)) return;
+                    } else if (legacyBlock.isCraftingBlock()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useWorkstation>(land, uuid)) return;
+                    } else if (legacyBlock.isLeverBlock()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useLever>(land, uuid)) return;
+                    } else if (vftable == BlastFurnaceBlock::$vftable() || vftable == FurnaceBlock::$vftable()
+                               || vftable == SmokerBlock::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useFurnaces>(land, uuid)) return;
+                    } else if (vftable == BeaconBlock::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useBeacon>(land, uuid)) return;
+                    } else if (vftable == BedBlock::$vftable()) {
+                        if (hasMemberOrGuestPermission<&RolePerms::useBed>(land, uuid)) return;
+                    }
+                    // fallback
+                    if (auto pointer = InterceptorConfig::lookupDynamicRule(block->getTypeName().data())) {
+                        if (_hasMemberOrGuestPermission(land, uuid, pointer)) {
+                            return;
+                        }
+                    }
+                }
+                ev.cancel();
+            }
+        );
+    });
+
+    registerListenerIf(config.PlayerAttackEvent, [bus, registry]() {
+        return bus->emplaceListener<ll::event::PlayerAttackEvent>([registry](ll::event::PlayerAttackEvent& ev) {
+            TRACE_THIS_EVENT(ll::event::PlayerAttackEvent);
+
+            auto&    player = ev.self();
+            auto&    target = ev.target();
+            BlockPos pos    = target.getPosition();
+            auto&    uuid   = player.getUuid();
+
+            TRACE_LOG("player={}, target={}, pos={}", player.getRealName(), target.getTypeName(), pos.toString());
+
+            auto land = registry->getLandAt(pos, player.getDimensionId());
+            if (hasPrivilege(land, uuid)) return;
+
+            if (target.isPlayer()) {
+                if (hasMemberOrGuestPermission<&RolePerms::allowPvP>(land, uuid)) return;
+            }
+
+            HashedString typeName{target.getTypeName()};
+            if (InterceptorConfig::cfg.rules.mob.allowFriendlyDamage.contains(typeName)) {
+                if (hasMemberOrGuestPermission<&RolePerms::allowFriendlyDamage>(land, uuid)) return;
+            } else if (InterceptorConfig::cfg.rules.mob.allowHostileDamage.contains(typeName)) {
+                if (hasMemberOrGuestPermission<&RolePerms::allowHostileDamage>(land, uuid)) return;
+            } else if (InterceptorConfig::cfg.rules.mob.allowSpecialEntityDamage.contains(typeName)) {
+                if (hasMemberOrGuestPermission<&RolePerms::allowSpecialEntityDamage>(land, uuid)) return;
+            }
+
+            ev.cancel();
+        });
+    });
+    registerListenerIf(config.PlayerPickUpItemEvent, [bus, registry]() {
+        return bus->emplaceListener<ll::event::PlayerPickUpItemEvent>([registry](ll::event::PlayerPickUpItemEvent& ev) {
+            TRACE_THIS_EVENT(ll::event::PlayerPickUpItemEvent);
+
+            auto&    player = ev.self();
+            auto&    item   = ev.itemActor();
+            BlockPos pos    = item.getPosition();
+
+            TRACE_LOG("player={}, item={}, pos={}", player.getRealName(), item.getTypeName(), pos.toString());
+
+            auto land = registry->getLandAt(pos, player.getDimensionId());
+            if (!hasRolePermission<&RolePerms::allowPlayerPickupItem>(land, player.getUuid())) {
+                ev.cancel();
+            }
+        });
+    });
+}
+
+
+} // namespace land::internal::interceptor

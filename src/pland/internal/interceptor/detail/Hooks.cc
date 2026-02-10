@@ -1,15 +1,13 @@
-#include "pland/Global.h"
-#include "pland/PLand.h"
-#include "pland/internal/hooks/EventListener.h"
-#include "pland/internal/hooks/listeners/ListenerHelper.h"
-#include "pland/land/Config.h"
-#include "pland/land/repo/LandRegistry.h"
+#include "pland/internal/interceptor/EventInterceptor.h"
+#include "pland/internal/interceptor/InterceptorConfig.h"
+#include "pland/internal/interceptor/helper/InterceptorHelper.h"
 
+#include "pland/PLand.h"
+#include "pland/land/repo/LandRegistry.h"
 
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/entity/ActorHurtEvent.h"
 #include "ll/api/memory/Hook.h"
-
 
 #include "mc/server/ServerPlayer.h"
 #include "mc/world/actor/ActorDamageSource.h"
@@ -22,8 +20,8 @@
 #include "mc/world/level/Level.h"
 #include "mc/world/level/block/FireBlock.h"
 #include "mc/world/level/block/actor/ChestBlockActor.h"
-namespace land {
 
+namespace land::internal::interceptor {
 
 // Fix [#140](https://github.com/engsr6982/PLand/issues/140)
 LL_TYPE_INSTANCE_HOOK(
@@ -57,32 +55,21 @@ LL_TYPE_INSTANCE_HOOK(
 ) {
     // 获取钓鱼钩的位置和维度
     auto& hookActor = *this;
-    auto& pos       = hookActor.getPosition();
-    auto  dimId     = hookActor.getDimensionId();
-
-    // 获取领地注册表实例
-    auto& db   = PLand::getInstance().getLandRegistry();
-    auto  land = db.getLandAt(pos, dimId);
-
-    auto* player = hookActor.getPlayerOwner();
+    auto* player    = hookActor.getPlayerOwner();
     if (!player) {
         origin(inEntity, inSpeed);
         return;
     }
 
-    // 如果在领地内
-    if (land) {
-        // 检查玩家是否有权限
-        if (!PreCheckLandExistsAndPermission(land, player->getUuid())) {
-            // 领地不存在或玩家没有权限，则拦截
-            return;
-        }
-        // 检查钓鱼竿权限
-        if (!land->getPermTable().allowFishingRodAndHook) {
-            // 如果不允许使用钓鱼竿，则拦截
-            return;
-        }
+    auto& pos   = hookActor.getPosition();
+    auto  dimId = hookActor.getDimensionId();
+
+    auto& db   = PLand::getInstance().getLandRegistry();
+    auto  land = db.getLandAt(pos, dimId);
+    if (!hasRolePermission<&RolePerms::allowFishingRodAndHook>(land, player->getUuid())) {
+        return;
     }
+
     origin(inEntity, inSpeed);
 }
 
@@ -96,13 +83,10 @@ LL_TYPE_INSTANCE_HOOK(
     ::BlockSource&    region,
     ::BlockPos const& pos
 ) {
-    // 获取领地注册表实例
     auto& db   = PLand::getInstance().getLandRegistry();
     auto  land = db.getLandAt(pos, region.getDimensionId());
-
-    // 如果在领地内且不允许实体破坏，则阻止产蛋
-    if (land && !land->getPermTable().allowActorDestroy) {
-        return false;
+    if (!hasEnvironmentPermission<&EnvironmentPerms::allowMobGrief>(land)) {
+        return false; // 如果领地内不允许实体破坏，则阻止产蛋
     }
     return origin(region, pos);
 }
@@ -121,13 +105,10 @@ LL_TYPE_INSTANCE_HOOK(
     int               age,
     ::BlockPos const& firePos
 ) {
-    // 获取领地注册表实例
     auto& db   = PLand::getInstance().getLandRegistry();
     auto  land = db.getLandAt(pos, region.getDimensionId());
-
-    // 如果在领地内且不允许火焰蔓延，则拦截
-    if (land && !land->getPermTable().allowFireSpread) {
-        return;
+    if (!hasEnvironmentPermission<&EnvironmentPerms::allowFireSpread>(land)) {
+        return; // 如果领地内不允许火焰蔓延，则阻止蔓延
     }
     origin(region, pos, chance, randomize, age, firePos);
 }
@@ -146,24 +127,21 @@ LL_TYPE_INSTANCE_HOOK(
         origin(actor);
         return;
     }
-    // 获取领地注册表实例
     auto& db   = PLand::getInstance().getLandRegistry();
     auto  land = db.getLandAt(this->mPosition, actor.getDimensionId());
-
-    if (land && !land->getPermTable().allowOpenChest) {
-        return;
+    if (!hasGuestPermission<&RolePerms::useContainer>(land)) {
+        return; // 访客权限不允许，拦截铜傀儡开箱子
     }
     origin(actor);
 }
 
-// impl EventListener
-void EventListener::registerHooks() {
-    RegisterHookIf<MobHurtHook>(Config::cfg.hooks.registerMobHurtHook);
-    RegisterHookIf<FishingHookHitHook>(Config::cfg.hooks.registerFishingHookHitHook);
-    RegisterHookIf<LayEggGoalHook>(Config::cfg.hooks.registerLayEggGoalHook);
-    RegisterHookIf<FireBlockBurnHook>(Config::cfg.hooks.registerFireBlockBurnHook);
-    RegisterHookIf<ChestBlockActorOpenHook>(Config::cfg.hooks.registerChestBlockActorOpenHook);
+
+void EventInterceptor::setupHooks() {
+    registerHookIf<MobHurtHook>(InterceptorConfig::cfg.hooks.MobHurtHook);
+    registerHookIf<FishingHookHitHook>(InterceptorConfig::cfg.hooks.FishingHookHitHook);
+    registerHookIf<LayEggGoalHook>(InterceptorConfig::cfg.hooks.LayEggGoalHook);
+    registerHookIf<FireBlockBurnHook>(InterceptorConfig::cfg.hooks.FireBlockBurnHook);
+    registerHookIf<ChestBlockActorOpenHook>(InterceptorConfig::cfg.hooks.ChestBlockActorOpenHook);
 }
 
-
-} // namespace land
+} // namespace land::internal::interceptor

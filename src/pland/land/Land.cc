@@ -197,7 +197,7 @@ void Land::migrateOwner(mce::UUID const& ownerUUID) {
 }
 
 void Land::load(nlohmann::json& json) {
-    json_util::json2structWithVersionPatch(json, impl->mContext);
+    json_util::json2structWithVersionPatch(json, impl->mContext, true);
     impl->initCache();
 }
 nlohmann::json Land::toJson() const { return json_util::struct2json(impl->mContext); }
