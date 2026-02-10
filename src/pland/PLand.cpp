@@ -87,8 +87,15 @@ bool PLand::load() {
 
     mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("PLand-ThreadPool", 2);
 
-    mImpl->mLandRegistry = std::make_unique<land::LandRegistry>(*this);
-    EconomySystem::getInstance().initialize();
+    try {
+        mImpl->mLandRegistry = std::make_unique<land::LandRegistry>(*this);
+
+        EconomySystem::getInstance().initialize();
+    } catch (std::exception const& exception) {
+        logger.error(exception.what());
+        mImpl->mThreadPoolExecutor->destroy(); // fix deadlock
+        return false;
+    }
 
 #ifdef DEBUG
     logger.warn("Debug Mode");
