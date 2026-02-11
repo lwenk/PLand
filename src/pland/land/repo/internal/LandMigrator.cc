@@ -199,17 +199,6 @@ LandMigrator::LandMigrator() {
 
         return {};
     });
-    registerMigrator(28, [](nlohmann::json& data) -> ll::Expected<> {
-        // v28, RolePerms::allowProjectileCreate -> EnvironmentPerms::allowProjectileCreate
-        auto& mLandPermTable = data["mLandPermTable"];
-        auto& role           = mLandPermTable["role"];
-        auto& environment    = mLandPermTable["environment"];
-
-        auto allowProjectileCreate           = role["allowProjectileCreate"]["guest"].get<bool>();
-        environment["allowProjectileCreate"] = allowProjectileCreate;
-        role.erase("allowProjectileCreate");
-        return {};
-    });
 }
 
 } // namespace internal

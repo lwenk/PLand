@@ -53,7 +53,7 @@ void InterceptorConfig::_buildDynamicRuleMap() {
         DECL_PERM_FIELD(RolePerms::allowRideEntity),
         DECL_PERM_FIELD(RolePerms::usePressurePlate),
         DECL_PERM_FIELD(RolePerms::allowFishingRodAndHook),
-        DECL_PERM_FIELD(RolePerms::allowUseThrowable),
+        DECL_PERM_FIELD(RolePerms::allowProjectileCreate),
         DECL_PERM_FIELD(RolePerms::useArmorStand),
         DECL_PERM_FIELD(RolePerms::allowDropItem),
         DECL_PERM_FIELD(RolePerms::useItemFrame),

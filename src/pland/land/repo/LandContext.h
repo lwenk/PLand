@@ -22,7 +22,6 @@ struct EnvironmentPerms final {
     bool allowDragonEggTeleport{false};   // 龙蛋传送 v25 allowAttackDragonEgg=false
     bool allowSculkBlockGrowth{true};     // 幽匿尖啸体生长
     bool allowSculkSpread{false};         // 幽匿蔓延 v27
-    bool allowProjectileCreate{true};     // 弹射物创建
 };
 struct RolePerms final {
     struct Entry final {
@@ -50,13 +49,13 @@ struct RolePerms final {
     Entry allowRideEntity{true, false};        // 允许骑乘实体
     Entry usePressurePlate{true, false};       // 触发压力板
     Entry allowFishingRodAndHook{true, false}; // 允许使用钓鱼竿和鱼钩
+    Entry allowProjectileCreate{true, false};  // 允许弹射物创建
     Entry useArmorStand{true, false};          // 允许使用盔甲架
     Entry allowDropItem{true, true};           // 允许丢弃物品
     Entry useItemFrame{true, false};           // 允许操作物品展示框
     Entry useFlintAndSteel{true, false};       // 使用打火石
     Entry useBeacon{true, false};              // 使用信标
     Entry useBed{true, false};                 // 使用床
-    Entry allowUseThrowable{true, false};      // 允许使用投掷物(雪球/鸡蛋/三叉戟/...)
 
     // 以下权限均通过 PermMapping 动态映射
     Entry allowPvP{false, false};                 // 允许PvP v25 allowPlayerDamage=false
@@ -88,7 +87,7 @@ struct LandPermTable final {
 
 // ! 注意：如果 LandContext 有更改，则必须递增 LandSchemaVersion，否则导致加载异常
 // 对于字段变动、重命名，请注册对应的 migrator 转换数据
-constexpr int LandSchemaVersion = 28;
+constexpr int LandSchemaVersion = 27;
 struct LandContext {
     int                      version{LandSchemaVersion};            // 版本号
     LandAABB                 mPos{};                                // 领地对角坐标
