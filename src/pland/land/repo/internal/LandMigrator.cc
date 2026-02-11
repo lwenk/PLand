@@ -115,13 +115,13 @@ LandMigrator::LandMigrator() {
         newRole["usePressurePlate"]      = makeEntry(getV25("usePressurePlate", false), true);
         newRole["allowFishingRodAndHook"] =
             makeEntry(getV25("allowFishingRodAndHook", false), false); // 钓鱼钩可能有破坏性，视作规则
-        newRole["allowProjectileCreate"] = makeEntry(getV25("allowProjectileCreate", false), false); // 弹射物视作规则
-        newRole["useArmorStand"]         = makeEntry(getV25("useArmorStand", false), true);
-        newRole["allowDropItem"]         = makeEntry(getV25("allowDropItem", true), true);
-        newRole["useItemFrame"]          = makeEntry(getV25("useItemFrame", false), true);
-        newRole["useFlintAndSteel"]      = makeEntry(getV25("useFlintAndSteel", false), true);
-        newRole["useBeacon"]             = makeEntry(getV25("useBeacon", false), true);
-        newRole["useBed"]                = makeEntry(getV25("useBed", false), true);
+        newRole["allowUseThrowable"] = makeEntry(getV25("allowProjectileCreate", false), false); // 弹射物视作规则
+        newRole["useArmorStand"]     = makeEntry(getV25("useArmorStand", false), true);
+        newRole["allowDropItem"]     = makeEntry(getV25("allowDropItem", true), true);
+        newRole["useItemFrame"]      = makeEntry(getV25("useItemFrame", false), true);
+        newRole["useFlintAndSteel"]  = makeEntry(getV25("useFlintAndSteel", false), true);
+        newRole["useBeacon"]         = makeEntry(getV25("useBeacon", false), true);
+        newRole["useBed"]            = makeEntry(getV25("useBed", false), true);
 
         // 杂项单点映射
         newRole["useBell"]             = makeEntry(getV25("useBell", false), true);

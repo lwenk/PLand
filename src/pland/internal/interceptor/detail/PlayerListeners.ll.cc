@@ -8,6 +8,7 @@
 #include "ll/api/event/player/PlayerInteractBlockEvent.h"
 #include "ll/api/event/player/PlayerPickUpItemEvent.h"
 #include "ll/api/event/player/PlayerPlaceBlockEvent.h"
+#include "ll/api/event/player/PlayerUseItemEvent.h"
 #include <ll/api/event/EventBus.h>
 
 #include "mc/deps/core/string/HashedString.h"
@@ -193,6 +194,33 @@ void EventInterceptor::setupLLPlayerListeners() {
             auto land = registry->getLandAt(pos, player.getDimensionId());
             if (!hasRolePermission<&RolePerms::allowPlayerPickupItem>(land, player.getUuid())) {
                 ev.cancel();
+            }
+        });
+    });
+
+    registerListenerIf(config.PlayerUseItemEvent, [bus, registry]() {
+        return bus->emplaceListener<ll::event::PlayerUseItemEvent>([registry](ll::event::PlayerUseItemEvent& ev) {
+            TRACE_THIS_EVENT(ll::event::PlayerUseItemEvent);
+
+            auto& player    = ev.self();
+            auto& itemStack = ev.item();
+            auto  item      = itemStack.getItem();
+            if (!item) {
+                TRACE_LOG("item is nullptr");
+                return;
+            }
+
+            TRACE_LOG("item={}, throwable={}", itemStack.getTypeName(), item->isThrowable());
+
+            auto land = registry->getLandAt(player.getPosition(), player.getDimensionId());
+            if (hasPrivilege(land, player.getUuid())) return;
+
+            if (item->isThrowable()) {
+                // 雪球、鸡蛋、末影珍珠、喷溅药水、滞留药水、附魔之瓶、冰弹、三叉戟
+                if (!hasMemberOrGuestPermission<&RolePerms::allowUseThrowable>(land, player.getUuid())) {
+                    ev.cancel();
+                }
+                // TODO: 弓、弩
             }
         });
     });

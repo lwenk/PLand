@@ -53,7 +53,7 @@ void InterceptorConfig::_buildDynamicRuleMap() {
         DECL_PERM_FIELD(RolePerms::allowRideEntity),
         DECL_PERM_FIELD(RolePerms::usePressurePlate),
         DECL_PERM_FIELD(RolePerms::allowFishingRodAndHook),
-        DECL_PERM_FIELD(RolePerms::allowProjectileCreate),
+        DECL_PERM_FIELD(RolePerms::allowUseThrowable),
         DECL_PERM_FIELD(RolePerms::useArmorStand),
         DECL_PERM_FIELD(RolePerms::allowDropItem),
         DECL_PERM_FIELD(RolePerms::useItemFrame),
@@ -165,7 +165,6 @@ void InterceptorConfig::tryMigrate(std::filesystem::path configDir) {
         cfg.listeners.PlayerOperatedItemFrameBeforeEvent = listeners["PlayerOperatedItemFrameBeforeEvent"].get<bool>();
         cfg.listeners.ActorTriggerPressurePlateBeforeEvent =
             listeners["ActorTriggerPressurePlateBeforeEvent"].get<bool>();
-        cfg.listeners.ProjectileCreateBeforeEvent       = listeners["ProjectileCreateBeforeEvent"].get<bool>();
         cfg.listeners.RedstoneUpdateBeforeEvent         = listeners["RedstoneUpdateBeforeEvent"].get<bool>();
         cfg.listeners.WitherDestroyBeforeEvent          = listeners["WitherDestroyBeforeEvent"].get<bool>();
         cfg.listeners.MossGrowthBeforeEvent             = listeners["MossGrowthBeforeEvent"].get<bool>();

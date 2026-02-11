@@ -176,44 +176,6 @@ void EventInterceptor::setupIlaEntityListeners() {
             }
         );
     });
-
-    registerListenerIf(config.ProjectileCreateBeforeEvent, [bus, registry]() {
-        return bus->emplaceListener<ila::mc::ProjectileCreateBeforeEvent>(
-            [registry](ila::mc::ProjectileCreateBeforeEvent& ev) {
-                TRACE_THIS_EVENT(ila::mc::ProjectileCreateBeforeEvent);
-
-                auto& projectile = ev.self(); // 这里是弹射物，而非创建者
-                auto  owner      = projectile.getOwner();
-                if (!owner) {
-                    TRACE_LOG("projectile has no owner");
-                    return;
-                }
-
-                BlockPos   blockPos      = projectile.getPosition();
-                auto const ownerIsPlayer = owner->isPlayer();
-
-                TRACE_LOG(
-                    "type={}, pos={}, ownerIsPlayer={}",
-                    projectile.getTypeName(),
-                    blockPos.toString(),
-                    ownerIsPlayer
-                );
-
-                auto land = registry->getLandAt(projectile.getPosition(), projectile.getDimensionId());
-
-                auto& uuid = ownerIsPlayer ? static_cast<Player&>(*owner).getUuid() : mce::UUID::EMPTY();
-                if (hasPrivilege(land, uuid)) return;
-
-                if (projectile.isType(ActorType::FishingHook)) {
-                    if (hasMemberOrGuestPermission<&RolePerms::allowFishingRodAndHook>(land, uuid)) return;
-                } else {
-                    if (hasMemberOrGuestPermission<&RolePerms::allowProjectileCreate>(land, uuid)) return;
-                }
-
-                ev.cancel();
-            }
-        );
-    });
 }
 
 } // namespace land::internal::interceptor

@@ -38,7 +38,7 @@
     "allowRideEntity": "Ride Entities",
     "usePressurePlate": "Trigger Pressure Plates",
     "allowFishingRodAndHook": "Use Fishing Rod",
-    "allowProjectileCreate": "Throw Projectiles",
+    "allowUseThrowable": "Use Thrown Items (Eggs/Potions/Trident/...)",
     "useArmorStand": "Use Armor Stand",
     "allowDropItem": "Drop Items",
     "useItemFrame": "Use Item Frames",

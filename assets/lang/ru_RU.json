@@ -38,7 +38,7 @@
     "allowRideEntity": "Езда на сущностях",
     "usePressurePlate": "Активация нажимных плит",
     "allowFishingRodAndHook": "Использование удочки",
-    "allowProjectileCreate": "Использование метательных предметов",
+    "allowUseThrowable": "Использовать метательные предметы (Яйца/Зелья/Трезубец/...)",
     "useArmorStand": "Использование стойки для брони",
     "allowDropItem": "Выбрасывание предметов",
     "useItemFrame": "Взаимодействие с рамками",

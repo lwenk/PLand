@@ -29,7 +29,6 @@ struct InterceptorConfig {
         bool ActorRideBeforeEvent                 = true; // ILA
         bool MobHurtEffectBeforeEvent             = true; // ILA
         bool ActorTriggerPressurePlateBeforeEvent = true; // ILA
-        bool ProjectileCreateBeforeEvent          = true; // ILA
         bool PlayerInteractEntityBeforeEvent      = true; // ILA
         bool ArmorStandSwapItemBeforeEvent        = true; // ILA
         bool PlayerDropItemBeforeEvent            = true; // ILA
@@ -46,6 +45,7 @@ struct InterceptorConfig {
         bool DragonEggBlockTeleportBeforeEvent    = true; // ILA (env)
         bool SculkBlockGrowthBeforeEvent          = true; // ILA (env)
         bool SculkSpreadBeforeEvent               = true; // ILA (env)
+        bool PlayerUseItemEvent                   = true; // LL
     } listeners;
     struct Hooks {
         bool MobHurtHook{true};             // 注册生物受伤Hook
@@ -74,7 +74,7 @@ struct InterceptorConfig {
     static void load(std::filesystem::path configDir);
     static void save(std::filesystem::path configDir);
 
-    static void _buildDynamicRuleMap();
+    static void             _buildDynamicRuleMap();
     static RolePerms::Entry RolePerms::* lookupDynamicRule(HashedString const& typeName);
 
     static void tryMigrate(std::filesystem::path configDir);

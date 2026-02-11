@@ -49,7 +49,7 @@ struct RolePerms final {
     Entry allowRideEntity{true, false};        // 允许骑乘实体
     Entry usePressurePlate{true, false};       // 触发压力板
     Entry allowFishingRodAndHook{true, false}; // 允许使用钓鱼竿和鱼钩
-    Entry allowProjectileCreate{true, false};  // 允许弹射物创建
+    Entry allowUseThrowable{true, false};      // 允许使用投掷物(雪球/鸡蛋/三叉戟/...)
     Entry useArmorStand{true, false};          // 允许使用盔甲架
     Entry allowDropItem{true, true};           // 允许丢弃物品
     Entry useItemFrame{true, false};           // 允许操作物品展示框
