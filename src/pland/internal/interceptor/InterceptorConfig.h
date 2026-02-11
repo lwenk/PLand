@@ -26,6 +26,7 @@ struct InterceptorConfig {
         bool ActorDestroyBlockEvent               = true; // ILA (env)
         bool MobTakeBlockBeforeEvent              = true; // ILA (env)
         bool MobPlaceBlockBeforeEvent             = true; // ILA (env)
+        bool ActorPickupItemBeforeEvent           = true; // ILA (env)
         bool ActorRideBeforeEvent                 = true; // ILA
         bool MobHurtEffectBeforeEvent             = true; // ILA
         bool ActorTriggerPressurePlateBeforeEvent = true; // ILA

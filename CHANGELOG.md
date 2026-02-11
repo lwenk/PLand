@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 权限系统:
     - 区分环境权限与角色权限 #170 @engsr6982
     - 成员支持独立权限配置 #170 @engsr6982
+- 添加实体拾取物品事件(关联`allowMobGrief`权限) #171 @engsr6982
 
 ### 🐛 问题修复
 

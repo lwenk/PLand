@@ -4,6 +4,7 @@
 #include "pland/internal/interceptor/helper/InterceptorHelper.h"
 
 #include "ila/event/minecraft/world/actor/ActorDestroyBlockEvent.h"
+#include "ila/event/minecraft/world/actor/ActorPickupItemEvent.h"
 #include "ila/event/minecraft/world/actor/ActorRideEvent.h"
 #include "ila/event/minecraft/world/actor/ActorTriggerPressurePlateEvent.h"
 #include "ila/event/minecraft/world/actor/MobHurtEffectEvent.h"
@@ -75,6 +76,24 @@ void EventInterceptor::setupIlaEntityListeners() {
                 TRACE_LOG("actor={}, pos={}", actor.getTypeName(), blockPos.toString());
 
                 auto land = registry->getLandAt(blockPos, actor.getDimensionId());
+                if (!hasEnvironmentPermission<&EnvironmentPerms::allowMobGrief>(land)) {
+                    ev.cancel();
+                }
+            }
+        );
+    });
+
+    registerListenerIf(config.ActorPickupItemBeforeEvent, [bus, registry]() {
+        return bus->emplaceListener<ila::mc::ActorPickupItemBeforeEvent>(
+            [registry](ila::mc::ActorPickupItemBeforeEvent& ev) {
+                TRACE_THIS_EVENT(ila::mc::ActorPickupItemBeforeEvent);
+
+                auto& actor = ev.self();
+                auto& pos   = actor.getPosition();
+
+                TRACE_LOG("actor={}, pos={}", actor.getTypeName(), pos.toString());
+
+                auto land = registry->getLandAt(pos, actor.getDimensionId());
                 if (!hasEnvironmentPermission<&EnvironmentPerms::allowMobGrief>(land)) {
                     ev.cancel();
                 }
