@@ -9,6 +9,8 @@
 #include "ll/api/Config.h"
 #include "ll/api/io/FileUtils.h"
 
+#include "mc/world/item/VanillaItemNames.h"
+
 #include <absl/container/flat_hash_map.h>
 
 namespace land::internal::interceptor {
@@ -81,6 +83,7 @@ void InterceptorConfig::_buildDynamicRuleMap() {
         DECL_PERM_FIELD(RolePerms::useBoneMeal),
         DECL_PERM_FIELD(RolePerms::useBeeNest),
         DECL_PERM_FIELD(RolePerms::editFlowerPot),
+        DECL_PERM_FIELD(RolePerms::allowUseRangedWeapon),
     };
     DynamicRuleMap.clear();
 
@@ -217,16 +220,19 @@ decltype(InterceptorConfig::cfg) InterceptorConfig::cfg = [] {
     InterceptorConfig config;
 
     // std::string_view 显示转为 std::string, 避免 std::string_view::data 转换导致截止错误
-    auto allowPlace   = std::string{reflect::getTemplateInnerLeafName<&RolePerms::allowPlace>()};
-    auto useBoneMeal  = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useBoneMeal>()};
-    config.rules.item = {
-        {       "minecraft:skull",  allowPlace}, // 头颅
-        {      "minecraft:banner",  allowPlace}, // 旗帜
-        {"minecraft:glow_ink_sac",  allowPlace}, // 灯光染料
-        { "minecraft:end_crystal",  allowPlace}, // 末影水晶
-        {   "minecraft:ender_eye",  allowPlace}, // 末影之眼
-        { "minecraft:armor_stand",  allowPlace}, // 盔甲架
-        {   "minecraft:bone_meal", useBoneMeal}, // 骨粉
+    auto allowPlace           = std::string{reflect::getTemplateInnerLeafName<&RolePerms::allowPlace>()};
+    auto useBoneMeal          = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useBoneMeal>()};
+    auto allowUseRangedWeapon = std::string{reflect::getTemplateInnerLeafName<&RolePerms::allowUseRangedWeapon>()};
+    config.rules.item         = {
+        {           "minecraft:skull",           allowPlace}, // 头颅
+        {          "minecraft:banner",           allowPlace}, // 旗帜
+        {    "minecraft:glow_ink_sac",           allowPlace}, // 灯光染料
+        {     "minecraft:end_crystal",           allowPlace}, // 末影水晶
+        {       "minecraft:ender_eye",           allowPlace}, // 末影之眼
+        {     "minecraft:armor_stand",           allowPlace}, // 盔甲架
+        {       "minecraft:bone_meal",          useBoneMeal}, // 骨粉
+        {     VanillaItemNames::Bow(), allowUseRangedWeapon}, // 弓
+        {VanillaItemNames::Crossbow(), allowUseRangedWeapon}, // 弩
     };
 
     auto useContainer        = std::string{reflect::getTemplateInnerLeafName<&RolePerms::useContainer>()};

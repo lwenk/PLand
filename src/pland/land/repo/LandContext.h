@@ -67,18 +67,19 @@ struct RolePerms final {
     Entry useBell{true, false};        // 使用钟
     Entry useCampfire{true, false};    // 使用营火
     Entry useComposter{true, false};   // 使用堆肥桶
-    Entry useDaylightDetector{true, false}; // 使用阳光探测器
-    Entry useJukebox{true, false};          // 使用唱片机
-    Entry useNoteBlock{true, false};        // 使用音符盒
-    Entry useCake{true, false};             // 吃蛋糕
-    Entry useComparator{true, false};       // 使用红石比较器
-    Entry useRepeater{true, false};         // 使用红石中继器
-    Entry useLectern{true, false};          // 使用讲台
-    Entry useCauldron{true, false};         // 使用炼药锅
-    Entry useRespawnAnchor{true, false};    // 使用重生锚
-    Entry useBoneMeal{true, false};         // 使用骨粉
-    Entry useBeeNest{true, false};          // 使用蜂巢(蜂箱)
-    Entry editFlowerPot{true, false};       // 编辑花盆
+    Entry useDaylightDetector{true, false};  // 使用阳光探测器
+    Entry useJukebox{true, false};           // 使用唱片机
+    Entry useNoteBlock{true, false};         // 使用音符盒
+    Entry useCake{true, false};              // 吃蛋糕
+    Entry useComparator{true, false};        // 使用红石比较器
+    Entry useRepeater{true, false};          // 使用红石中继器
+    Entry useLectern{true, false};           // 使用讲台
+    Entry useCauldron{true, false};          // 使用炼药锅
+    Entry useRespawnAnchor{true, false};     // 使用重生锚
+    Entry useBoneMeal{true, false};          // 使用骨粉
+    Entry useBeeNest{true, false};           // 使用蜂巢(蜂箱)
+    Entry editFlowerPot{true, false};        // 编辑花盆
+    Entry allowUseRangedWeapon{true, false}; // 允许使用远程武器(弓/弩)
 };
 struct LandPermTable final {
     EnvironmentPerms environment{};

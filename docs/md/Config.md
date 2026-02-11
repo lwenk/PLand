@@ -310,6 +310,7 @@
 | `useBoneMeal`              | 使用骨粉                                        |
 | `useBeeNest`               | 使用蜂巢(蜂箱)                                    |
 | `editFlowerPot`            | 编辑花盆                                        |
+| `allowUseRangedWeapon`     | 允许使用远程武器(弓/弩)                               |
 
 **示例**：
 默认情况下，`minecraft:flint_and_steel`（打火石）需要 `useFlintAndSteel` 权限。如果您想让它需要 `allowPlace` 权限，您可以这样修改：

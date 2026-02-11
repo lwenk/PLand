@@ -219,8 +219,15 @@ void EventInterceptor::setupLLPlayerListeners() {
                 // 雪球、鸡蛋、末影珍珠、喷溅药水、滞留药水、附魔之瓶、冰弹、三叉戟
                 if (!hasMemberOrGuestPermission<&RolePerms::allowUseThrowable>(land, player.getUuid())) {
                     ev.cancel();
+                    return;
                 }
-                // TODO: 弓、弩
+            }
+
+            auto typeName = HashedString{itemStack.getTypeName()};
+            if (auto mptr = InterceptorConfig::lookupDynamicRule(typeName)) {
+                if (!_hasMemberOrGuestPermission(land, player.getUuid(), mptr)) {
+                    ev.cancel();
+                }
             }
         });
     });

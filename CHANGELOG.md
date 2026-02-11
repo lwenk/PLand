@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修复领地最小间距计算错误 @engsr6982
 - 修复领地检查错误信息翻译失败 @engsr6982
 - 重命名权限语义解决弹射物吞物品问题 #139 @engsr6982
+- 修复远程武器攻击领地内实体问题 #177 @engsr6982
 
 ### 🧩 逻辑优化
 
