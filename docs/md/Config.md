@@ -282,7 +282,7 @@
 | `allowRideEntity`          | 允许骑乘实体                                      |
 | `usePressurePlate`         | 触发压力板                                       |
 | `allowFishingRodAndHook`   | 允许使用钓鱼竿和鱼钩                                  |
-| `allowProjectileCreate`    | 允许弹射物创建                                     |
+| `allowUseThrowable`        | 允许使用投掷物(雪球/鸡蛋/三叉戟/...)                      |
 | `useArmorStand`            | 允许使用盔甲架                                     |
 | `allowDropItem`            | 允许丢弃物品                                      |
 | `useItemFrame`             | 允许操作物品展示框                                   |

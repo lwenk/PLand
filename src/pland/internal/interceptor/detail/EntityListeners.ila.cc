@@ -207,7 +207,7 @@ void EventInterceptor::setupIlaEntityListeners() {
                 if (projectile.isType(ActorType::FishingHook)) {
                     if (hasMemberOrGuestPermission<&RolePerms::allowFishingRodAndHook>(land, uuid)) return;
                 } else {
-                    if (hasMemberOrGuestPermission<&RolePerms::allowProjectileCreate>(land, uuid)) return;
+                    if (hasEnvironmentPermission<&EnvironmentPerms::allowProjectileCreate>(land)) return;
                 }
 
                 ev.cancel();
