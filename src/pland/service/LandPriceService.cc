@@ -55,10 +55,12 @@ LandPriceService::_getLandPrice(LandAABB const& range, int dimId, std::string co
     if (!Config::ensureEconomySystemEnabled()) {
         return ll::makeStringError("Economy system is not enabled");
     }
-    auto   variable      = PriceCalculate::Variable::make(range, dimId);
-    double originalPrice = PriceCalculate::eval(calculateFormula, variable);
+    auto variable = PriceCalculate::Variable::make(range, dimId);
+    auto expected = PriceCalculate::eval(calculateFormula, variable);
+    if (!expected) return ll::makeStringError(expected.error().message());
 
-    auto multipliers = Config::getLandDimensionMultipliers(dimId);
+    auto originalPrice = expected.value();
+    auto multipliers   = Config::getLandDimensionMultipliers(dimId);
     if (multipliers) {
         originalPrice *= *multipliers;
     }

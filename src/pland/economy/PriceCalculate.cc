@@ -4,6 +4,8 @@
 
 #pragma warning(disable : 4702)
 #include "exprtk.hpp"
+
+#include <magic_enum.hpp>
 #pragma warning(default : 4702)
 
 namespace land {
@@ -37,7 +39,7 @@ PriceCalculate::Variable PriceCalculate::Variable::make(int height, int width, i
 }
 
 
-double PriceCalculate::eval(std::string const& code, Variable const& variables) {
+ll::Expected<double> PriceCalculate::eval(std::string const& code, Variable const& variables) {
     exprtk::symbol_table<double> symbols;
 
     for (auto& [key, value] : variables.get()) {
@@ -54,7 +56,18 @@ double PriceCalculate::eval(std::string const& code, Variable const& variables) 
     // 编译表达式
     exprtk::parser<double> parser;
     if (!parser.compile(code, expr)) {
-        return 0;
+        std::ostringstream oss;
+        for (std::size_t i = 0; i < parser.error_count(); ++i) {
+            const auto& error = parser.get_error(i);
+            oss << fmt::format(
+                "ExprTK error {}: type={}, pos={}, msg={}",
+                i,
+                magic_enum::enum_name(error.mode),
+                error.token.position,
+                error.diagnostic
+            );
+        }
+        return ll::makeStringError(oss.str());
     }
 
     return expr.value(); // 计算结果

@@ -86,6 +86,10 @@ void LandBuyGUI::_impl(Player& player, OrdinaryLandCreateSelector* selector) {
                 result->mDiscountedPrice,
                 EconomySystem::getInstance().getCostMessage(player, result->mDiscountedPrice)
             );
+        } else {
+            feedback_utils::sendErrorText(player, "价格表达式解析失败，请联系管理员"_trl(localeCode));
+            PLand::getInstance().getSelf().getLogger().error(result.error().message());
+            return;
         }
     }
 
@@ -153,6 +157,10 @@ void LandBuyGUI::_impl(Player& player, LandResizeSelector* selector) {
                 refund.value_or(0) < 0 ? 0 : refund,
                 needPay.value_or(0) > 0 ? EconomySystem::getInstance().getCostMessage(player, needPay.value()) : ""
             );
+        } else {
+            feedback_utils::sendErrorText(player, "价格表达式解析失败，请联系管理员"_trl(localeCode));
+            PLand::getInstance().getSelf().getLogger().error(result.error().message());
+            return;
         }
     }
 
@@ -232,6 +240,10 @@ void LandBuyGUI::_impl(Player& player, SubLandCreateSelector* selector) {
                 result->mDiscountedPrice,
                 EconomySystem::getInstance().getCostMessage(player, result->mDiscountedPrice)
             );
+        } else {
+            feedback_utils::sendErrorText(player, "价格表达式解析失败，请联系管理员"_trl(localeCode));
+            PLand::getInstance().getSelf().getLogger().error(result.error().message());
+            return;
         }
     }
 

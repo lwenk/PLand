@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 重命名权限语义解决弹射物吞物品问题 #139 @engsr6982
 - 修复远程武器攻击领地内实体问题 #177 @engsr6982
 - 修复闪电造成领地内方块、实体状态更新 #167 @engsr6982
+- 修复领地价格表达式解析失败时可能导致经济异常结算的问题 @engsr6982
 
 ### 🧩 逻辑优化
 

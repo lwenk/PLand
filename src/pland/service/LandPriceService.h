@@ -56,6 +56,7 @@ public:
      * @param range 领地范围
      * @param dimId 领地所在维度
      * @param is3D 是否为三维领地
+     * @note 此函数可能返回底层表达式解析失败异常，请勿发送给玩家
      */
     LDNDAPI ll::Expected<PriceResult> getOrdinaryLandPrice(LandAABB const& range, int dimId, bool is3D) const;
 
@@ -63,6 +64,7 @@ public:
      * 获取子领地报价
      * @param range 领地范围
      * @param dimId 领地所在维度
+     * @note 此函数可能返回底层表达式解析失败异常，请勿发送给玩家
      */
     LDNDAPI ll::Expected<PriceResult> getSubLandPrice(LandAABB const& range, int dimId) const;
 
