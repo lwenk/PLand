@@ -49,12 +49,14 @@ struct InterceptorConfig {
         bool PlayerUseItemEvent                   = true; // LL
     } listeners;
     struct Hooks {
-        bool MobHurtHook{true};             // 注册生物受伤Hook
-        bool FishingHookHitHook{true};      // 注册钓鱼竿Hook
-        bool LayEggGoalHook{true};          // 注册产卵AI目标Hook
-        bool FireBlockBurnHook{true};       // 注册火焰蔓延Hook
-        bool ChestBlockActorOpenHook{true}; // 注册箱子打开Hook
-        bool LightningBoltHook{true};       // 注册闪电Hook
+        bool MobHurtHook{true};              // 生物受伤
+        bool FishingHookHitHook{true};       // 钓鱼竿
+        bool LayEggGoalHook{true};           // 海龟产卵
+        bool FireBlockBurnHook{true};        // 火焰蔓延
+        bool ChestBlockActorOpenHook{true};  // 箱子打开
+        bool LightningBoltHook{true};        // 闪电
+        bool LecternBlockUseHook{true};      // 使用讲台
+        bool LecternBlockDropBookHook{true}; // 取出讲台书本
     } hooks;
     struct Rules {
         using Mapping = std::unordered_map<std::string, std::string>; // TypeName -> Permission

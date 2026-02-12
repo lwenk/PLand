@@ -22,6 +22,8 @@
 #include "mc/world/level/block/actor/ChestBlockActor.h"
 
 #include "mc/world/actor/global/LightningBolt.h"
+#include "mc/world/level/block/LecternBlock.h"
+#include "mc/world/level/block/block_events/BlockPlayerInteractEvent.h"
 
 namespace land::internal::interceptor {
 
@@ -155,6 +157,42 @@ LL_TYPE_INSTANCE_HOOK(
     origin();
 }
 
+// Fix [#143](https://github.com/IceBlcokMC/PLand/issues/143)
+LL_TYPE_INSTANCE_HOOK(
+    LecternBlockUseHook,
+    ll::memory::HookPriority::Normal,
+    LecternBlock,
+    &LecternBlock::use,
+    void,
+    BlockEvents::BlockPlayerInteractEvent& event
+) {
+    auto& player = event.mPlayer;
+    auto& pos    = event.mPos;
+
+    auto& registry = PLand::getInstance().getLandRegistry();
+    auto  land     = registry.getLandAt(pos, player.getDimensionId());
+    if (!hasRolePermission<&RolePerms::useLectern>(land, player.getUuid())) {
+        return; // 拦截阅读/放置书本
+    }
+    origin(event);
+}
+LL_TYPE_INSTANCE_HOOK(
+    LecternBlockDropBookHook,
+    ll::memory::HookPriority::Normal,
+    LecternBlock,
+    &LecternBlock::_dropBook,
+    bool,
+    Player&         player,
+    BlockPos const& pos
+) {
+    auto& registry = PLand::getInstance().getLandRegistry();
+    auto  land     = registry.getLandAt(pos, player.getDimensionId());
+    if (!hasRolePermission<&RolePerms::useLectern>(land, player.getUuid())) {
+        return false; // 拦截取下书本
+    }
+    return origin(player, pos);
+}
+
 void EventInterceptor::setupHooks() {
     auto& config = InterceptorConfig::cfg.hooks;
     registerHookIf<MobHurtHook>(config.MobHurtHook);
@@ -163,6 +201,8 @@ void EventInterceptor::setupHooks() {
     registerHookIf<FireBlockBurnHook>(config.FireBlockBurnHook);
     registerHookIf<ChestBlockActorOpenHook>(config.ChestBlockActorOpenHook);
     registerHookIf<LightningBoltHook>(config.LightningBoltHook);
+    registerHookIf<LecternBlockUseHook>(config.LecternBlockUseHook);
+    registerHookIf<LecternBlockDropBookHook>(config.LecternBlockDropBookHook);
 }
 
 } // namespace land::internal::interceptor
