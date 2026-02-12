@@ -21,6 +21,8 @@
 #include "mc/world/level/block/FireBlock.h"
 #include "mc/world/level/block/actor/ChestBlockActor.h"
 
+#include "mc/world/actor/global/LightningBolt.h"
+
 namespace land::internal::interceptor {
 
 // Fix [#140](https://github.com/engsr6982/PLand/issues/140)
@@ -135,13 +137,32 @@ LL_TYPE_INSTANCE_HOOK(
     origin(actor);
 }
 
+// fix: [#167](https://github.com/IceBlcokMC/PLand/issues/167)
+LL_TYPE_INSTANCE_HOOK(
+    LightningBoltHook,
+    ll::memory::HookPriority::Normal,
+    LightningBolt,
+    &LightningBolt::$normalTick,
+    void
+) {
+    auto& registry = PLand::getInstance().getLandRegistry();
+    if (auto land = registry.getLandAt(this->getPosition(), this->getDimensionId())) {
+        if (!hasEnvironmentPermission<&EnvironmentPerms::allowLightningBolt>(land)) {
+            this->remove(); // 必须标记移除，否则闪电实体不会被移除且会一直tick
+            return;         // 不允许闪电，拦截 tick
+        }
+    }
+    origin();
+}
 
 void EventInterceptor::setupHooks() {
-    registerHookIf<MobHurtHook>(InterceptorConfig::cfg.hooks.MobHurtHook);
-    registerHookIf<FishingHookHitHook>(InterceptorConfig::cfg.hooks.FishingHookHitHook);
-    registerHookIf<LayEggGoalHook>(InterceptorConfig::cfg.hooks.LayEggGoalHook);
-    registerHookIf<FireBlockBurnHook>(InterceptorConfig::cfg.hooks.FireBlockBurnHook);
-    registerHookIf<ChestBlockActorOpenHook>(InterceptorConfig::cfg.hooks.ChestBlockActorOpenHook);
+    auto& config = InterceptorConfig::cfg.hooks;
+    registerHookIf<MobHurtHook>(config.MobHurtHook);
+    registerHookIf<FishingHookHitHook>(config.FishingHookHitHook);
+    registerHookIf<LayEggGoalHook>(config.LayEggGoalHook);
+    registerHookIf<FireBlockBurnHook>(config.FireBlockBurnHook);
+    registerHookIf<ChestBlockActorOpenHook>(config.ChestBlockActorOpenHook);
+    registerHookIf<LightningBoltHook>(config.LightningBoltHook);
 }
 
 } // namespace land::internal::interceptor

@@ -67,6 +67,7 @@
     "useBeeNest": "Use Beehive/Bee Nest",
     "editFlowerPot": "Edit Flower Pot",
     "allowUseRangedWeapon": "Allow using ranged weapons (Bow/Crossbow)",
+    "allowLightningBolt": "Allow Lightning Bolt",
     "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$col": "Auto-collected Strings",
     "Unnamed territories": "Unnamed Territory",
     "\n[Tip] 经济系统未启用，本次操作不消耗 {}": "\n[Tip] Economy system disabled, this operation costs nothing {}",

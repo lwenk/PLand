@@ -54,6 +54,7 @@ struct InterceptorConfig {
         bool LayEggGoalHook{true};          // 注册产卵AI目标Hook
         bool FireBlockBurnHook{true};       // 注册火焰蔓延Hook
         bool ChestBlockActorOpenHook{true}; // 注册箱子打开Hook
+        bool LightningBoltHook{true};       // 注册闪电Hook
     } hooks;
     struct Rules {
         using Mapping = std::unordered_map<std::string, std::string>; // TypeName -> Permission

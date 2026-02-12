@@ -22,6 +22,7 @@ struct EnvironmentPerms final {
     bool allowDragonEggTeleport{false};   // 龙蛋传送 v25 allowAttackDragonEgg=false
     bool allowSculkBlockGrowth{true};     // 幽匿尖啸体生长
     bool allowSculkSpread{false};         // 幽匿蔓延 v27
+    bool allowLightningBolt{true};        // 闪电
 };
 struct RolePerms final {
     struct Entry final {
