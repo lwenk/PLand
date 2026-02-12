@@ -59,12 +59,17 @@ void LandBuyGUI::impl(Player& player, DefaultSelector* selector) {
     aabb->fix();
     auto const volume = aabb->getVolume();
 
-    auto   _variables    = PriceCalculate::Variable::make(*aabb, selector->getDimensionId()); // 传入维度ID
-    double originalPrice = PriceCalculate::eval(
+    auto _variables = PriceCalculate::Variable::make(*aabb, selector->getDimensionId()); // 传入维度ID
+    auto expected   = PriceCalculate::eval(
         is3D ? Config::cfg.land.bought.threeDimensionl.calculate : Config::cfg.land.bought.twoDimensionl.calculate,
         _variables
     );
-
+    if (!expected) {
+        feedback_utils::sendErrorText(player, "价格表达式解析失败，请联系管理员"_trf(player));
+        PLand::getInstance().getSelf().getLogger().error(expected.error().message());
+        return;
+    }
+    double originalPrice = expected.value();
     // 应用维度价格系数
     auto it = Config::cfg.land.bought.dimensionPriceCoefficients.find(std::to_string(selector->getDimensionId()));
     if (it != Config::cfg.land.bought.dimensionPriceCoefficients.end()) {
@@ -162,7 +167,14 @@ void LandBuyGUI::impl(Player& player, ChangeLandRangeSelector* reSelector) {
     auto       landPtr       = reSelector->getLand();
     int const& originalPrice = landPtr->getOriginalBuyPrice(); // 原始购买价格
     auto       _variables    = PriceCalculate::Variable::make(*aabb, landPtr->getDimensionId());
-    double     newRangePrice = PriceCalculate::eval(Config::cfg.land.bought.threeDimensionl.calculate, _variables);
+    auto       expected      = PriceCalculate::eval(Config::cfg.land.bought.threeDimensionl.calculate, _variables);
+    if (!expected) {
+        feedback_utils::sendErrorText(player, "价格表达式解析失败，请联系管理员"_trf(player));
+        PLand::getInstance().getSelf().getLogger().error(expected.error().message());
+        return;
+    }
+
+    double newRangePrice = expected.value();
 
     // 应用维度价格系数
     auto it = Config::cfg.land.bought.dimensionPriceCoefficients.find(std::to_string(landPtr->getDimensionId()));
@@ -267,9 +279,14 @@ void LandBuyGUI::impl(Player& player, SubLandSelector* subSelector) {
     subLandRange->fix();
     auto const volume = subLandRange->getVolume();
 
-    auto   _variables    = PriceCalculate::Variable::make(*subLandRange, subSelector->getDimensionId()); // 传入维度ID
-    double originalPrice = PriceCalculate::eval(Config::cfg.land.subLand.calculate, _variables);
-
+    auto _variables = PriceCalculate::Variable::make(*subLandRange, subSelector->getDimensionId()); // 传入维度ID
+    auto expected   = PriceCalculate::eval(Config::cfg.land.subLand.calculate, _variables);
+    if (!expected) {
+        feedback_utils::sendErrorText(player, "价格表达式解析失败，请联系管理员"_trf(player));
+        PLand::getInstance().getSelf().getLogger().error(expected.error().message());
+        return;
+    }
+    double originalPrice = expected.value();
     // 应用维度价格系数
     auto it = Config::cfg.land.bought.dimensionPriceCoefficients.find(std::to_string(subSelector->getDimensionId()));
     if (it != Config::cfg.land.bought.dimensionPriceCoefficients.end()) {
