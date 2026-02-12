@@ -39,7 +39,7 @@ public:
     /**
      * @brief 计算价格
      */
-    LDNDAPI static double eval(std::string const& code, Variable const& variables);
+    LDNDAPI static ll::Expected<double> eval(std::string const& code, Variable const& variables);
 
     /**
      * @brief 计算折扣价
