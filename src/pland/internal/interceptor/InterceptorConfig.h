@@ -57,6 +57,8 @@ struct InterceptorConfig {
         bool LightningBoltHook{true};        // 闪电
         bool LecternBlockUseHook{true};      // 使用讲台
         bool LecternBlockDropBookHook{true}; // 取出讲台书本
+        bool OozingMobEffectHook{true};      // 渗浆效果
+        bool WeavingMobEffectHook{true};     // 盘丝效果
     } hooks;
     struct Rules {
         using Mapping = std::unordered_map<std::string, std::string>; // TypeName -> Permission

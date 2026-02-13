@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修复闪电造成领地内方块、实体状态更新 #167 @engsr6982
 - 修复领地价格表达式解析失败时可能导致经济异常结算的问题 @engsr6982
 - 修复玩家可以无权限放置、取下讲台书本 #143 @engsr6982
+- 修复渗浆和盘丝药水在生物死亡后还是能使用 #59 @engsr6982
 
 ### 🧩 逻辑优化
 

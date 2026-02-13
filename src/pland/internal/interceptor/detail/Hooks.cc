@@ -22,6 +22,8 @@
 #include "mc/world/level/block/actor/ChestBlockActor.h"
 
 #include "mc/world/actor/global/LightningBolt.h"
+#include "mc/world/effect/OozingMobEffect.h"
+#include "mc/world/effect/WeavingMobEffect.h"
 #include "mc/world/level/block/LecternBlock.h"
 #include "mc/world/level/block/block_events/BlockPlayerInteractEvent.h"
 
@@ -193,6 +195,45 @@ LL_TYPE_INSTANCE_HOOK(
     return origin(player, pos);
 }
 
+// Fix [#59](https://github.com/IceBlcokMC/PLand/issues/59)
+LL_TYPE_INSTANCE_HOOK(
+    OozingMobEffectHook,
+    ll::memory::HookPriority::Normal,
+    OozingMobEffect,
+    &OozingMobEffect::$onActorDied,
+    void,
+    ::Actor& actor,
+    int      amplifier
+) {
+    // Wiki: 此效果的生物死亡时，会尝试在死亡处生成2只中型史莱姆
+    auto& pos      = actor.getPosition();
+    auto& registry = PLand::getInstance().getLandRegistry();
+    auto  land     = registry.getLandAt(pos, actor.getDimensionId());
+    if (!hasEnvironmentPermission<&EnvironmentPerms::allowMonsterSpawn>(land)) {
+        return;
+    }
+    origin(actor, amplifier);
+}
+LL_TYPE_INSTANCE_HOOK(
+    WeavingMobEffectHook,
+    ll::memory::HookPriority::Normal,
+    WeavingMobEffect,
+    &WeavingMobEffect::$onActorDied,
+    void,
+    ::Actor& actor,
+    int      amplifier
+) {
+    // Wiki: 当游戏规则mobGriefing为true时，拥有盘丝的生物死亡后会在以自身为中心3×3×3的范围内尝试生成2-3个蜘蛛网
+    auto& pos      = actor.getPosition();
+    auto& registry = PLand::getInstance().getLandRegistry();
+    auto  land     = registry.getLandAt(pos, actor.getDimensionId());
+    if (!hasEnvironmentPermission<&EnvironmentPerms::allowMobGrief>(land)) {
+        return;
+    }
+    origin(actor, amplifier);
+}
+
+
 void EventInterceptor::setupHooks() {
     auto& config = InterceptorConfig::cfg.hooks;
     registerHookIf<MobHurtHook>(config.MobHurtHook);
@@ -203,6 +244,8 @@ void EventInterceptor::setupHooks() {
     registerHookIf<LightningBoltHook>(config.LightningBoltHook);
     registerHookIf<LecternBlockUseHook>(config.LecternBlockUseHook);
     registerHookIf<LecternBlockDropBookHook>(config.LecternBlockDropBookHook);
+    registerHookIf<OozingMobEffectHook>(config.OozingMobEffectHook);
+    registerHookIf<WeavingMobEffectHook>(config.WeavingMobEffectHook);
 }
 
 } // namespace land::internal::interceptor
