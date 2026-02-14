@@ -1,6 +1,6 @@
 # 配置文件
 
-> 配置文件均为`json`格式，位于`plugins/PLand/`目录下。
+> 配置文件均为`json`格式，位于`plugins/PLand/config`目录下。
 
 !> 配置文件为`json`格式，请勿使用记事本等不支持`json`格式的文本编辑器进行编辑，否则会导致配置文件损坏。
 
@@ -196,7 +196,13 @@
         "FishingHookHitHook": true, // 钓鱼钩击中
         "LayEggGoalHook": true, // 海龟产卵
         "FireBlockBurnHook": true, // 火焰燃烧方块
-        "ChestBlockActorOpenHook": true // 箱子实体打开 (铜傀儡)
+        "ChestBlockActorOpenHook": true, // 箱子实体打开 (铜傀儡)
+        "LightningBoltHook": true, // 闪电
+        "LecternBlockUseHook": true, // 使用讲台
+        "LecternBlockDropBookHook": true, // 取出讲台书本
+        "OozingMobEffectHook": true, // 渗浆效果
+        "WeavingMobEffectHook": true, // 盘丝效果
+        "HopperComponentPullInItemsHook": true // 漏斗组件吸取物品(漏斗矿车)
     },
     "rules": {
         "mob": {
