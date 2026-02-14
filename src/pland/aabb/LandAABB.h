@@ -1,5 +1,6 @@
 #pragma once
 #include "mc/world/level/BlockPos.h"
+
 #include "pland/Global.h"
 #include "pland/aabb/LandPos.h"
 
@@ -13,7 +14,13 @@ class LandAABB {
 public:
     LandPos min{}, max{};
 
-    LDNDAPI static LandAABB make(BlockPos const& min, BlockPos const& max);
+    template <typename... Args>
+        requires std::constructible_from<LandAABB, Args...>
+    static LandAABB make(Args&&... args) {
+        auto aabb = LandAABB(std::forward<Args>(args)...);
+        aabb.fix();
+        return aabb;
+    }
 
     LDAPI void fix(); // fix min/max
 
@@ -132,6 +139,9 @@ public:
      */
     LDNDAPI static bool isCollision(LandAABB const& pos1, LandAABB const& pos2);
 
+    // 计算两个 AABB 之间的最短距离的平方（避免开根号，高性能）
+    LDAPI static long long getDistanceSq(LandAABB const& a, LandAABB const& b, bool includeY);
+
     /**
      * @brief 判断两个AABB是否满足最小间距要求
      */
@@ -148,7 +158,7 @@ public:
      * @brief 获取两个 AABB 之间的最小间距(x/z 轴)
      * @return 返回实际间距（重叠则为实际重叠部分长度，负数）
      */
-    LDNDAPI static int getMinSpacing(LandAABB const& a, LandAABB const& b);
+    LDNDAPI static int getMinSpacing(LandAABB const& a, LandAABB const& b, bool includeY);
 };
 
 STATIC_ASSERT_AGGREGATE(LandAABB);

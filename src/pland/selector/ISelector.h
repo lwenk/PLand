@@ -1,10 +1,10 @@
 #pragma once
-#include "mc/deps/ecs/WeakEntityRef.h"
-#include "mc/network/packet/SetTitlePacket.h"
-#include "mc/world/level/BlockPos.h"
 #include "pland/Global.h"
 #include "pland/drawer/DrawHandleManager.h"
 
+#include "mc/deps/ecs/WeakEntityRef.h"
+#include "mc/network/packet/SetTitlePacket.h"
+#include "mc/world/level/BlockPos.h"
 
 class Player;
 class ItemStack;
@@ -57,45 +57,45 @@ public:
     }
 
 public: /* virtual */
-    /**
-     * @brief 当 A 点被设置时触发
-     */
-    virtual void onPointASet() /* = 0 */;
+        /**
+         * @brief 当 A 点被设置时触发
+         */
+    LDAPI virtual void onPointASet() /* = 0 */;
 
     /**
      * @brief 当 B 点被设置时触发
      */
-    virtual void onPointBSet() /* = 0 */;
+    LDAPI virtual void onPointBSet() /* = 0 */;
 
     /**
      * @brief 当 A 点被更新时触发
      * @note 比如：当玩家选择点后，不合适又更新了点
      */
-    virtual void onPointAUpdated() /* = 0 */;
+    LDAPI virtual void onPointAUpdated() /* = 0 */;
 
     /**
      * @brief 当 B 点被更新时触发
      */
-    virtual void onPointBUpdated() /* = 0 */;
+    LDAPI virtual void onPointBUpdated() /* = 0 */;
 
     /**
      * @brief 当 A 点和 B 点都设置后触发
      * @warning 此函数可能会触发多次，例如：玩家多次 update a/b 点
      */
-    virtual void onPointABSet();
+    LDAPI virtual void onPointABSet();
 
     /**
      * @brief 当 A 点和 B 点都设置后触发
      * @note 当 a 和 b 点都设置后，会向玩家确认坐标，当玩家确认坐标后此函数会被调用
      * @warning 此函数可能会触发多次
      */
-    virtual void onPointConfirmed();
+    LDAPI virtual void onPointConfirmed();
 
     /**
      * @note `SelectorManager` 每 20 tick 调用一次
      * @note 用于向玩家发送标题提示当前状态
      */
-    virtual void tick();
+    LDAPI virtual void tick();
 };
 
 

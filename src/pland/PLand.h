@@ -15,18 +15,15 @@ namespace ll {
 namespace thread {
 class ThreadPoolExecutor;
 }
-namespace data {
-struct Version;
-}
 } // namespace ll
 
-#ifdef LD_DEVTOOL
-namespace devtool {
-class DevToolApp;
-}
-#endif
 
 namespace land {
+
+namespace internal {
+class SafeTeleport;
+}
+
 
 class PLand {
     PLand();
@@ -42,18 +39,18 @@ public: /* private */
 public: /* public */
     LDAPI static PLand& getInstance();
 
-    LDNDAPI class SafeTeleport*      getSafeTeleport() const;
-    LDNDAPI class LandScheduler*     getLandScheduler() const;
     LDNDAPI class SelectorManager*   getSelectorManager() const;
     LDNDAPI class LandRegistry&      getLandRegistry() const;
     LDNDAPI class DrawHandleManager* getDrawHandleManager() const;
 
-    LDNDAPI ll::thread::ThreadPoolExecutor* getThreadPool() const;
+    LDNDAPI ll::thread::ThreadPoolExecutor& getThreadPool() const;
 
     LDNDAPI service::ServiceLocator& getServiceLocator() const;
 
+    LDNDAPI internal::SafeTeleport& getSafeTeleport() const;
+
 #ifdef LD_DEVTOOL
-    [[nodiscard]] devtool::DevToolApp* getDevToolApp() const;
+    void setDevToolVisible(bool visible);
 #endif
 
 private:

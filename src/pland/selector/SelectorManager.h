@@ -5,25 +5,27 @@
 #include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/event/ListenerBase.h"
 
+#include <concepts>
 #include <unordered_map>
 
 
 namespace land {
 class Debouncer;
 
+namespace service {
+class SelectionService;
+}
 
 /**
  * @brief 选区管理器
- * @note 由 PLand 管理 (RAII)
  */
 class SelectorManager final {
-    std::unordered_map<mce::UUID, std::unique_ptr<ISelector>> mSelectors{};
-    std::unordered_map<mce::UUID, Debouncer>                  mStabilization{};
-    ll::event::ListenerPtr                                    mListener{nullptr};
-    std::shared_ptr<std::atomic<bool>>                        mCoroStop{nullptr};
-    std::shared_ptr<ll::coro::InterruptableSleep>             mInterruptableSleep{nullptr};
+    struct Impl;
+    std::unique_ptr<Impl> impl{nullptr};
 
-    LDAPI bool startSelectionImpl(std::unique_ptr<ISelector> selector);
+    friend service::SelectionService;
+
+    LDAPI bool _startSelection(std::unique_ptr<ISelector> selector);
 
 public:
     LD_DISABLE_COPY_AND_MOVE(SelectorManager);
@@ -41,9 +43,9 @@ public:
 
     // 开始选区
     template <typename T>
-        requires std::is_base_of_v<ISelector, T> && std::is_final_v<T>
+        requires std::derived_from<T, ISelector> && std::is_final_v<T>
     bool startSelection(std::unique_ptr<T> selector) {
-        return startSelectionImpl(std::move(selector));
+        return _startSelection(std::move(selector));
     }
 
     // 停止选区

@@ -34,11 +34,7 @@ void LandAABB::fix() {
     if (min.y > max.y) std::swap(min.y, max.y);
     if (min.z > max.z) std::swap(min.z, max.z);
 }
-LandAABB LandAABB::make(BlockPos const& min, BlockPos const& max) {
-    LandAABB inst(LandPos::make(min), LandPos::make(max));
-    inst.fix();
-    return inst;
-}
+
 std::string LandAABB::toString() const { return fmt::format("{} => {}", min.toString(), max.toString()); }
 std::unordered_set<ChunkPos> LandAABB::getChunks() const {
     std::unordered_set<ChunkPos> chunks;
@@ -169,22 +165,33 @@ bool LandAABB::isCollision(const LandAABB& pos1, const LandAABB& pos2) {
         || pos1.max.z < pos2.min.z || pos1.min.z > pos2.max.z
     );
 }
-bool LandAABB::isComplisWithMinSpacing(const LandAABB& pos1, const LandAABB& pos2, int minSpacing, bool includeY) {
-    // 检查 X 轴
-    int xDist = std::min(std::abs(pos1.max.x - pos2.min.x), std::abs(pos2.max.x - pos1.min.x));
-    if (xDist < minSpacing) return false;
 
-    // 检查 Z 轴
-    int zDist = std::min(std::abs(pos1.max.z - pos2.min.z), std::abs(pos2.max.z - pos1.min.z));
-    if (zDist < minSpacing) return false;
+// 辅助函数：计算单轴上的间隙（如果重叠则为0，不重叠则为正数）
+static int _getAxisGap(int minA, int maxA, int minB, int maxB) {
+    // max(0, A左-B右, B左-A右)
+    return std::max(0, std::max(minA - maxB, minB - maxA));
+}
+long long LandAABB::getDistanceSq(LandAABB const& a, LandAABB const& b, bool includeY) {
+    long long gapX = _getAxisGap(a.min.x, a.max.x, b.min.x, b.max.x);
+    long long gapZ = _getAxisGap(a.min.z, a.max.z, b.min.z, b.max.z);
+    long long gapY = 0;
 
-    // 检查 Y 轴
     if (includeY) {
-        int yDist = std::min(std::abs(pos1.max.y - pos2.min.y), std::abs(pos2.max.y - pos1.min.y));
-        if (yDist < minSpacing) return false;
+        gapY = _getAxisGap(a.min.y, a.max.y, b.min.y, b.max.y);
     }
 
-    return true;
+    // 勾股定理：d² = x² + y² + z²
+    return (gapX * gapX) + (gapZ * gapZ) + (gapY * gapY);
+}
+bool LandAABB::isComplisWithMinSpacing(const LandAABB& pos1, const LandAABB& pos2, int minSpacing, bool includeY) {
+    // 允许 minSpacing 为 0
+    if (minSpacing <= 0) return true;
+
+    long long distSq       = getDistanceSq(pos1, pos2, includeY);
+    long long minSpacingSq = static_cast<long long>(minSpacing) * minSpacing;
+
+    // 实际距离平方 >= 最小间距平方，即为合法
+    return distSq >= minSpacingSq;
 }
 bool LandAABB::isContain(LandAABB const& src, LandAABB const& dst) {
     return src.min.x <= dst.min.x && src.max.x >= dst.max.x && //
@@ -226,31 +233,9 @@ bool LandAABB::isAboveLand(BlockPos const& pos) const {
 }
 
 
-int LandAABB::getMinSpacing(LandAABB const& a, LandAABB const& b) {
-    // 计算 X 和 Z 轴的重叠量（>0 表示重叠）
-    int xOverlap = std::min(a.max.x, b.max.x) - std::max(a.min.x, b.min.x);
-    int zOverlap = std::min(a.max.z, b.max.z) - std::max(a.min.z, b.min.z);
-
-    // 如果两轴都重叠，则 AABB 相交
-    if (xOverlap > 0 && zOverlap > 0) {
-        // 返回负值表示重叠，可用重叠量的最小值（或任意负数）
-        return -std::min(xOverlap, zOverlap); // 或直接 return -1;
-    }
-
-    // 计算 X 和 Z 方向的间距（≥0）
-    int xSpacing = std::max(0, std::max(a.min.x - b.max.x, b.min.x - a.max.x));
-    int zSpacing = std::max(0, std::max(a.min.z - b.max.z, b.min.z - a.max.z));
-
-    // 如果一轴重叠，另一轴分离，则间距由分离轴决定
-    if (xOverlap > 0) {
-        return zSpacing; // X 重叠，看 Z 间距
-    }
-    if (zOverlap > 0) {
-        return xSpacing; // Z 重叠，看 X 间距
-    }
-
-    // 两轴都分离（对角），返回最小轴向间距
-    return std::min(xSpacing, zSpacing);
+int LandAABB::getMinSpacing(LandAABB const& a, LandAABB const& b, bool includeY) {
+    double dist = std::sqrt(getDistanceSq(a, b, includeY));
+    return static_cast<int>(dist); // 向下取整用于显示
 }
 
 

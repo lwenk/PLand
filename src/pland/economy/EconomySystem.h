@@ -1,7 +1,9 @@
 #pragma once
 #include "EconomyConfig.h"
 #include "pland/Global.h"
-#include "pland/economy/impl/IEconomy.h"
+
+#include "econbridge/IEconomy.h"
+
 #include <memory>
 #include <mutex>
 
@@ -15,28 +17,23 @@ namespace land {
 
 
 class EconomySystem final {
-    std::shared_ptr<economy::IEconomy> mEconomySystem;
-    mutable std::mutex                 mInstanceMutex;
-
-    explicit EconomySystem();
-
+    struct Impl;
+    std::unique_ptr<Impl> impl;
 
 public:
     LD_DISABLE_COPY_AND_MOVE(EconomySystem);
+    explicit EconomySystem();
 
     LDNDAPI static EconomySystem& getInstance();
 
-    LDAPI void initEconomySystem();   // 初始化经济系统
-    LDAPI void reloadEconomySystem(); // 重载经济系统（当 kit 改变时）
+    LDAPI void initialize(); // 初始化经济系统
+    LDAPI void reload();     // 重载经济系统（当 kit 改变时）
 
-    LDNDAPI EconomyConfig& getConfig() const;
+    LDNDAPI std::string getCostMessage(Player& player, llong amount) const;
 
-    LDNDAPI std::shared_ptr<economy::IEconomy> getEconomyInterface() const;
+    LDNDAPI std::shared_ptr<econbridge::IEconomy> get() const;
 
-    LDNDAPI std::shared_ptr<economy::IEconomy> operator->() const;
-
-private:
-    std::shared_ptr<economy::IEconomy> createEconomySystem() const;
+    inline std::shared_ptr<econbridge::IEconomy> operator->() const { return get(); }
 };
 
 

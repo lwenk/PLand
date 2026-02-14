@@ -45,9 +45,9 @@ inline bool _VersionPatcher(T& obj, J& data) {
 }
 
 template <typename T, typename J = nlohmann::ordered_json>
-inline void json2structWithVersionPatch(J& j, T& obj) {
+inline void json2structWithVersionPatch(J& j, T& obj, bool forcePatch = false) {
     bool noNeedMerge = true;
-    if (!j.contains("version") || (int64)(j["version"]) != obj.version) {
+    if (forcePatch || !j.contains("version") || (int64)(j["version"]) != obj.version) {
         noNeedMerge = false;
     }
     if (noNeedMerge || _VersionPatcher(obj, j)) {

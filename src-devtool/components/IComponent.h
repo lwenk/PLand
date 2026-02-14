@@ -74,16 +74,16 @@ public:
 
 
 class IWindow : IComponent {
-    bool open_{false};
+    bool visible_{false};
 
 public:
-    virtual bool isOpen() const;
+    virtual bool visible() const;
 
-    virtual bool* getOpenFlag();
+    virtual bool* getVisibleFlag();
 
-    virtual void setOpenFlag(bool open);
+    virtual void setVisible(bool visible);
 
-    // open_ 为 true 时执行渲染
+    // visible 为 true 时执行渲染
     virtual void tick() override;
 };
 

@@ -6,7 +6,7 @@ add_repositories("miracleforest-repo https://github.com/MiracleForest/xmake-repo
 
 
 -- LeviMc(LiteLDev)
-add_requires("levilamina 1.9.2", {configs = {target_type = "server"}})
+add_requires("levilamina 1.9.5", {configs = {target_type = "server"}})
 add_requires("levibuildscript")
 
 -- MiracleForest
@@ -14,9 +14,11 @@ add_requires("ilistenattentively 0.11.0")
 
 -- IceBlockMC
 add_requires("ll-bstats 0.2.0")
+add_requires("economy_bridge 0.2.0")
 
 -- xmake
 add_requires("exprtk 0.0.3")
+add_requires("abseil 20250127.0")
 
 if has_config("devtool") then
     add_requires("imgui v1.91.6-docking", {configs = { opengl3 = true, glfw = true }})
@@ -66,13 +68,13 @@ target("PLand")
         "levilamina",
         "exprtk",
         "ilistenattentively",
-        "ll-bstats"
+        "ll-bstats",
+        "economy_bridge",
+        "abseil"
     )
 
     add_configfiles("src/BuildInfo.h.in")
     set_configdir("src/pland")
-
-    add_defines("PLUGIN_NAME=\"[PLand] \"")
 
     if is_mode("debug") then
         add_defines("DEBUG")

@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-02-14
+
+> ⚠️ 本次版本为权限系统重构版本，存在破坏性变更
+> - 旧版领地权限数据与新版本完全不兼容
+> - 插件会在启动时自动执行数据迁移
+> - 由于权限模型发生变化，迁移后的权限可能与旧版行为不完全一致
+
+### ✨ 新增功能
+
+- 新增领地 **名称**、**描述** 可配置检查 @engsr6982
+- DevTool 新增领地树可视化 @engsr6982
+- 管理 GUI：
+    - 管理玩家表单支持分页和搜索（#129）@engsr6982
+    - 支持按领地 ID 查找领地 @engsr6982
+- 权限系统:
+    - 区分环境权限与角色权限 #170 @engsr6982
+    - 成员支持独立权限配置 #170 @engsr6982
+- 添加实体拾取物品事件(关联`allowMobGrief`权限) #171 @engsr6982
+- 分离拦截配置(InterceptorConfig.json)和领地配置(Config.json)，改进权限映射 #169 @engsr6982
+
+### 🐛 问题修复
+
+- 修复领地最小间距计算错误 @engsr6982
+- 修复领地检查错误信息翻译失败 @engsr6982
+- 重命名权限语义解决弹射物吞物品问题 #139 @engsr6982
+- 修复远程武器攻击领地内实体问题 #177 @engsr6982
+- 修复闪电造成领地内方块、实体状态更新 #167 @engsr6982
+- 修复领地价格表达式解析失败时可能导致经济异常结算的问题 @engsr6982
+- 修复玩家可以无权限放置、取下讲台书本 #143 @engsr6982
+- 修复渗浆和盘丝药水在生物死亡后还是能使用 #59 @engsr6982
+- 修复漏斗矿车可以吸取领地内物品 #55 @engsr6982
+
+### 🧩 逻辑优化
+
+- 预计算领地层级缓存，优化子领地查询性能 @engsr6982
+
+### 🧹 其他改动
+
+- 领地管理 GUI 新增 **创建子领地** 按钮 @engsr6982
+- 移除 `pland set language` 命令 @engsr6982
+- 移除对 **iLand** 领地数据转换支持 @engsr6982
+- 移除领地描述相关配置与编辑入口（该功能无实际使用场景）#181 @engsr6982
+
+### 🛠️ 开发者相关
+
+- 重构代码，清理历史代码，引入 Service、pImpl 模式 (#166) @engsr6982
+- 调整项目工程结构 @engsr6982
+- 改进内置领地表单系统 (#144) @engsr6982
+
+#### 🔔 事件更改
+
+> ⚠️ 本次版本重构了领地事件体系，旧事件已全部移除，不再提供兼容与迁移映射。  
+> 请基于以下新增事件重新接入监听逻辑。
+
+- [-] 移除 `LandEvent.h` 内所有事件 @engsr6982
+- [+] 新增 `LandResizedEvent` 事件 @engsr6982
+- [+] 新增 `MemberChangedEvent` 事件 @engsr6982
+- [+] 新增 `OwnerChangedEvent` 事件 @engsr6982
+- [+] 新增 `LandRefundFailedEvent` 事件 @engsr6982
+- [+] 新增 `PlayerApplyLandRangeChangeBeforeEvent`, `PlayerApplyLandRangeChangeAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerBuyLandBeforeEvent`, `PlayerBuyLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerChangeLandDescBeforeEvent`, `PlayerChangeLandDescAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerChangeLandMemberBeforeEvent`, `PlayerChangeLandMemberAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerChangeLandNameBeforeEvent`, `PlayerChangeLandNameAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerDeleteLandBeforeEvent`, `PlayerDeleteLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerEnterLandEvent`, `PlayerLeaveLandEvent` 事件 @engsr6982
+- [+] 新增 `PlayerRequestChangeLandRangeBeforeEvent`, `PlayerRequestChangeLandRangeAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerTransferLandBeforeEvent`, `PlayerTransferLandAfterEvent` 事件 @engsr6982
+- [+] 新增 `PlayerRequestCreateLandEvent` 事件 @engsr6982
+
+#### 💾 领地数据权限字段变更
+
+> 以下 v25 字段在 v27 中不再独立存在：
+
+- `allowActorDestroy` & `allowEndermanLeaveBlock` -> 合并为 `environment.allowMobGrief`。
+- `allowSpecialDamage` & `allowCustomSpecialDamage` -> 合并为 `role.allowSpecialEntityDamage`。
+- `useFurnace`, `useBlastFurnace`, `useSmoker` -> 合并为 `role.useFurnaces`。
+- `allowOpenChest`, `useBarrel`, `useShulkerBox` 等8项 -> 合并为 `role.useContainer`。
+- `useCraftingTable`, `useAnvil` 等10项 -> 合并为 `role.useWorkstation`。
+- `allowAxePeeled` -> 重命名为 `role.useAxe`。
+- `allowPickupItem` -> 重命名为 `role.allowPlayerPickupItem`。
+- `allowAttackDragonEgg` -> 重命名为 `environment.allowDragonEggTeleport`。
+
 ## [0.17.2] 2026-02-12
 
 ### 🐛 问题修复

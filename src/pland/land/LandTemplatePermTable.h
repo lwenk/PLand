@@ -1,5 +1,5 @@
 #pragma once
-#include "LandContext.h"
+#include "repo/LandContext.h"
 
 
 namespace land {
@@ -9,13 +9,13 @@ class LandTemplatePermTable {
 public:
     LDAPI explicit LandTemplatePermTable(LandPermTable permTable);
 
-    LandPermTable const& get() const;
+    LDAPI LandPermTable const& get() const;
 
-    void set(LandPermTable const& permTable);
+    LDAPI void set(LandPermTable const& permTable);
 
-    bool isDirty() const;
-    void markDirty();
-    void resetDirty();
+    LDAPI bool isDirty() const;
+    LDAPI void markDirty();
+    LDAPI void resetDirty();
 
 private:
     std::atomic_bool mDirty{false};

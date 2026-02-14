@@ -42,9 +42,8 @@ PriceCalculate::Variable PriceCalculate::Variable::make(int height, int width, i
 ll::Expected<double> PriceCalculate::eval(std::string const& code, Variable const& variables) {
     exprtk::symbol_table<double> symbols;
 
-    for (auto const& [key, value] : variables.get()) {
-        auto& t = *const_cast<double*>(&value);
-        symbols.add_constant(key, t);
+    for (auto& [key, value] : variables.get()) {
+        symbols.add_constant(key, value);
     }
 
     symbols.add_function("random_num", &internals::random_num);

@@ -14,17 +14,19 @@
 #include "ll/api/utils/SystemUtils.h"
 
 #include "drawer/DrawHandleManager.h"
-#include "pland/adapter/telemetry/Telemetry.h"
-#include "pland/command/Command.h"
+#include "events/domain/ConfigReloadEvent.h"
+#include "internal/interceptor/InterceptorConfig.h"
+#include "land/internal/LandScheduler.h"
+#include "land/internal/SafeTeleport.h"
 #include "pland/economy/EconomySystem.h"
-#include "pland/events/ConfigReloadEvent.h"
-#include "pland/hooks/EventListener.h"
-#include "pland/infra/Config.h"
-#include "pland/infra/SafeTeleport.h"
-#include "pland/land/LandRegistry.h"
-#include "pland/land/LandScheduler.h"
+#include "pland/internal/adapter/telemetry/Telemetry.h"
+#include "pland/internal/command/Command.h"
+#include "pland/internal/interceptor/EventInterceptor.h"
+#include "pland/land/Config.h"
+#include "pland/land/repo/LandRegistry.h"
 #include "pland/selector/SelectorManager.h"
 #include "pland/service/ServiceLocator.h"
+
 
 #ifdef LD_DEVTOOL
 #include "DevToolApp.h"
@@ -34,15 +36,15 @@ namespace land {
 
 
 struct PLand::Impl {
-    ll::mod::NativeMod&                             mSelf;
-    std::unique_ptr<ll::thread::ThreadPoolExecutor> mThreadPoolExecutor{nullptr};
-    std::unique_ptr<LandRegistry>                   mLandRegistry{nullptr};
-    std::unique_ptr<LandScheduler>                  mLandScheduler{nullptr};
-    std::unique_ptr<EventListener>                  mEventListener{nullptr};
-    std::unique_ptr<SafeTeleport>                   mSafeTeleport{nullptr};
-    std::unique_ptr<SelectorManager>                mSelectorManager{nullptr};
-    std::unique_ptr<DrawHandleManager>              mDrawHandleManager{nullptr};
-    std::unique_ptr<adapter::Telemetry>             mTelemetry{nullptr};
+    ll::mod::NativeMod&                                      mSelf;
+    std::unique_ptr<ll::thread::ThreadPoolExecutor>          mThreadPoolExecutor{nullptr};
+    std::unique_ptr<LandRegistry>                            mLandRegistry{nullptr};
+    std::unique_ptr<internal::LandScheduler>                 mLandScheduler{nullptr};
+    std::unique_ptr<internal::interceptor::EventInterceptor> mEventListener{nullptr};
+    std::unique_ptr<internal::SafeTeleport>                  mSafeTeleport{nullptr};
+    std::unique_ptr<SelectorManager>                         mSelectorManager{nullptr};
+    std::unique_ptr<DrawHandleManager>                       mDrawHandleManager{nullptr};
+    std::unique_ptr<internal::adapter::Telemetry>            mTelemetry{nullptr};
 
     ll::event::ListenerPtr mConfigReloadListener{nullptr};
 
@@ -55,25 +57,45 @@ struct PLand::Impl {
     explicit Impl() : mSelf(*ll::mod::NativeMod::current()) {}
 };
 
+bool ensureStableVersion() {
+    auto tag = land::BuildInfo::Tag;
+    if (tag.find("-g") != std::string_view::npos) {
+        return false;
+    }
+    if (!tag.empty() && tag.front() == 'v') {
+        tag.remove_prefix(1);
+    }
+    return ll::data::Version::valid(tag);
+}
 
 bool PLand::load() {
     auto& logger = getSelf().getLogger();
     logger.info("{}-{}-{}", BuildInfo::Tag, BuildInfo::Branch, BuildInfo::Commit);
-    if (BuildInfo::Branch != "main") {
-        logger.warn("This is a development build. It may not be stable and may contain bugs.");
+    if (!ensureStableVersion()) {
+        logger.warn("This is a development build ({}). It may not be stable.", BuildInfo::Tag);
     }
+
     if (auto res = ll::i18n::getInstance().load(getSelf().getLangDir()); !res) {
         logger.error("Load language file failed, plugin will use default language.");
         res.error().log(logger);
     }
 
+    internal::interceptor::InterceptorConfig::tryMigrate(getSelf().getConfigDir());
+
     Config::tryLoad();
-    logger.setLevel(Config::cfg.logLevel);
+    internal::interceptor::InterceptorConfig::load(getSelf().getConfigDir());
 
     mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("PLand-ThreadPool", 2);
 
-    mImpl->mLandRegistry = std::make_unique<land::LandRegistry>();
-    EconomySystem::getInstance().initEconomySystem();
+    try {
+        mImpl->mLandRegistry = std::make_unique<land::LandRegistry>(*this);
+
+        EconomySystem::getInstance().initialize();
+    } catch (std::exception const& exception) {
+        logger.error(exception.what());
+        mImpl->mThreadPoolExecutor->destroy(); // fix deadlock
+        return false;
+    }
 
 #ifdef DEBUG
     logger.warn("Debug Mode");
@@ -84,28 +106,29 @@ bool PLand::load() {
 }
 
 bool PLand::enable() {
-    LandCommand::setup();
-    mImpl->mLandScheduler     = std::make_unique<LandScheduler>();
-    mImpl->mEventListener     = std::make_unique<EventListener>();
-    mImpl->mSafeTeleport      = std::make_unique<SafeTeleport>();
+    internal::LandCommand::setup();
+    mImpl->mLandScheduler     = std::make_unique<internal::LandScheduler>();
+    mImpl->mEventListener     = std::make_unique<internal::interceptor::EventInterceptor>();
+    mImpl->mSafeTeleport      = std::make_unique<internal::SafeTeleport>();
     mImpl->mSelectorManager   = std::make_unique<SelectorManager>();
     mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
-    mImpl->mTelemetry         = std::make_unique<adapter::Telemetry>();
+    mImpl->mTelemetry         = std::make_unique<internal::adapter::Telemetry>();
     if (Config::cfg.internal.telemetry) {
-        mImpl->mTelemetry->launch(*getThreadPool());
+        mImpl->mTelemetry->launch(getThreadPool());
     }
 
     mImpl->mServiceLocator = std::make_unique<service::ServiceLocator>(*this);
 
     mImpl->mConfigReloadListener = ll::event::EventBus::getInstance().emplaceListener<events::ConfigReloadEvent>(
         [this](events::ConfigReloadEvent& ev [[maybe_unused]]) {
+            internal::interceptor::InterceptorConfig::load(getSelf().getConfigDir());
             mImpl->mEventListener.reset();
-            mImpl->mEventListener = std::make_unique<EventListener>();
+            mImpl->mEventListener = std::make_unique<internal::interceptor::EventInterceptor>();
 
-            EconomySystem::getInstance().reloadEconomySystem();
+            EconomySystem::getInstance().reload();
 
-            if (ev.getConfig().internal.telemetry) {
-                mImpl->mTelemetry->launch(*getThreadPool());
+            if (ev.config().internal.telemetry) {
+                mImpl->mTelemetry->launch(getThreadPool());
             } else {
                 mImpl->mTelemetry->shutdown();
             }
@@ -163,18 +186,25 @@ PLand& PLand::getInstance() {
 
 PLand::PLand() : mImpl(std::make_unique<Impl>()) {}
 
-ll::mod::NativeMod& PLand::getSelf() const { return mImpl->mSelf; }
-SafeTeleport*       PLand::getSafeTeleport() const { return mImpl->mSafeTeleport.get(); }
-LandScheduler*      PLand::getLandScheduler() const { return mImpl->mLandScheduler.get(); }
-SelectorManager*    PLand::getSelectorManager() const { return mImpl->mSelectorManager.get(); }
-LandRegistry&       PLand::getLandRegistry() const { return *mImpl->mLandRegistry; }
-DrawHandleManager*  PLand::getDrawHandleManager() const { return mImpl->mDrawHandleManager.get(); }
+ll::mod::NativeMod&     PLand::getSelf() const { return mImpl->mSelf; }
+SelectorManager*        PLand::getSelectorManager() const { return mImpl->mSelectorManager.get(); }
+LandRegistry&           PLand::getLandRegistry() const { return *mImpl->mLandRegistry; }
+DrawHandleManager*      PLand::getDrawHandleManager() const { return mImpl->mDrawHandleManager.get(); }
+internal::SafeTeleport& PLand::getSafeTeleport() const { return *mImpl->mSafeTeleport; }
 
-ll::thread::ThreadPoolExecutor* PLand::getThreadPool() const { return mImpl->mThreadPoolExecutor.get(); }
+ll::thread::ThreadPoolExecutor& PLand::getThreadPool() const { return *mImpl->mThreadPoolExecutor; }
 service::ServiceLocator&        PLand::getServiceLocator() const { return *mImpl->mServiceLocator; }
 
 #ifdef LD_DEVTOOL
-devtool::DevToolApp* PLand::getDevToolApp() const { return mImpl->mDevToolApp.get(); }
+void PLand::setDevToolVisible(bool visible) {
+    if (Config::cfg.internal.devTools) {
+        if (visible) {
+            mImpl->mDevToolApp->show();
+        } else {
+            mImpl->mDevToolApp->hide();
+        }
+    }
+}
 #endif
 
 } // namespace land

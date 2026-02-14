@@ -4,7 +4,7 @@
 class Player;
 
 namespace land {
-
+namespace gui {
 
 class LandMainMenuGUI {
 public:
@@ -13,5 +13,5 @@ public:
     LDAPI static void sendTo(Player& player);
 };
 
-
+} // namespace gui
 } // namespace land
