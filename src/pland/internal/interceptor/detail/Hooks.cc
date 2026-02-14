@@ -21,6 +21,7 @@
 #include "mc/world/level/block/FireBlock.h"
 #include "mc/world/level/block/actor/ChestBlockActor.h"
 
+#include "mc/entity/components_json_legacy/HopperComponent.h"
 #include "mc/world/actor/global/LightningBolt.h"
 #include "mc/world/effect/OozingMobEffect.h"
 #include "mc/world/effect/WeavingMobEffect.h"
@@ -234,6 +235,28 @@ LL_TYPE_INSTANCE_HOOK(
 }
 
 
+// https://github.com/IceBlcokMC/PLand/issues/55
+LL_TYPE_INSTANCE_HOOK(
+    HopperComponentPullInItemsHook,
+    ll::memory::HookPriority::Normal,
+    HopperComponent,
+    &HopperComponent::pullInItems,
+    bool,
+    ::Actor& owner // 拥有此组件的 Actor
+) {
+    if (!owner.isType(ActorType::MinecartHopper)) {
+        return origin(owner);
+    }
+
+    auto& registry = PLand::getInstance().getLandRegistry();
+    auto  land     = registry.getLandAt(owner.getPosition(), owner.getDimensionId());
+    if (!hasGuestPermission<&RolePerms::useContainer>(land)) {
+        return false;
+    }
+    return origin(owner);
+}
+
+
 void EventInterceptor::setupHooks() {
     auto& config = InterceptorConfig::cfg.hooks;
     registerHookIf<MobHurtHook>(config.MobHurtHook);
@@ -246,6 +269,7 @@ void EventInterceptor::setupHooks() {
     registerHookIf<LecternBlockDropBookHook>(config.LecternBlockDropBookHook);
     registerHookIf<OozingMobEffectHook>(config.OozingMobEffectHook);
     registerHookIf<WeavingMobEffectHook>(config.WeavingMobEffectHook);
+    registerHookIf<HopperComponentPullInItemsHook>(config.HopperComponentPullInItemsHook);
 }
 
 } // namespace land::internal::interceptor

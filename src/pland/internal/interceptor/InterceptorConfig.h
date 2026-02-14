@@ -49,16 +49,17 @@ struct InterceptorConfig {
         bool PlayerUseItemEvent                   = true; // LL
     } listeners;
     struct Hooks {
-        bool MobHurtHook{true};              // 生物受伤
-        bool FishingHookHitHook{true};       // 钓鱼竿
-        bool LayEggGoalHook{true};           // 海龟产卵
-        bool FireBlockBurnHook{true};        // 火焰蔓延
-        bool ChestBlockActorOpenHook{true};  // 箱子打开
-        bool LightningBoltHook{true};        // 闪电
-        bool LecternBlockUseHook{true};      // 使用讲台
-        bool LecternBlockDropBookHook{true}; // 取出讲台书本
-        bool OozingMobEffectHook{true};      // 渗浆效果
-        bool WeavingMobEffectHook{true};     // 盘丝效果
+        bool MobHurtHook{true};                    // 生物受伤
+        bool FishingHookHitHook{true};             // 钓鱼竿
+        bool LayEggGoalHook{true};                 // 海龟产卵
+        bool FireBlockBurnHook{true};              // 火焰蔓延
+        bool ChestBlockActorOpenHook{true};        // 箱子打开
+        bool LightningBoltHook{true};              // 闪电
+        bool LecternBlockUseHook{true};            // 使用讲台
+        bool LecternBlockDropBookHook{true};       // 取出讲台书本
+        bool OozingMobEffectHook{true};            // 渗浆效果
+        bool WeavingMobEffectHook{true};           // 盘丝效果
+        bool HopperComponentPullInItemsHook{true}; // 漏斗组件吸取物品
     } hooks;
     struct Rules {
         using Mapping = std::unordered_map<std::string, std::string>; // TypeName -> Permission
