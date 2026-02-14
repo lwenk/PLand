@@ -90,6 +90,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `allowPickupItem` -> 重命名为 `role.allowPlayerPickupItem`。
 - `allowAttackDragonEgg` -> 重命名为 `environment.allowDragonEggTeleport`。
 
+## [0.17.2] 2026-02-12
+
+### 🐛 问题修复
+
+- 修复领地价格表达式解析失败时可能导致经济异常结算的问题 @engsr6982
+
 ## [0.17.1] - 2026-01-28
 
 ### 🐛 问题修复
