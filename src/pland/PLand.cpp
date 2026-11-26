@@ -19,7 +19,6 @@
 #include "land/internal/LandScheduler.h"
 #include "land/internal/SafeTeleport.h"
 #include "pland/economy/EconomySystem.h"
-#include "pland/internal/adapter/telemetry/Telemetry.h"
 #include "pland/internal/command/Command.h"
 #include "pland/internal/interceptor/EventInterceptor.h"
 #include "pland/land/Config.h"
@@ -44,7 +43,6 @@ struct PLand::Impl {
     std::unique_ptr<internal::SafeTeleport>                  mSafeTeleport{nullptr};
     std::unique_ptr<SelectorManager>                         mSelectorManager{nullptr};
     std::unique_ptr<DrawHandleManager>                       mDrawHandleManager{nullptr};
-    std::unique_ptr<internal::adapter::Telemetry>            mTelemetry{nullptr};
 
     ll::event::ListenerPtr mConfigReloadListener{nullptr};
 
@@ -132,10 +130,6 @@ bool PLand::enable() {
     mImpl->mSafeTeleport      = std::make_unique<internal::SafeTeleport>();
     mImpl->mSelectorManager   = std::make_unique<SelectorManager>();
     mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
-    mImpl->mTelemetry         = std::make_unique<internal::adapter::Telemetry>();
-    if (ConfigProvider::isTelemetryEnabled()) {
-        mImpl->mTelemetry->launch(getThreadPool());
-    }
 
     mImpl->mServiceLocator = std::make_unique<service::ServiceLocator>(*this);
 
@@ -146,12 +140,6 @@ bool PLand::enable() {
             mImpl->mEventListener->reload();
 
             EconomySystem::getInstance().reload();
-
-            if (ConfigProvider::isTelemetryEnabled()) {
-                mImpl->mTelemetry->launch(getThreadPool());
-            } else {
-                mImpl->mTelemetry->shutdown();
-            }
 
             mImpl->mDrawHandleManager.reset();
             mImpl->mDrawHandleManager = std::make_unique<DrawHandleManager>();
@@ -176,7 +164,6 @@ bool PLand::disable() {
     ll::event::EventBus::getInstance().removeListener(mImpl->mConfigReloadListener);
 
     auto& logger = mImpl->mSelf.getLogger();
-    mImpl->mTelemetry.reset();
 
     mImpl->mServiceLocator.reset();
 

@@ -194,7 +194,6 @@ struct ConfigData {
     } business;
 
     struct SystemConfig {
-        bool telemetry{true}; // 是否启用遥测
         bool devTools{false}; // 开发者工具
     } system;
 };
@@ -217,8 +216,6 @@ struct ConfigProvider {
     // inline API
 
     inline static auto& getDrawConfig() { return cfg.features.draw; }
-
-    inline static bool isTelemetryEnabled() { return cfg.system.telemetry; }
 
     inline static bool isDevToolsEnabled() { return cfg.system.devTools; }
 

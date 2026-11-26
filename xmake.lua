@@ -10,7 +10,6 @@ add_requires("levibuildscript")
 add_requires("ilistenattentively 0.18.0")
 
 -- IceBlockMC
-add_requires("ll-bstats 26.60.0")
 add_requires("economy_bridge 26.60.0")
 
 -- xmake
@@ -76,7 +75,6 @@ target("PLand")
         "levilamina",
         "exprtk",
         "ilistenattentively",
-        "ll-bstats",
         "economy_bridge",
         "abseil"
     )

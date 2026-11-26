@@ -17,7 +17,7 @@ PLand 的所有配置文件均为 **JSON 格式**，位于 `mods/PLand/config` �
 | [`features`](#features-功能开关)       | 领地传送、领地绘制、进服提示等       | `Config.json`                                                         |
 | [`constraints`](#constraints-全局约束) | 全服统一的领地规则（数量/大小/间距） | `Config.json`                                                         |
 | [`business`](#business-商业配置)       | 买断制 / 租赁制的价格与规则          | `Config.json`                                                         |
-| [`system`](#system-系统配置)           | 遥测、开发者工具                     | `Config.json`                                                         |
+| [`system`](#system-系统配置)           | 开发者工具                           | `Config.json`                                                         |
 | [`listeners` / `hooks` / `rules`](#)   | 事件监听、权限修补、特殊物品权限     | `InterceptorConfig.json`（[单独文档](/user_guide/InterceptorConfig)） |
 
 ## 完整配置示例
@@ -169,7 +169,6 @@ PLand 的所有配置文件均为 **JSON 格式**，位于 `mods/PLand/config` �
         }
     },
     "system": {
-        "telemetry": true, // 是否启用遥测
         "devTools": false // 是否启用开发者工具 (此工具依赖 OpenGL3 & Windows 桌面环境，请确保环境支持)
     }
 }
@@ -299,7 +298,6 @@ PLand 的所有配置文件均为 **JSON 格式**，位于 `mods/PLand/config` �
 
 | 配置项      | 默认值  | 说明                                                     |
 | :---------- | :------ | :------------------------------------------------------- |
-| `telemetry` | `true`  | 是否启用遥测统计（[了解更多](/user_guide/FAQ#关于遥测)） |
 | `devTools`  | `false` | 是否启用开发者工具（依赖 OpenGL3 与 Windows 桌面环境）   |
 
 ## formula 价格表达式
